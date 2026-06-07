@@ -95,14 +95,16 @@ export default function DriversPage() {
   }
 
   // Filtragem local por nome ou telefone
-  const filteredDrivers = drivers.filter(d => 
-    d.name.toLowerCase().includes(search.toLowerCase()) ||
-    (d.phone || '').includes(search)
+  const filteredDrivers = (drivers || []).filter(d => 
+    d && (
+      (d.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.phone || '').includes(search)
+    )
   )
 
-  const activeDrivers = drivers.filter(d => d.is_active === 1)
-  const availableDrivers = drivers.filter(d => d.is_active === 1 && d.is_available === 1)
-  const offlineDrivers = drivers.filter(d => d.is_active === 1 && d.is_available === 0)
+  const activeDrivers = (drivers || []).filter(d => d && d.is_active === 1)
+  const availableDrivers = (drivers || []).filter(d => d && d.is_active === 1 && d.is_available === 1)
+  const offlineDrivers = (drivers || []).filter(d => d && d.is_active === 1 && d.is_available === 0)
 
   return (
     <div className="space-y-6 text-left">
@@ -125,10 +127,10 @@ export default function DriversPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Cadastrado', value: drivers.length, emoji: '🏍️' },
-          { label: 'Disponíveis Agora', value: availableDrivers.length, emoji: '✅' },
-          { label: 'Entregas Totais', value: drivers.reduce((s, d) => s + (d.total_deliveries || 0), 0), emoji: '📦' },
-          { label: 'Ganhos Acumulados', value: formatCurrency(drivers.reduce((s, d) => s + parseFloat(d.total_earned || 0), 0)), emoji: '💰' },
+          { label: 'Total Cadastrado', value: (drivers || []).length, emoji: '🏍️' },
+          { label: 'Disponíveis Agora', value: (availableDrivers || []).length, emoji: '✅' },
+          { label: 'Entregas Totais', value: (drivers || []).reduce((s, d) => s + (d?.total_deliveries || 0), 0), emoji: '📦' },
+          { label: 'Ganhos Acumulados', value: formatCurrency((drivers || []).reduce((s, d) => s + parseFloat(d?.total_earned || 0), 0)), emoji: '💰' },
         ].map((stat) => (
           <div key={stat.label} className="glass rounded-3xl p-5 border border-white/[0.06] bg-[#220d3a]/40 shadow-md">
             <div className="text-2xl mb-1.5">{stat.emoji}</div>
@@ -172,7 +174,7 @@ export default function DriversPage() {
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${avatarColors[i % avatarColors.length]} flex items-center justify-center text-white font-black text-base shadow-md`}>
-                        {driver.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                        {(driver.name || 'Entregador').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
                       </div>
                       <span className="absolute -bottom-1.5 -right-1.5 text-base">
                         {driver.vehicle_type === 'bicycle' ? '🚲' : driver.vehicle_type === 'car' ? '🚗' : '🛵'}

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Users,
@@ -5,10 +6,11 @@ import {
   ChefHat, Tag, Palette, UserCheck, CreditCard, MessageSquare
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { orders as ordersApi } from '../../services/api'
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Início' },
-  { to: '/dashboard/pedidos', icon: ShoppingBag, label: 'Pedidos', badge: 3 },
+  { to: '/dashboard/pedidos', icon: ShoppingBag, label: 'Pedidos' },
   { to: '/dashboard/cozinha', icon: ChefHat, label: 'Cozinha' },
   { to: '/dashboard/produtos', icon: UtensilsCrossed, label: 'Produtos' },
   { to: '/dashboard/categorias', icon: Tag, label: 'Categorias' },
@@ -25,6 +27,28 @@ const navItems = [
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+
+    const fetchPendingCount = async () => {
+      try {
+        const res = await ordersApi.list({ status: 'pending', limit: 1 })
+        if (res.success && res.pagination) {
+          setPendingCount(res.pagination.total)
+        } else if (res.success && res.data) {
+          setPendingCount(res.data.length)
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar contagem de pedidos na sidebar:', err)
+      }
+    }
+
+    fetchPendingCount()
+    const interval = setInterval(fetchPendingCount, 10000)
+    return () => clearInterval(interval)
+  }, [user])
 
   const handleLogout = () => {
     logout()
@@ -68,33 +92,38 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1">
         <p className="text-[#6b5880] text-[10px] font-semibold uppercase tracking-wider px-2 mb-3">Menu Principal</p>
-        {navItems.map(({ to, icon: Icon, label, badge }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) => [
-              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative',
-              isActive
-                ? 'bg-[#FF6B35]/15 text-[#FF6B35] border border-[#FF6B35]/20'
-                : 'text-[#a991c7] hover:text-white hover:bg-white/5',
-            ].join(' ')}
-          >
-            {({ isActive }) => (
-              <>
-                <Icon size={18} className={`flex-shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-[#FF6B35]' : ''}`} />
-                <span className="flex-1">{label}</span>
-                {badge && (
-                  <span className="bg-[#FF6B35] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                    {badge}
-                  </span>
-                )}
-                {isActive && (
-                  <ChevronRight size={14} className="text-[#FF6B35] opacity-60" />
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
+        {navItems.map(({ to, icon: Icon, label }) => {
+          const isOrders = to === '/dashboard/pedidos'
+          const badge = isOrders && pendingCount > 0 ? pendingCount : null
+
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => [
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative',
+                isActive
+                  ? 'bg-[#FF6B35]/15 text-[#FF6B35] border border-[#FF6B35]/20'
+                  : 'text-[#a991c7] hover:text-white hover:bg-white/5',
+              ].join(' ')}
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon size={18} className={`flex-shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-[#FF6B35]' : ''}`} />
+                  <span className="flex-1">{label}</span>
+                  {badge !== null && (
+                    <span className="bg-[#FF6B35] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                      {badge}
+                    </span>
+                  )}
+                  {isActive && (
+                    <ChevronRight size={14} className="text-[#FF6B35] opacity-60" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
 
       {/* User & Logout */}

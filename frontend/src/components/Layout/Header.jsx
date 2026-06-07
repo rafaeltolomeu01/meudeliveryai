@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight, Download } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePWA } from '../../contexts/PWAContext'
+import { restaurants as restaurantApi } from '../../services/api'
+import toast from 'react-hot-toast'
 
 const pageNames = {
   '/dashboard': 'Dashboard',
@@ -26,8 +28,16 @@ export default function Header() {
   const pageName = pageNames[location.pathname] || 'Painel'
   const isOpen = user?.restaurant?.isOpen
 
-  const toggleRestaurant = () => {
-    updateUser({ restaurant: { ...user.restaurant, isOpen: !isOpen } })
+  const toggleRestaurant = async () => {
+    const next = !isOpen
+    try {
+      await restaurantApi.toggleOpen()
+      updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
+      toast.success(next ? 'Restaurante aberto! 🟢' : 'Restaurante fechado! 🔴')
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao alterar status da loja.')
+    }
   }
 
   const handleLogout = () => {

@@ -7,6 +7,25 @@ const AuthContext = createContext(null)
 // Configure axios defaults
 axios.defaults.baseURL = '/api/v1'
 
+function formatUserObject(userRaw) {
+  if (!userRaw) return null
+  if (userRaw.restaurant) return userRaw
+  return {
+    id: userRaw.id,
+    name: userRaw.name,
+    email: userRaw.email,
+    role: userRaw.role,
+    avatar_url: userRaw.avatar_url,
+    restaurant: userRaw.restaurant_id ? {
+      id: userRaw.restaurant_id,
+      name: userRaw.restaurant_name,
+      slug: userRaw.restaurant_slug,
+      isOpen: userRaw.restaurant_is_open === 1 || userRaw.restaurant_is_open === true || userRaw.restaurant_is_open === '1',
+      plan: userRaw.plan || 'starter'
+    } : null
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(localStorage.getItem('mda_token'))
@@ -63,13 +82,14 @@ export function AuthProvider({ children }) {
         const response = await axios.post('/auth/login', { email, password });
         if (response.data?.success) {
           const { token, user } = response.data.data;
+          const formattedUser = formatUserObject(user);
           localStorage.setItem('mda_token', token);
-          localStorage.setItem('mda_user', JSON.stringify(user));
+          localStorage.setItem('mda_user', JSON.stringify(formattedUser));
           setAuthHeader(token);
-          setUser(user);
+          setUser(formattedUser);
           setToken(token);
-          toast.success(`Bem-vindo de volta, ${user.name.split(' ')[0]}! 🎉`);
-          return { success: true, user };
+          toast.success(`Bem-vindo de volta, ${formattedUser.name.split(' ')[0]}! 🎉`);
+          return { success: true, user: formattedUser };
         }
       } catch (apiError) {
         if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
@@ -148,10 +168,11 @@ export function AuthProvider({ children }) {
         const response = await axios.post('/auth/register', payload);
         if (response.data?.success) {
           const { token, user } = response.data.data;
+          const formattedUser = formatUserObject(user);
           localStorage.setItem('mda_token', token);
-          localStorage.setItem('mda_user', JSON.stringify(user));
+          localStorage.setItem('mda_user', JSON.stringify(formattedUser));
           setAuthHeader(token);
-          setUser(user);
+          setUser(formattedUser);
           setToken(token);
           toast.success('Conta criada com sucesso! 🚀');
           return { success: true };

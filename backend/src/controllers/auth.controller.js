@@ -155,9 +155,10 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     const users = await query(
-      `SELECT u.*, r.name as restaurant_name, r.slug as restaurant_slug, r.status as restaurant_status
+      `SELECT u.*, r.name as restaurant_name, r.slug as restaurant_slug, r.status as restaurant_status, rs.is_open as restaurant_is_open
        FROM users u
        LEFT JOIN restaurants r ON r.id = u.restaurant_id
+       LEFT JOIN restaurant_settings rs ON rs.restaurant_id = u.restaurant_id
        WHERE u.email = ? LIMIT 1`,
       [email]
     );
@@ -210,6 +211,7 @@ const login = async (req, res, next) => {
           restaurant_id: user.restaurant_id,
           restaurant_name: user.restaurant_name,
           restaurant_slug: user.restaurant_slug,
+          restaurant_is_open: user.restaurant_is_open,
         },
       },
     });
@@ -226,11 +228,13 @@ const me = async (req, res, next) => {
     const users = await query(
       `SELECT u.id, u.name, u.email, u.role, u.created_at,
               u.restaurant_id, r.name as restaurant_name, r.slug as restaurant_slug,
-              p.slug as plan, s.status as subscription_status, s.due_date as trial_ends_at, s.due_date
+              p.slug as plan, s.status as subscription_status, s.due_date as trial_ends_at, s.due_date,
+              rs.is_open as restaurant_is_open
        FROM users u
        LEFT JOIN restaurants r ON r.id = u.restaurant_id
        LEFT JOIN subscriptions s ON s.restaurant_id = u.restaurant_id
        LEFT JOIN plans p ON p.id = s.plan_id
+       LEFT JOIN restaurant_settings rs ON rs.restaurant_id = u.restaurant_id
        WHERE u.id = ? LIMIT 1`,
       [req.user.id]
     );

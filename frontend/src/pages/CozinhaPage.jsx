@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChefHat, Clock, Check, Play, Bell, LogOut, Loader2, Volume2, VolumeX, RefreshCw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ChefHat, Clock, Check, Play, Bell, LogOut, Loader2, Volume2, VolumeX, RefreshCw, LayoutDashboard } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import toast from 'react-hot-toast'
@@ -8,6 +9,7 @@ import { orders as ordersApi } from '../services/api'
 
 export default function CozinhaPage() {
   const { logout, user } = useAuth()
+  const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -203,6 +205,10 @@ export default function CozinhaPage() {
               {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
             </button>
           </div>
+
+          <Button variant="secondary" size="md" leftIcon={LayoutDashboard} onClick={() => navigate('/dashboard')}>
+            Voltar ao Painel
+          </Button>
 
           <Button variant="danger" size="md" leftIcon={LogOut} onClick={logout}>
             Sair
