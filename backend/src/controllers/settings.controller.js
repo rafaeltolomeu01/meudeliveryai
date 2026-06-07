@@ -70,7 +70,7 @@ const updateSettings = async (req, res, next) => {
       delivery_radius_km, min_order_value, delivery_fee, estimated_delivery_time,
       auto_accept_orders, whatsapp_number, instagram_url, facebook_url,
       accept_orders_when_closed, welcome_message, order_confirmed_message,
-      order_dispatched_message, support_phone, is_open,
+      order_dispatched_message, support_phone, is_open, default_print_format
     } = req.body;
 
     await query(
@@ -78,9 +78,10 @@ const updateSettings = async (req, res, next) => {
         restaurant_id, delivery_radius_km, min_order_value, delivery_fee,
         estimated_delivery_time, auto_accept_orders, whatsapp_number,
         instagram_url, facebook_url, accept_orders_when_closed, welcome_message,
-        order_confirmed_message, order_dispatched_message, support_phone, is_open
+        order_confirmed_message, order_dispatched_message, support_phone, is_open,
+        default_print_format
       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
         delivery_radius_km = COALESCE(VALUES(delivery_radius_km), delivery_radius_km),
         min_order_value = COALESCE(VALUES(min_order_value), min_order_value),
@@ -95,7 +96,8 @@ const updateSettings = async (req, res, next) => {
         order_confirmed_message = COALESCE(VALUES(order_confirmed_message), order_confirmed_message),
         order_dispatched_message = COALESCE(VALUES(order_dispatched_message), order_dispatched_message),
         support_phone = COALESCE(VALUES(support_phone), support_phone),
-        is_open = COALESCE(VALUES(is_open), is_open)`,
+        is_open = COALESCE(VALUES(is_open), is_open),
+        default_print_format = COALESCE(VALUES(default_print_format), default_print_format)`,
       [
         restaurant_id,
         delivery_radius_km || null, min_order_value || null, delivery_fee || null,
@@ -106,6 +108,7 @@ const updateSettings = async (req, res, next) => {
         welcome_message || null, order_confirmed_message || null,
         order_dispatched_message || null, support_phone || null,
         is_open !== undefined ? (is_open ? 1 : 0) : null,
+        default_print_format || 'ask'
       ]
     );
 

@@ -576,8 +576,8 @@ const customerRegister = async (req, res, next) => {
     const { slug } = req.params;
     const { name, email, phone, document, password } = req.body;
 
-    if (!name || !phone || !document || !password) {
-      return res.status(400).json({ success: false, message: 'Preencha todos os campos obrigatórios (Nome, WhatsApp, CPF e Senha).' });
+    if (!name || !phone || !password) {
+      return res.status(400).json({ success: false, message: 'Preencha todos os campos obrigatórios (Nome, WhatsApp e Senha).' });
     }
 
     const restaurants = await query('SELECT id FROM restaurants WHERE slug = ? LIMIT 1', [slug]);
@@ -586,10 +586,23 @@ const customerRegister = async (req, res, next) => {
     }
     const restaurant_id = restaurants[0].id;
 
-    const existing = await query(
-      'SELECT id FROM customers WHERE restaurant_id = ? AND (phone = ? OR (email IS NOT NULL AND email = ?) OR document = ?) LIMIT 1',
-      [restaurant_id, phone, email || null, document]
-    );
+    // Refactored duplicate check query: build condition dynamically to avoid empty email/document matching
+    let checkQuery = 'SELECT id FROM customers WHERE restaurant_id = ? AND (phone = ?';
+    const checkParams = [restaurant_id, phone];
+
+    if (email && email.trim() !== '') {
+      checkQuery += ' OR email = ?';
+      checkParams.push(email);
+    }
+
+    if (document && document.trim() !== '') {
+      checkQuery += ' OR document = ?';
+      checkParams.push(document);
+    }
+
+    checkQuery += ') LIMIT 1';
+
+    const existing = await query(checkQuery, checkParams);
 
     if (existing.length > 0) {
       return res.status(409).json({ success: false, message: 'Este WhatsApp, E-mail ou CPF já está cadastrado para este estabelecimento.' });
@@ -601,7 +614,7 @@ const customerRegister = async (req, res, next) => {
     const result = await query(
       `INSERT INTO customers (restaurant_id, name, email, phone, document, password_hash)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [restaurant_id, name, email || null, phone, document, password_hash]
+      [restaurant_id, name, email || null, phone, document || null, password_hash]
     );
 
     const customerId = result.insertId;
