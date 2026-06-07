@@ -147,6 +147,15 @@ async function startServer() {
       console.warn('⚠️  Aviso ao verificar tabelas para auto-setup:', dbErr.message);
     }
 
+    // Executar migrações incrementais automáticas
+    try {
+      console.log('🔄 Executando migrações incrementais do banco de dados...');
+      const { migrate } = require('./src/models/migrate');
+      await migrate();
+    } catch (migErr) {
+      console.warn('⚠️  Erro ou aviso durante a execução de migrações automáticas:', migErr.message);
+    }
+
     app.listen(PORT, () => {
       console.log('');
       console.log('╔════════════════════════════════════════╗');
