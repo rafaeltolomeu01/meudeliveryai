@@ -30,7 +30,7 @@ const evoApi = getEvoApi();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function extractQrCode(data) {
-  console.log("QR Response:", data);
+  console.log("Connect QR Response:", data);
   if (!data) return null;
 
   let qr = null;
@@ -42,8 +42,10 @@ function extractQrCode(data) {
          data.qr || 
          data.code || 
          data.pairingCode || 
-         data.instance?.qrcode || 
+         data.data?.base64 ||
          data.data?.qrcode || 
+         data.data?.code ||
+         data.instance?.qrcode || 
          data.qrcode?.base64 ||
          data.qrcode?.code ||
          data.instance?.connect?.qrcode ||
@@ -206,7 +208,7 @@ const connect = async (req, res, next) => {
     let errorDetail = null;
     try {
       const response = await evoApi.get(`/instance/connect/${name}`);
-      console.log("QR Response:", response.data);
+      console.log("Connect QR Response:", response.data);
       qrBase64 = extractQrCode(response.data);
       if (!qrBase64) {
         errorDetail = 'Evolution API connect responded successfully but did not contain a valid QR Code format.';
@@ -319,7 +321,7 @@ const getQrCode = async (req, res, next) => {
       let errorDetail = null;
       try {
         const response = await evoApi.get(`/instance/connect/${conn.session_name}`);
-        console.log("QR Response:", response.data);
+        console.log("Connect QR Response:", response.data);
         qrBase64 = extractQrCode(response.data);
         if (!qrBase64) {
           errorDetail = 'Evolution API connect responded successfully but did not contain a valid QR Code format.';
