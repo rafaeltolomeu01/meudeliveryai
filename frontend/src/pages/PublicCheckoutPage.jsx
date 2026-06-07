@@ -196,6 +196,11 @@ export default function PublicCheckoutPage() {
     setAuthLoading(true)
     try {
       if (authMode === 'login') {
+        if (!authForm.email && !authForm.phone) {
+          toast.error('Informe seu WhatsApp ou E-mail para entrar.')
+          setAuthLoading(false)
+          return
+        }
         const res = await publicApi.customerLogin(slug, {
           email: authForm.email || authForm.phone,
           phone: authForm.phone,
@@ -448,7 +453,7 @@ export default function PublicCheckoutPage() {
                       placeholder="Ex: 33999998888"
                       value={authForm.phone}
                       onChange={(e) => setAuthForm({ ...authForm, phone: e.target.value })}
-                      required
+                      required={authMode === 'register'}
                     />
 
                     <Input
