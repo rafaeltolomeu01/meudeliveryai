@@ -751,7 +751,7 @@ export default function OrdersPage() {
               
               <div className="divide-y divide-white/5">
                 {selectedOrder.items?.map((item, index) => {
-                  const opts = item.options ? JSON.parse(item.options) : []
+                  const opts = item.options ? (typeof item.options === 'string' ? JSON.parse(item.options) : item.options) : []
                   
                   return (
                     <div key={index} className="py-3 first:pt-0 last:pb-0 flex justify-between gap-4 text-xs">

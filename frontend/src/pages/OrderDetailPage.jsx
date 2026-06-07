@@ -438,7 +438,7 @@ export default function OrderDetailPage() {
           <Card title="Itens do Pedido">
             <div className="divide-y divide-white/5">
               {order.items?.map((item, index) => {
-                const opts = item.options ? JSON.parse(item.options) : []
+                const opts = item.options ? (typeof item.options === 'string' ? JSON.parse(item.options) : item.options) : []
                 return (
                   <div key={index} className="py-4 first:pt-0 last:pb-0 flex justify-between gap-4">
                     <div className="space-y-1">

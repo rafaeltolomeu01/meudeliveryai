@@ -259,7 +259,7 @@ export default function CozinhaPage() {
                 <div className="p-6 flex-1 space-y-5">
                   <div className="space-y-4">
                     {order.items?.map((item, idx) => {
-                      const opts = item.options ? JSON.parse(item.options) : []
+                      const opts = item.options ? (typeof item.options === 'string' ? JSON.parse(item.options) : item.options) : []
                       
                       return (
                         <div key={idx} className="border-b border-white/[0.03] pb-3.5 last:border-0 last:pb-0 text-left">
