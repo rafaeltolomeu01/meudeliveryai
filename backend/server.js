@@ -48,8 +48,12 @@ app.use('/api/', generalLimiter);
 const uploadDir = path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
 app.use('/uploads', express.static(uploadDir));
 
-// ─── Welcome / Root Route ─────────────────────────────────────────────────────
-app.get('/', (req, res) => {
+// ─── Serve Frontend Static Files ─────────────────────────────────────────────
+const frontendDistDir = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendDistDir));
+
+// ─── API Welcome Route ────────────────────────────────────────────────────────
+app.get('/api', (req, res) => {
   res.json({
     success: true,
     message: 'MeuDeliveryAI API está online e rodando com sucesso!',
@@ -92,6 +96,14 @@ app.get('/api/v1/health', healthCheckHandler);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/v1', routes);
+
+// ─── SPA Fallback Route ───────────────────────────────────────────────────────
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+    return next();
+  }
+  res.sendFile(path.join(frontendDistDir, 'index.html'));
+});
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {

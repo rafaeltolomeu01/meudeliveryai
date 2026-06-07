@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "db:migrate": "node src/models/migrate.js",
     "db:create-admin": "node src/scripts/create-admin-geral.js",
-    "setup-db": "node scripts/setup-db.js"
+    "setup-db": "node scripts/setup-db.js",
+    "build": "npm install --prefix ../frontend && npm run build --prefix ../frontend"
   },
   "dependencies": {
     "axios": "^1.17.0",
