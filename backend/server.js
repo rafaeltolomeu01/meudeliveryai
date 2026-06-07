@@ -102,7 +102,16 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
     return next();
   }
-  res.sendFile(path.join(frontendDistDir, 'index.html'));
+  const indexPath = path.join(frontendDistDir, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      res.status(200).json({
+        success: true,
+        message: 'MeuDeliveryAI API está online e rodando. O frontend ainda está compilando ou não foi encontrado.',
+        docs: '/api/health'
+      });
+    }
+  });
 });
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
