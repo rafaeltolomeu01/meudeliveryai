@@ -1,21 +1,14 @@
 const { query } = require('../config/database');
 const axios = require('axios');
-const QRCode = require('qrcode');
 const aiService = require('../services/ai.service');
 
 // ─── Evolution API Config ──────────────────────────────────────────────────────
-function getEvoUrl() {
-  return process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-}
+// Leitura lazy (via função) para garantir que process.env já foi carregado pelo dotenv
+function getEvoUrl()  { return process.env.EVOLUTION_API_URL || 'http://localhost:8080'; }
+function getEvoKey()  { return process.env.EVOLUTION_API_KEY || ''; }
+function isEvoConfigured() { return !!(process.env.EVOLUTION_API_KEY && process.env.EVOLUTION_API_KEY.trim()); }
 
-function getEvoKey() {
-  return process.env.EVOLUTION_API_KEY || '';
-}
-
-function isEvoConfigured() {
-  return !!(process.env.EVOLUTION_API_KEY && process.env.EVOLUTION_API_KEY.trim());
-}
-
+// Logs solicitados
 console.log("EVOLUTION_API_URL:", process.env.EVOLUTION_API_URL);
 console.log("EVOLUTION_API_KEY existe:", !!process.env.EVOLUTION_API_KEY);
 
@@ -26,76 +19,65 @@ function getEvoApi() {
       'Content-Type': 'application/json',
       'apikey': getEvoKey(),
     },
-    timeout: 20000,
+    timeout: 15000,
   });
 }
 
+// Compatibilidade retroativa — usa getter lazy
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '';
 const evoApi = getEvoApi();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-async function extractQrCode(data) {
-  console.log("Resposta Evolution:", JSON.stringify(data, null, 2));
-
+function extractQrCode(data) {
+  console.log("Resposta Evolution connect:", data);
   if (!data) return null;
 
-  let qrString = null;
-
-  qrString =
-    data?.base64 ||
-    data?.qrcode ||
-    data?.code ||
-    data?.qr ||
-    data?.pairingCode ||
-    data?.data?.qrcode ||
-    data?.data?.base64 ||
-    data?.data?.code ||
-    data?.data?.qr ||
-    data?.data?.pairingCode ||
-    data?.qrcode?.base64 ||
-    data?.qrcode?.code ||
-    data?.qrcode?.qrcode ||
-    data?.instance?.qrcode ||
-    data?.instance?.connect?.qrcode ||
-    null;
-
-  if (!qrString) return null;
-
-  if (typeof qrString === 'object') {
-    qrString =
-      qrString.base64 ||
-      qrString.qrcode ||
-      qrString.code ||
-      qrString.qr ||
-      null;
+  let qr = null;
+  if (typeof data === 'string') {
+    qr = data;
+  } else {
+    // aceitar base64, qrcode, code, qr ou data.qrcode
+    qr = data.base64 ||
+         data.qrcode ||
+         data.code ||
+         data.qr ||
+         data.data?.qrcode ||
+         data.data?.base64 ||
+         data.data?.code ||
+         data.data?.qr ||
+         data.qrcode?.base64 ||
+         data.qrcode?.code ||
+         data.qrcode?.qr ||
+         data.qrcode?.qrcode ||
+         data.instance?.qrcode ||
+         data.instance?.connect?.qrcode ||
+         null;
   }
 
-  if (!qrString || typeof qrString !== 'string') return null;
-
-  qrString = qrString.trim();
-
-  if (qrString.startsWith('data:image')) {
-    return qrString;
+  if (typeof qr === 'object' && qr !== null) {
+    qr = qr.base64 || qr.qrcode || qr.code || qr.qr || null;
   }
 
-  if (qrString.startsWith('http')) {
-    return qrString;
+  if (qr && typeof qr === 'string') {
+    qr = qr.trim();
+    if (qr.startsWith('data:')) {
+      return qr;
+    }
+    // se vier base64 sem prefixo, adicionar data:image/png;base64,
+    if (/^[A-Za-z0-9+/=]+$/.test(qr.replace(/\s/g, '')) || qr.length > 100) {
+      return `data:image/png;base64,${qr}`;
+    }
+    return qr;
   }
 
-  if (qrString.length > 300) {
-    return `data:image/png;base64,${qrString}`;
-  }
-
-  try {
-    return await QRCode.toDataURL(qrString);
-  } catch (err) {
-    console.error("Erro ao gerar QR:", err.message);
-    return null;
-  }
+  return null;
 }
 
 function sessionName(restaurantId) {
-  return `restaurant_${restaurantId}`;
+  // Permite usar uma instância fixa já criada/conectada na Evolution API.
+  // No Render/Railway, crie a variável EVOLUTION_INSTANCE_NAME=restaurant_8
+  return process.env.EVOLUTION_INSTANCE_NAME || `restaurant_${restaurantId}`;
 }
 
 async function getOrCreateConnection(restaurantId) {
@@ -103,22 +85,18 @@ async function getOrCreateConnection(restaurantId) {
     'SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1',
     [restaurantId]
   );
-
   if (rows.length === 0) {
     const name = sessionName(restaurantId);
-
     await query(
       `INSERT INTO whatsapp_connections (restaurant_id, session_name, status)
        VALUES (?, ?, 'disconnected')`,
       [restaurantId, name]
     );
-
     rows = await query(
       'SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1',
       [restaurantId]
     );
   }
-
   return rows[0];
 }
 
@@ -137,28 +115,31 @@ async function saveLog(restaurantId, event, to, message, status, errorMessage = 
 
 // ─── Controllers ──────────────────────────────────────────────────────────────
 
+/**
+ * GET /api/v1/whatsapp/status
+ * Retorna o status da conexão WhatsApp para o restaurante logado.
+ */
 const getStatus = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
     const conn = await getOrCreateConnection(restaurantId);
 
+    // Contar mensagens enviadas hoje
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const countRows = await query(
       `SELECT COUNT(*) as total FROM whatsapp_messages_logs
        WHERE restaurant_id = ? AND status = 'sent' AND sent_at >= ?`,
       [restaurantId, today]
     );
-
     const todayCount = countRows[0]?.total || 0;
-    let liveStatus = conn.status;
 
+    // Tenta checar status real na Evolution API (não-bloqueante)
+    let liveStatus = conn.status;
     if (isEvoConfigured() && conn.status !== 'disconnected') {
       try {
         const resp = await evoApi.get(`/instance/connectionState/${conn.session_name}`);
         const state = resp.data?.instance?.state;
-
         if (state === 'open') liveStatus = 'connected';
         else if (state === 'connecting') liveStatus = 'connecting';
         else liveStatus = 'disconnected';
@@ -169,8 +150,8 @@ const getStatus = async (req, res, next) => {
             [liveStatus, restaurantId]
           );
         }
-      } catch (e) {
-        console.error('[WhatsApp] Erro ao consultar status:', e.message);
+      } catch (_) {
+        // Evolution API indisponível — usar status salvo no banco
       }
     }
 
@@ -189,6 +170,10 @@ const getStatus = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/whatsapp/connect
+ * Inicia uma sessão WhatsApp e retorna o QR Code.
+ */
 const connect = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
@@ -196,48 +181,47 @@ const connect = async (req, res, next) => {
     const name = conn.session_name;
 
     if (!isEvoConfigured()) {
+      // Modo demo: gera QR Code fictício
       await query(
         `UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW()
          WHERE restaurant_id = ?`,
         ['DEMO_QR_' + Date.now(), restaurantId]
       );
-
       const updated = await query(
         'SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1',
         [restaurantId]
       );
-
       return res.json({
         success: true,
-        message: 'Modo demo: Evolution API não configurada.',
+        message: 'Modo demo: Evolution API não configurada. Configure EVOLUTION_API_URL e EVOLUTION_API_KEY.',
         data: { ...updated[0], demo_mode: true },
       });
     }
 
+    // Criar instância na Evolution API (ignora se já existe)
     try {
       await evoApi.post('/instance/create', {
         instanceName: name,
         qrcode: true,
-        integration: 'WHATSAPP-BAILEYS',
+        integration: 'EVOLUTION',
       });
     } catch (e) {
-      console.log('[WhatsApp] Instância já existe ou erro ignorado:', e.response?.data || e.message);
+      // Instância pode já existir — seguir em frente
     }
 
+    // Buscar QR Code
     let qrBase64 = null;
     let errorDetail = null;
-
     try {
       const response = await evoApi.get(`/instance/connect/${name}`);
-      qrBase64 = await extractQrCode(response.data);
-
+      console.log("Connect QR Response:", response.data);
+      qrBase64 = extractQrCode(response.data);
       if (!qrBase64) {
-        errorDetail = 'Evolution API não retornou QR em formato reconhecido.';
+        errorDetail = 'Evolution API connect responded successfully but did not contain a valid QR Code format.';
       }
     } catch (qrErr) {
       console.error("[WhatsApp] Error fetching QR in connect:", qrErr.message);
       errorDetail = qrErr.message;
-
       if (qrErr.response) {
         console.error("[WhatsApp] Error detail:", qrErr.response.data);
         errorDetail += ' - ' + JSON.stringify(qrErr.response.data);
@@ -248,7 +232,7 @@ const connect = async (req, res, next) => {
       return res.status(422).json({
         success: false,
         message: 'A Evolution API não retornou o QR Code. Certifique-se de que a instância está ativa.',
-        details: errorDetail,
+        details: errorDetail
       });
     }
 
@@ -273,6 +257,10 @@ const connect = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/whatsapp/disconnect
+ * Desconecta a sessão WhatsApp.
+ */
 const disconnect = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
@@ -281,9 +269,7 @@ const disconnect = async (req, res, next) => {
     if (isEvoConfigured()) {
       try {
         await evoApi.delete(`/instance/logout/${conn.session_name}`);
-      } catch (e) {
-        console.error('[WhatsApp] Erro ao desconectar:', e.message);
-      }
+      } catch (_) {}
     }
 
     await query(
@@ -300,6 +286,10 @@ const disconnect = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/whatsapp/reconnect
+ * Tenta reconectar a sessão existente.
+ */
 const reconnect = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
@@ -307,10 +297,9 @@ const reconnect = async (req, res, next) => {
 
     if (isEvoConfigured()) {
       try {
-        await evoApi.post(`/instance/restart/${conn.session_name}`);
-      } catch (e) {
-        console.error('[WhatsApp] Erro ao reconectar:', e.message);
-      }
+        await evoApi.delete(`/instance/logout/${conn.session_name}`);
+        await evoApi.get(`/instance/connect/${conn.session_name}`);
+      } catch (_) {}
     }
 
     await query(
@@ -325,6 +314,10 @@ const reconnect = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/whatsapp/qrcode
+ * Busca o QR Code atualizado.
+ */
 const getQrCode = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
@@ -333,18 +326,16 @@ const getQrCode = async (req, res, next) => {
     if (isEvoConfigured() && conn.status === 'connecting') {
       let qrBase64 = null;
       let errorDetail = null;
-
       try {
         const response = await evoApi.get(`/instance/connect/${conn.session_name}`);
-        qrBase64 = await extractQrCode(response.data);
-
+        console.log("Connect QR Response:", response.data);
+        qrBase64 = extractQrCode(response.data);
         if (!qrBase64) {
-          errorDetail = 'Evolution API não retornou QR em formato reconhecido.';
+          errorDetail = 'Evolution API connect responded successfully but did not contain a valid QR Code format.';
         }
       } catch (qrErr) {
         console.error("[WhatsApp] Error fetching QR in getQrCode:", qrErr.message);
         errorDetail = qrErr.message;
-
         if (qrErr.response) {
           console.error("[WhatsApp] Error detail:", qrErr.response.data);
           errorDetail += ' - ' + JSON.stringify(qrErr.response.data);
@@ -356,15 +347,14 @@ const getQrCode = async (req, res, next) => {
           'UPDATE whatsapp_connections SET qr_code = ?, updated_at = NOW() WHERE restaurant_id = ?',
           [qrBase64, restaurantId]
         );
-
         return res.json({ success: true, data: { qr_code: qrBase64 } });
+      } else {
+        return res.status(422).json({
+          success: false,
+          message: 'A Evolution API não retornou o QR Code ao atualizar.',
+          details: errorDetail
+        });
       }
-
-      return res.status(422).json({
-        success: false,
-        message: 'A Evolution API não retornou o QR Code ao atualizar.',
-        details: errorDetail,
-      });
     }
 
     return res.json({ success: true, data: { qr_code: conn.qr_code } });
@@ -373,31 +363,35 @@ const getQrCode = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/whatsapp/webhook
+ * Recebe eventos da Evolution API (connection updates, QR code updates).
+ */
 const webhook = async (req, res, next) => {
   try {
     const payload = req.body;
-    const event = payload?.event;
+    const event   = payload?.event;
     const instanceName = payload?.instance || payload?.data?.instance?.instanceName;
 
     if (!instanceName) return res.json({ success: true });
 
+    // Resolver restaurant_id pelo session_name
     const rows = await query(
       'SELECT restaurant_id FROM whatsapp_connections WHERE session_name = ? LIMIT 1',
       [instanceName]
     );
-
     if (rows.length === 0) return res.json({ success: true });
 
     const restaurantId = rows[0].restaurant_id;
 
     if (event === 'connection.update' || event === 'QRCODE_UPDATED') {
-      const state = payload?.data?.state || payload?.data?.instance?.state;
-      const qr = await extractQrCode(payload) || await extractQrCode(payload?.data);
-      const phone = payload?.data?.wuid?.replace('@s.whatsapp.net', '') || null;
-      const pname = payload?.data?.profileName || null;
+      const state  = payload?.data?.state || payload?.data?.instance?.state;
+      const qr     = extractQrCode(payload) || extractQrCode(payload?.data) || payload?.data?.qrcode?.base64 || null;
+      const phone  = payload?.data?.wuid?.replace('@s.whatsapp.net', '') || null;
+      const pname  = payload?.data?.profileName || null;
 
       let status = 'connecting';
-      if (state === 'open') status = 'connected';
+      if (state === 'open')  status = 'connected';
       if (state === 'close') status = 'disconnected';
 
       await query(
@@ -416,8 +410,8 @@ const webhook = async (req, res, next) => {
 
     if (event === 'messages.upsert') {
       const messages = payload?.data?.messages || [];
-
       for (const msg of messages) {
+        // Ignorar mensagens enviadas pelo próprio bot
         if (msg.key?.fromMe) {
           await saveLog(
             restaurantId,
@@ -429,6 +423,7 @@ const webhook = async (req, res, next) => {
           continue;
         }
 
+        // Mensagem recebida de cliente — tentar responder com IA
         const customerPhone = (msg.key?.remoteJid || '').replace('@s.whatsapp.net', '');
         const customerMessage = (
           msg.message?.conversation ||
@@ -438,22 +433,23 @@ const webhook = async (req, res, next) => {
 
         if (!customerPhone || !customerMessage) continue;
 
+        // Salvar log da mensagem recebida
         await saveLog(restaurantId, 'received', customerPhone, customerMessage, 'sent');
 
+        // Verificar se IA está habilitada para este restaurante
         const { enabled, settings: aiSettings } = await aiService.getAIConfig(restaurantId);
         if (!enabled || !aiSettings) continue;
 
+        // Verificar se WhatsApp está conectado
         const connRows = await query(
           "SELECT * FROM whatsapp_connections WHERE restaurant_id = ? AND status = 'connected' LIMIT 1",
           [restaurantId]
         );
-
         if (connRows.length === 0) continue;
-
         const activeConn = connRows[0];
 
+        // Gerar resposta da IA (com dados reais do banco)
         let aiReply = null;
-
         try {
           aiReply = await aiService.processIncomingMessage(
             restaurantId,
@@ -463,28 +459,27 @@ const webhook = async (req, res, next) => {
           );
         } catch (aiErr) {
           console.error('[AI] Erro ao processar mensagem:', aiErr.message);
-          aiReply =
-            aiSettings.ai_fallback_message ||
+          aiReply = aiSettings.ai_fallback_message ||
             'Desculpe, não consigo processar sua mensagem agora. Por favor, entre em contato diretamente conosco.';
         }
 
         if (!aiReply) continue;
 
+        // Enviar resposta via Evolution API
         if (EVOLUTION_API_KEY) {
           try {
             const jid = `${customerPhone}@s.whatsapp.net`;
-
             await evoApi.post(`/message/sendText/${activeConn.session_name}`, {
               number: jid,
               textMessage: { text: aiReply },
             });
-
             await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'sent');
           } catch (sendErr) {
             console.error('[AI] Erro ao enviar resposta:', sendErr.message);
             await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'error', sendErr.message);
           }
         } else {
+          // Modo demo: apenas loga sem enviar
           await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'demo', 'Evolution API não configurada');
         }
       }
@@ -496,6 +491,10 @@ const webhook = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/whatsapp/send
+ * Envia mensagem manualmente a um número.
+ */
 const sendMessage = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
@@ -533,10 +532,14 @@ const sendMessage = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/whatsapp/logs
+ * Retorna histórico de mensagens enviadas.
+ */
 const getLogs = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
-    const page = parseInt(req.query.page) || 1;
+    const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
 
@@ -568,10 +571,13 @@ const getLogs = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/whatsapp/settings
+ * Retorna configurações do WhatsApp (templates de mensagem).
+ */
 const getWhatsAppSettings = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
-
     let rows = await query(
       'SELECT * FROM whatsapp_settings WHERE restaurant_id = ? LIMIT 1',
       [restaurantId]
@@ -582,7 +588,6 @@ const getWhatsAppSettings = async (req, res, next) => {
         `INSERT INTO whatsapp_settings (restaurant_id, is_enabled) VALUES (?, 0)`,
         [restaurantId]
       );
-
       rows = await query(
         'SELECT * FROM whatsapp_settings WHERE restaurant_id = ? LIMIT 1',
         [restaurantId]
@@ -595,24 +600,19 @@ const getWhatsAppSettings = async (req, res, next) => {
   }
 };
 
+/**
+ * PUT /api/v1/whatsapp/settings
+ * Atualiza configurações e templates de mensagem do WhatsApp.
+ */
 const updateWhatsAppSettings = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
-
     const {
       is_enabled,
-      notify_new_order,
-      notify_order_confirmed,
-      notify_order_ready,
-      notify_out_for_delivery,
-      notify_delivered,
-      notify_cancelled,
-      template_new_order,
-      template_confirmed,
-      template_ready,
-      template_out_for_delivery,
-      template_delivered,
-      template_cancelled,
+      notify_new_order, notify_order_confirmed, notify_order_ready,
+      notify_out_for_delivery, notify_delivered, notify_cancelled,
+      template_new_order, template_confirmed, template_ready,
+      template_out_for_delivery, template_delivered, template_cancelled,
     } = req.body;
 
     await query(
@@ -639,18 +639,12 @@ const updateWhatsAppSettings = async (req, res, next) => {
       [
         restaurantId,
         is_enabled ? 1 : 0,
-        notify_new_order ? 1 : 0,
-        notify_order_confirmed ? 1 : 0,
-        notify_order_ready ? 1 : 0,
-        notify_out_for_delivery ? 1 : 0,
-        notify_delivered ? 1 : 0,
-        notify_cancelled ? 1 : 0,
-        template_new_order || null,
-        template_confirmed || null,
-        template_ready || null,
-        template_out_for_delivery || null,
-        template_delivered || null,
-        template_cancelled || null,
+        notify_new_order ? 1 : 0, notify_order_confirmed ? 1 : 0,
+        notify_order_ready ? 1 : 0, notify_out_for_delivery ? 1 : 0,
+        notify_delivered ? 1 : 0, notify_cancelled ? 1 : 0,
+        template_new_order || null, template_confirmed || null,
+        template_ready || null, template_out_for_delivery || null,
+        template_delivered || null, template_cancelled || null,
       ]
     );
 
@@ -665,23 +659,26 @@ const updateWhatsAppSettings = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/whatsapp/ai-settings
+ * Retorna as configurações da IA de atendimento.
+ */
 const getAISettings = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
-
     let rows = await query(
       `SELECT ai_enabled, ai_name, ai_personality, ai_fallback_message, ai_model
        FROM whatsapp_settings WHERE restaurant_id = ? LIMIT 1`,
       [restaurantId]
     );
 
+    // Criar registro se não existir
     if (rows.length === 0) {
       await query(
         `INSERT INTO whatsapp_settings (restaurant_id, is_enabled, ai_enabled)
          VALUES (?, 0, 0)`,
         [restaurantId]
       );
-
       rows = await query(
         `SELECT ai_enabled, ai_name, ai_personality, ai_fallback_message, ai_model
          FROM whatsapp_settings WHERE restaurant_id = ? LIMIT 1`,
@@ -703,10 +700,13 @@ const getAISettings = async (req, res, next) => {
   }
 };
 
+/**
+ * PUT /api/v1/whatsapp/ai-settings
+ * Atualiza as configurações da IA.
+ */
 const updateAISettings = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
-
     const {
       ai_enabled,
       ai_name,
@@ -727,10 +727,10 @@ const updateAISettings = async (req, res, next) => {
       [
         restaurantId,
         ai_enabled ? 1 : 0,
-        ai_name || 'Assistente',
-        ai_personality || null,
+        ai_name             || 'Assistente',
+        ai_personality      || null,
         ai_fallback_message || null,
-        ai_model || 'gpt-4o-mini',
+        ai_model            || 'gpt-4o-mini',
       ]
     );
 
@@ -746,6 +746,10 @@ const updateAISettings = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/whatsapp/ai-test
+ * Testa a IA com uma pergunta avulsa (painel admin).
+ */
 const testAIEndpoint = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
@@ -763,6 +767,10 @@ const testAIEndpoint = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/whatsapp/config-status
+ * Retorna as configurações da Evolution API para o frontend saber se está ativa.
+ */
 const getConfigStatus = async (req, res, next) => {
   try {
     return res.json({
@@ -775,33 +783,30 @@ const getConfigStatus = async (req, res, next) => {
   }
 };
 
+// ─── Auto-send on order status change (called internally) ─────────────────────
 async function autoSendOrderNotification(restaurantId, order, newStatus) {
   try {
     const settingsRows = await query(
       'SELECT * FROM whatsapp_settings WHERE restaurant_id = ? AND is_enabled = 1 LIMIT 1',
       [restaurantId]
     );
-
     if (settingsRows.length === 0) return;
-
     const ws = settingsRows[0];
 
     const connRows = await query(
       "SELECT * FROM whatsapp_connections WHERE restaurant_id = ? AND status = 'connected' LIMIT 1",
       [restaurantId]
     );
-
     if (connRows.length === 0) return;
-
     const conn = connRows[0];
 
     const fieldMap = {
-      pending: { flag: 'notify_new_order', tmpl: 'template_new_order' },
-      confirmed: { flag: 'notify_order_confirmed', tmpl: 'template_confirmed' },
-      ready: { flag: 'notify_order_ready', tmpl: 'template_ready' },
-      out_for_delivery: { flag: 'notify_out_for_delivery', tmpl: 'template_out_for_delivery' },
-      delivered: { flag: 'notify_delivered', tmpl: 'template_delivered' },
-      cancelled: { flag: 'notify_cancelled', tmpl: 'template_cancelled' },
+      pending:          { flag: 'notify_new_order',         tmpl: 'template_new_order' },
+      confirmed:        { flag: 'notify_order_confirmed',   tmpl: 'template_confirmed' },
+      ready:            { flag: 'notify_order_ready',       tmpl: 'template_ready' },
+      out_for_delivery: { flag: 'notify_out_for_delivery',  tmpl: 'template_out_for_delivery' },
+      delivered:        { flag: 'notify_delivered',         tmpl: 'template_delivered' },
+      cancelled:        { flag: 'notify_cancelled',         tmpl: 'template_cancelled' },
     };
 
     const mapping = fieldMap[newStatus];
@@ -810,6 +815,7 @@ async function autoSendOrderNotification(restaurantId, order, newStatus) {
     let template = ws[mapping.tmpl] || '';
     if (!template) return;
 
+    // Substituir variáveis no template
     template = template
       .replace(/{order_number}/g, order.order_number)
       .replace(/{total}/g, Number(order.total).toFixed(2))
