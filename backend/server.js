@@ -48,6 +48,15 @@ app.use('/api/', generalLimiter);
 const uploadDir = path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
 app.use('/uploads', express.static(uploadDir));
 
+// ─── Welcome / Root Route ─────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'MeuDeliveryAI API está online e rodando com sucesso!',
+    docs: '/api/health'
+  });
+});
+
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
@@ -58,23 +67,28 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/api/health', async (req, res) => {
+const healthCheckHandler = async (req, res) => {
   try {
     const db = require('./src/config/database');
     await db.query('SELECT 1');
     return res.json({
+      success: true,
       status: "ok",
       database: "connected",
       environment: process.env.NODE_ENV || 'production'
     });
   } catch (err) {
     return res.status(500).json({
+      success: false,
       status: "error",
       database: "disconnected",
       environment: process.env.NODE_ENV || 'production'
     });
   }
-});
+};
+
+app.get('/api/health', healthCheckHandler);
+app.get('/api/v1/health', healthCheckHandler);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/v1', routes);
