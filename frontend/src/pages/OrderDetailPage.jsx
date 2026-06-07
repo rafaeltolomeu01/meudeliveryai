@@ -53,6 +53,8 @@ export default function OrderDetailPage() {
   const [cancelReason, setCancelReason] = useState('')
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showPrintMenu, setShowPrintMenu] = useState(false)
+  const [messages, setMessages] = useState([])
+  const [newMessageText, setNewMessageText] = useState('')
 
   const loadOrderDetails = async () => {
     try {
@@ -88,10 +90,52 @@ export default function OrderDetailPage() {
     }
   }
 
+  const loadChatMessages = async () => {
+    try {
+      const res = await ordersApi.getMessages(id)
+      if (res.success && res.data) {
+        setMessages(res.data)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar chat:', err)
+    }
+  }
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault()
+    if (!newMessageText.trim()) return
+
+    try {
+      const txt = newMessageText.trim()
+      setNewMessageText('')
+      const res = await ordersApi.sendMessage(id, txt)
+      if (res.success && res.data) {
+        setMessages(prev => [...prev, res.data])
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao enviar mensagem.')
+    }
+  }
+
   useEffect(() => {
     loadOrderDetails()
     loadDriversList()
+    loadChatMessages()
+
+    const interval = setInterval(() => {
+      loadChatMessages()
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [id])
+
+  useEffect(() => {
+    const container = document.getElementById('chat-messages-container')
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  }, [messages])
 
   const handleUpdateStatus = async (newStatus) => {
     setActionLoading(true)
@@ -440,6 +484,70 @@ export default function OrderDetailPage() {
                 <span className="font-bold text-sm">Total Geral</span>
                 <span className="font-black text-lg text-[#FF6B35]">{formatCurrency(order.total)}</span>
               </div>
+            </div>
+          </Card>
+
+          {/* Chat do Pedido */}
+          <Card title="Chat com o Cliente 💬">
+            <div className="flex flex-col h-[350px] bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden">
+              {/* Message History */}
+              <div 
+                className="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col no-scrollbar scroll-smooth" 
+                id="chat-messages-container"
+              >
+                {messages.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+                    <MessageSquare size={32} className="text-gray-600 mb-2 animate-pulse" />
+                    <p className="text-xs text-gray-500 italic">Nenhuma mensagem ainda. Digite algo para iniciar a conversa!</p>
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isMerchant = msg.sender_type === 'merchant'
+                    const isSystem = msg.sender_type === 'system'
+                    
+                    if (isSystem) {
+                      return (
+                        <div key={msg.id} className="self-center bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-full text-[10px] text-gray-400 font-semibold max-w-[90%] text-center shadow-sm">
+                          {msg.message}
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`max-w-[75%] rounded-2xl p-3 text-xs leading-relaxed flex flex-col shadow-md ${
+                          isMerchant
+                            ? 'self-end bg-[#FF6B35] text-white rounded-tr-none'
+                            : 'self-start bg-white/10 text-gray-200 rounded-tl-none border border-white/5'
+                        }`}
+                      >
+                        <span className="font-bold text-[9px] text-white/55 mb-1">
+                          {isMerchant ? 'Você (Estabelecimento)' : (order.customer_name || 'Cliente')}
+                        </span>
+                        <span>{msg.message}</span>
+                        <span className="text-[8px] text-white/45 self-end mt-1 font-semibold">
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+
+              {/* Message Input Form */}
+              <form onSubmit={handleSendMessage} className="p-3 bg-black/20 border-t border-white/5 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Digite uma mensagem para o cliente..."
+                  value={newMessageText}
+                  onChange={(e) => setNewMessageText(e.target.value)}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6B35]"
+                />
+                <Button type="submit" variant="primary" size="sm">
+                  Enviar
+                </Button>
+              </form>
             </div>
           </Card>
 

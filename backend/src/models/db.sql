@@ -581,6 +581,25 @@ CREATE TABLE IF NOT EXISTS order_status_logs (
   COMMENT='Histórico de mudanças de status dos pedidos';
 
 -- ============================================================
+-- 15b. ORDER_MESSAGES — Mensagens do chat do pedido
+-- ============================================================
+CREATE TABLE IF NOT EXISTS order_messages (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id      INT UNSIGNED NOT NULL,
+  restaurant_id INT UNSIGNED NOT NULL,
+  sender_type   ENUM('customer', 'merchant', 'system') NOT NULL,
+  message       TEXT NOT NULL,
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX idx_order      (order_id),
+  INDEX idx_restaurant (restaurant_id),
+  INDEX idx_created_at (created_at),
+  FOREIGN KEY (order_id)      REFERENCES orders(id)      ON DELETE CASCADE,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Mensagens do chat do pedido';
+
+-- ============================================================
 -- 16. SYSTEM_LOGS — Logs gerais do sistema
 -- ============================================================
 CREATE TABLE IF NOT EXISTS system_logs (

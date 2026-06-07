@@ -62,6 +62,9 @@ export default function PublicOrderTrackingPage() {
   const [isSimulated, setIsSimulated] = useState(false)
   const [simStep, setSimStep] = useState(0)
 
+  const [messages, setMessages] = useState([])
+  const [newMessageText, setNewMessageText] = useState('')
+
   const loadData = async (isPoll = false) => {
     try {
       if (!isPoll) setLoading(true)
@@ -70,6 +73,14 @@ export default function PublicOrderTrackingPage() {
 
       if (restRes.success) setRestaurant(restRes.data)
       if (orderRes.success) setOrder(orderRes.data)
+
+      // Load chat messages
+      if (!isSimulated) {
+        const chatRes = await publicApi.getMessages(slug, id)
+        if (chatRes.success && chatRes.data) {
+          setMessages(chatRes.data)
+        }
+      }
     } catch (err) {
       console.warn('Erro ao conectar com API para rastreamento, usando simulador.', err)
       // Activate mock simulator
@@ -120,6 +131,28 @@ export default function PublicOrderTrackingPage() {
             status: nextStatus,
             logs: [...o.logs, { to_status: nextStatus, notes: STATUS_STEPS[nextStep].desc, created_at: new Date().toISOString() }]
           }))
+
+          const statusChatMessages = {
+            confirmed: 'Seu pedido foi confirmado pelo estabelecimento! ✅',
+            preparing: 'Seu pedido já está em andamento / preparação! 👨‍🍳',
+            ready: 'Seu pedido está pronto! 📦',
+            out_for_delivery: 'Seu pedido saiu para entrega! 🛵',
+            delivered: 'Seu pedido foi entregue! Agradecemos a preferência! 🍔',
+          };
+          const chatMsg = statusChatMessages[nextStatus]
+          if (chatMsg) {
+            setMessages(m => [
+              ...m,
+              {
+                id: Date.now(),
+                order_id: id,
+                sender_type: 'system',
+                message: chatMsg,
+                created_at: new Date().toISOString()
+              }
+            ])
+          }
+
           toast.success(`Status do pedido atualizado: ${STATUS_STEPS[nextStep].label}! 🎉`)
           return nextStep
         }
@@ -128,6 +161,91 @@ export default function PublicOrderTrackingPage() {
     }, 20000)
     return () => clearInterval(timer)
   }, [isSimulated, order])
+
+  const loadChatMessages = async () => {
+    if (isSimulated) return
+    try {
+      const res = await publicApi.getMessages(slug, id)
+      if (res.success && res.data) {
+        setMessages(res.data)
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar chat:', err)
+    }
+  }
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault()
+    if (!newMessageText.trim()) return
+
+    const txt = newMessageText.trim()
+    setNewMessageText('')
+
+    if (isSimulated) {
+      const customerMsg = {
+        id: Date.now(),
+        order_id: id,
+        sender_type: 'customer',
+        message: txt,
+        created_at: new Date().toISOString()
+      }
+      setMessages(prev => [...prev, customerMsg])
+
+      setTimeout(() => {
+        const merchantMsg = {
+          id: Date.now() + 1,
+          order_id: id,
+          sender_type: 'merchant',
+          message: 'Olá! Recebemos sua mensagem. Seu pedido está sendo preparado e qualquer dúvida estamos à disposição! 👍',
+          created_at: new Date().toISOString()
+        }
+        setMessages(prev => [...prev, merchantMsg])
+      }, 3000)
+      return
+    }
+
+    try {
+      const res = await publicApi.sendMessage(slug, id, txt)
+      if (res.success && res.data) {
+        setMessages(prev => [...prev, res.data])
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao enviar mensagem.')
+    }
+  }
+
+  // Initialize mock messages on simulation mode start
+  useEffect(() => {
+    if (isSimulated) {
+      setMessages([
+        {
+          id: 1,
+          order_id: id,
+          sender_type: 'system',
+          message: 'Pedido enviado! Aguardando confirmação do estabelecimento. ⏳',
+          created_at: new Date().toISOString()
+        }
+      ])
+    }
+  }, [isSimulated])
+
+  // Polling for chat messages
+  useEffect(() => {
+    if (isSimulated) return
+    const timer = setInterval(() => {
+      loadChatMessages()
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [slug, id, isSimulated])
+
+  // Scroll chat messages to bottom
+  useEffect(() => {
+    const container = document.getElementById('chat-messages-container')
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  }, [messages])
 
   // Apply visual theme from database dynamically
   useEffect(() => {
@@ -320,6 +438,81 @@ export default function PublicOrderTrackingPage() {
               ) : (
                 <p className="text-xs text-gray-400">Este pedido foi feito para **Retirada no Balcão**.</p>
               )}
+            </div>
+
+            {/* Chat com o Estabelecimento */}
+            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full" style={{ backgroundColor: primaryColor }} />
+                Chat do Pedido 💬
+              </h3>
+              
+              <div className="flex flex-col h-[300px] bg-black/30 border border-white/5 rounded-2xl overflow-hidden">
+                {/* Message History */}
+                <div 
+                  className="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col no-scrollbar scroll-smooth" 
+                  id="chat-messages-container"
+                >
+                  {messages.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+                      <MessageSquare size={24} className="text-gray-600 mb-2 animate-pulse" />
+                      <p className="text-[10px] text-gray-500 italic">Nenhuma mensagem. Envie um oi para falar com o restaurante!</p>
+                    </div>
+                  ) : (
+                    messages.map((msg) => {
+                      const isCustomer = msg.sender_type === 'customer'
+                      const isSystem = msg.sender_type === 'system'
+                      
+                      if (isSystem) {
+                        return (
+                          <div key={msg.id} className="self-center bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-full text-[10px] text-gray-400 font-semibold max-w-[90%] text-center shadow-sm">
+                            {msg.message}
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`max-w-[75%] rounded-2xl p-3 text-xs leading-relaxed flex flex-col shadow-md ${
+                            isCustomer
+                              ? 'self-end text-white rounded-tr-none'
+                              : 'self-start bg-white/10 text-gray-200 rounded-tl-none border border-white/5'
+                          }`}
+                          style={isCustomer ? { backgroundColor: primaryColor } : {}}
+                        >
+                          <span className="font-bold text-[9px] text-white/55 mb-1">
+                            {isCustomer ? 'Você' : (restaurant.name || 'Estabelecimento')}
+                          </span>
+                          <span>{msg.message}</span>
+                          <span className="text-[8px] text-white/45 self-end mt-1 font-semibold">
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+
+                {/* Message Input Form */}
+                <form onSubmit={handleSendMessage} className="p-3 bg-black/20 border-t border-white/5 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Digite sua mensagem para o restaurante..."
+                    value={newMessageText}
+                    onChange={(e) => setNewMessageText(e.target.value)}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6B35]"
+                    style={{ focusBorderColor: primaryColor }}
+                  />
+                  <button 
+                    type="submit" 
+                    className="px-4 py-2 text-xs font-bold text-white rounded-xl hover:opacity-90 transition-opacity shrink-0 animate-fade-in"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    Enviar
+                  </button>
+                </form>
+              </div>
             </div>
 
           </div>

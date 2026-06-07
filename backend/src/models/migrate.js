@@ -30,6 +30,7 @@ const EXPECTED_TABLES = [
   'orders',
   'order_items',
   'order_status_logs',
+  'order_messages',
   'system_logs',
 ];
 
@@ -178,6 +179,24 @@ async function migrate() {
         await connection.query('ALTER TABLE payment_settings ADD COLUMN pix_instructions TEXT DEFAULT NULL AFTER pix_receiver_city');
         console.log('     + Coluna pix_instructions adicionada.');
       }
+
+      console.log('  🔄 Verificando e criando tabela de chat (order_messages)...');
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS order_messages (
+          id            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          order_id      INT UNSIGNED NOT NULL,
+          restaurant_id INT UNSIGNED NOT NULL,
+          sender_type   ENUM('customer', 'merchant', 'system') NOT NULL,
+          message       TEXT NOT NULL,
+          created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_order (order_id),
+          INDEX idx_restaurant (restaurant_id),
+          INDEX idx_created_at (created_at),
+          FOREIGN KEY (order_id)      REFERENCES orders(id)      ON DELETE CASCADE,
+          FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('     + Tabela order_messages verificada/criada.');
     } catch (colErr) {
       console.warn('  ⚠️ Aviso ao tentar atualizar colunas incrementais:', colErr.message);
     }

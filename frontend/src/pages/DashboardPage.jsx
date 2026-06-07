@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import {
   ShoppingBag, DollarSign, Clock, Users, TrendingUp, TrendingDown,
   ArrowUpRight, Package, ChevronRight, ToggleLeft, ToggleRight,
-  TrendingUp as TicketIcon, Play, CheckCircle2, AlertCircle, Sparkles, Loader2
+  TrendingUp as TicketIcon, Play, CheckCircle2, AlertCircle, Sparkles, Loader2,
+  Share2, Copy, ExternalLink
 } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
@@ -152,6 +153,49 @@ export default function DashboardPage() {
           <span>{isOpen ? 'Restaurante Aberto' : 'Restaurante Fechado'}</span>
         </button>
       </div>
+
+      {/* Cardápio Link Banner */}
+      {user?.restaurant?.slug && (
+        <div className="bg-gradient-to-r from-[#FF6B35]/15 to-[#1A0533]/50 border border-[#FF6B35]/20 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4 text-left">
+            <div className="w-12 h-12 rounded-2xl bg-[#FF6B35]/10 flex items-center justify-center text-[#FF6B35] shrink-0">
+              <Share2 size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                Seu Cardápio Digital está Online! 🚀
+              </h3>
+              <p className="text-[#a991c7] text-xs mt-1">
+                Compartilhe o link do seu restaurante para receber pedidos diretamente no painel.
+              </p>
+              <div className="mt-2.5 flex items-center gap-2 text-xs bg-black/40 border border-white/5 px-3 py-1.5 rounded-xl text-white font-mono break-all select-all">
+                {`${window.location.origin}/cardapio/${user.restaurant.slug}`}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end shrink-0">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/cardapio/${user.restaurant.slug}`)
+                toast.success('Link do cardápio copiado! 📋')
+              }}
+              className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs border border-white/10 transition-all"
+            >
+              <Copy size={14} />
+              Copiar Link
+            </button>
+            <a
+              href={`/cardapio/${user.restaurant.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white font-bold text-xs shadow-lg shadow-[#FF6B35]/20 transition-all"
+            >
+              Visualizar Cardápio
+              <ExternalLink size={14} />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Main KPI Grid (Vendas, Pedidos, Ticket, Status) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

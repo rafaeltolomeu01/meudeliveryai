@@ -360,6 +360,12 @@ const createPublicOrder = async (req, res, next) => {
         [order_id, restaurant.id]
       );
 
+      // Inicializa o chat do pedido
+      await queryTransaction(connection,
+        'INSERT INTO order_messages (order_id, restaurant_id, sender_type, message) VALUES (?, ?, \'system\', \'Pedido enviado! Aguardando confirmação do estabelecimento. ⏳\')',
+        [order_id, restaurant.id]
+      );
+
       // Incrementa estatísticas do cliente
       if (customerId) {
         await queryTransaction(connection,
@@ -447,9 +453,83 @@ const getPublicOrder = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/public/restaurant/:slug/orders/:id/messages
+ */
+const getPublicMessages = async (req, res, next) => {
+  try {
+    const { slug, id } = req.params;
+
+    const restaurants = await query('SELECT id FROM restaurants WHERE slug = ? LIMIT 1', [slug]);
+    if (restaurants.length === 0) {
+      return res.status(404).json({ success: false, message: 'Restaurante não encontrado.' });
+    }
+    const restaurant_id = restaurants[0].id;
+
+    const orders = await query('SELECT id FROM orders WHERE id = ? AND restaurant_id = ? LIMIT 1', [id, restaurant_id]);
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pedido não encontrado.' });
+    }
+
+    const messages = await query(
+      'SELECT * FROM order_messages WHERE order_id = ? AND restaurant_id = ? ORDER BY created_at ASC',
+      [id, restaurant_id]
+    );
+
+    return res.json({ success: true, data: messages });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/public/restaurant/:slug/orders/:id/messages
+ */
+const sendPublicMessage = async (req, res, next) => {
+  try {
+    const { slug, id } = req.params;
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'A mensagem não pode ser vazia.' });
+    }
+
+    const restaurants = await query('SELECT id FROM restaurants WHERE slug = ? LIMIT 1', [slug]);
+    if (restaurants.length === 0) {
+      return res.status(404).json({ success: false, message: 'Restaurante não encontrado.' });
+    }
+    const restaurant_id = restaurants[0].id;
+
+    const orders = await query('SELECT id FROM orders WHERE id = ? AND restaurant_id = ? LIMIT 1', [id, restaurant_id]);
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pedido não encontrado.' });
+    }
+
+    const result = await query(
+      'INSERT INTO order_messages (order_id, restaurant_id, sender_type, message) VALUES (?, ?, ?, ?)',
+      [id, restaurant_id, 'customer', message.trim()]
+    );
+
+    const newMessage = {
+      id: result.insertId,
+      order_id: parseInt(id),
+      restaurant_id,
+      sender_type: 'customer',
+      message: message.trim(),
+      created_at: new Date()
+    };
+
+    return res.status(201).json({ success: true, data: newMessage });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getRestaurantBySlug,
   getRestaurantMenu,
   createPublicOrder,
-  getPublicOrder
+  getPublicOrder,
+  getPublicMessages,
+  sendPublicMessage
 };

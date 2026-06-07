@@ -92,6 +92,8 @@ export const orders = {
   cancel: (id, reason) => api.patch(`/orders/${id}/cancel`, { reason }),
   assignDriver: (id, driverId) => api.patch(`/orders/${id}/assign-driver`, { driverId }),
   stats: (params) => api.get('/orders/stats', { params }),
+  getMessages: (id) => api.get(`/orders/${id}/messages`),
+  sendMessage: (id, message) => api.post(`/orders/${id}/messages`, { message }),
 }
 
 // ===== CUSTOMERS =====
@@ -158,6 +160,8 @@ export const publicApi = {
   getMenu: (slug) => api.get(`/public/restaurant/${slug}/menu`),
   createOrder: (slug, data) => api.post(`/public/restaurant/${slug}/orders`, data),
   getOrder: (slug, orderId) => api.get(`/public/restaurant/${slug}/orders/${orderId}`),
+  getMessages: (slug, orderId) => api.get(`/public/restaurant/${slug}/orders/${orderId}/messages`),
+  sendMessage: (slug, orderId, message) => api.post(`/public/restaurant/${slug}/orders/${orderId}/messages`, { message }),
 }
 
 // ===== ADMIN (SUPER ADMIN) =====

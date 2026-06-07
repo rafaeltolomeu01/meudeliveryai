@@ -6,7 +6,7 @@ const tenantMiddleware = require('../middlewares/tenantMiddleware');
 const subscriptionMiddleware = require('../middlewares/subscriptionMiddleware');
 const { checkOwnership } = tenantMiddleware;
 const {
-  getAll, getOne, create, updateStatus, assignDriver, cancel, getStats, markAsPaid,
+  getAll, getOne, create, updateStatus, assignDriver, cancel, getStats, markAsPaid, getMessages, sendMessage,
 } = require('../controllers/order.controller');
 
 // ─── Validações ───────────────────────────────────────────────────────────────
@@ -53,5 +53,9 @@ router.patch('/:id/assign-driver', authMiddleware, tenantMiddleware, subscriptio
 
 // PATCH /api/v1/orders/:id/cancel
 router.patch('/:id/cancel', authMiddleware, tenantMiddleware, subscriptionMiddleware, checkOwnership('orders'), cancel);
+
+// Chat / Mensagens
+router.get('/:id/messages', authMiddleware, tenantMiddleware, checkOwnership('orders'), getMessages);
+router.post('/:id/messages', authMiddleware, tenantMiddleware, checkOwnership('orders'), sendMessage);
 
 module.exports = router;

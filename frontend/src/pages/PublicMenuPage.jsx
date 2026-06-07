@@ -370,6 +370,7 @@ export default function PublicMenuPage() {
   const primaryColor = restaurant.primary_color || '#FF6B35'
   const bgColor = restaurant.background_color || '#0F0F0F'
   const secondaryColor = restaurant.secondary_color || '#1A0533'
+  const buttonColor = restaurant.button_color || primaryColor
 
   const borderRadiusClass = restaurant.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-2xl'
   const buttonRadiusClass = restaurant.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-xl'

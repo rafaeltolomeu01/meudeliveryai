@@ -253,6 +253,12 @@ const create = async (req, res, next) => {
         );
       }
 
+      // Inicializa o chat do pedido
+      await queryTransaction(connection,
+        'INSERT INTO order_messages (order_id, restaurant_id, sender_type, message) VALUES (?, ?, \'system\', \'Pedido enviado! Aguardando confirmação do estabelecimento. ⏳\')',
+        [order_id, restaurant_id]
+      );
+
       await connection.commit();
       connection.release();
 
@@ -334,6 +340,22 @@ const updateStatus = async (req, res, next) => {
       [id, restaurant_id, status, `Status alterado para "${label}" pelo estabelecimento`]
     );
 
+    const statusChatMessages = {
+      confirmed: 'Seu pedido foi confirmado pelo estabelecimento! ✅',
+      preparing: 'Seu pedido já está em andamento / preparação! 👨‍🍳',
+      ready: 'Seu pedido está pronto! 📦',
+      out_for_delivery: 'Seu pedido saiu para entrega! 🛵',
+      delivered: 'Seu pedido foi entregue! Agradecemos a preferência! 🍔',
+      cancelled: 'Seu pedido foi cancelado pelo estabelecimento. ❌',
+    };
+    const chatMsg = statusChatMessages[status];
+    if (chatMsg) {
+      await query(
+        'INSERT INTO order_messages (order_id, restaurant_id, sender_type, message) VALUES (?, ?, ?, ?)',
+        [id, restaurant_id, 'system', chatMsg]
+      );
+    }
+
     const updated = await query('SELECT * FROM orders WHERE id = ? LIMIT 1', [id]);
     return res.json({ success: true, message: 'Status do pedido atualizado!', data: updated[0] });
   } catch (error) {
@@ -404,6 +426,11 @@ const cancel = async (req, res, next) => {
     await query(
       'INSERT INTO order_status_logs (order_id, restaurant_id, to_status, notes) VALUES (?, ?, \'cancelled\', ?)',
       [id, restaurant_id, reason || 'Pedido cancelado pelo estabelecimento']
+    );
+
+    await query(
+      'INSERT INTO order_messages (order_id, restaurant_id, sender_type, message) VALUES (?, ?, ?, ?)',
+      [id, restaurant_id, 'system', `Pedido cancelado pelo estabelecimento. Motivo: ${reason || 'Não informado'}. ❌`]
     );
 
     // Reverte stats do cliente se necessário
@@ -486,4 +513,66 @@ const markAsPaid = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, getOne, create, updateStatus, assignDriver, cancel, getStats, markAsPaid };
+/**
+ * GET /api/v1/orders/:id/messages
+ */
+const getMessages = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const restaurant_id = req.user.restaurant_id;
+
+    const orders = await query('SELECT id FROM orders WHERE id = ? AND restaurant_id = ? LIMIT 1', [id, restaurant_id]);
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pedido não encontrado.' });
+    }
+
+    const messages = await query(
+      'SELECT * FROM order_messages WHERE order_id = ? AND restaurant_id = ? ORDER BY created_at ASC',
+      [id, restaurant_id]
+    );
+
+    return res.json({ success: true, data: messages });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/orders/:id/messages
+ */
+const sendMessage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+    const restaurant_id = req.user.restaurant_id;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'A mensagem não pode ser vazia.' });
+    }
+
+    const orders = await query('SELECT id FROM orders WHERE id = ? AND restaurant_id = ? LIMIT 1', [id, restaurant_id]);
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pedido não encontrado.' });
+    }
+
+    const result = await query(
+      'INSERT INTO order_messages (order_id, restaurant_id, sender_type, message) VALUES (?, ?, ?, ?)',
+      [id, restaurant_id, 'merchant', message.trim()]
+    );
+
+    const newMessage = {
+      id: result.insertId,
+      order_id: parseInt(id),
+      restaurant_id,
+      sender_type: 'merchant',
+      message: message.trim(),
+      created_at: new Date()
+    };
+
+    return res.status(201).json({ success: true, data: newMessage });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAll, getOne, create, updateStatus, assignDriver, cancel, getStats, markAsPaid, getMessages, sendMessage };
