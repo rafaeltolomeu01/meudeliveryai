@@ -29,6 +29,45 @@ const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '';
 const evoApi = getEvoApi();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function extractQrCode(data) {
+  console.log("QR Response:", data);
+  if (!data) return null;
+
+  let qr = null;
+  if (typeof data === 'string') {
+    qr = data;
+  } else {
+    qr = data.qrcode || 
+         data.base64 || 
+         data.qr || 
+         data.code || 
+         data.pairingCode || 
+         data.instance?.qrcode || 
+         data.data?.qrcode || 
+         data.qrcode?.base64 ||
+         data.qrcode?.code ||
+         data.instance?.connect?.qrcode ||
+         null;
+  }
+
+  if (typeof qr === 'object' && qr !== null) {
+    qr = qr.base64 || qr.qrcode || qr.code || null;
+  }
+
+  if (qr && typeof qr === 'string') {
+    qr = qr.trim();
+    if (qr.startsWith('data:')) {
+      return qr;
+    }
+    if (/^[A-Za-z0-9+/=]+$/.test(qr.replace(/\s/g, '')) || qr.length > 100) {
+      return `data:image/png;base64,${qr}`;
+    }
+    return qr;
+  }
+
+  return null;
+}
+
 function sessionName(restaurantId) {
   return `restaurant_${restaurantId}`;
 }
@@ -163,8 +202,31 @@ const connect = async (req, res, next) => {
     }
 
     // Buscar QR Code
-    const qrResp = await evoApi.get(`/instance/connect/${name}`);
-    const qrBase64 = qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || null;
+    let qrBase64 = null;
+    let errorDetail = null;
+    try {
+      const response = await evoApi.get(`/instance/connect/${name}`);
+      console.log("QR Response:", response.data);
+      qrBase64 = extractQrCode(response.data);
+      if (!qrBase64) {
+        errorDetail = 'Evolution API connect responded successfully but did not contain a valid QR Code format.';
+      }
+    } catch (qrErr) {
+      console.error("[WhatsApp] Error fetching QR in connect:", qrErr.message);
+      errorDetail = qrErr.message;
+      if (qrErr.response) {
+        console.error("[WhatsApp] Error detail:", qrErr.response.data);
+        errorDetail += ' - ' + JSON.stringify(qrErr.response.data);
+      }
+    }
+
+    if (!qrBase64) {
+      return res.status(422).json({
+        success: false,
+        message: 'A Evolution API não retornou o QR Code. Certifique-se de que a instância está ativa.',
+        details: errorDetail
+      });
+    }
 
     await query(
       `UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW()
@@ -253,18 +315,37 @@ const getQrCode = async (req, res, next) => {
     const conn = await getOrCreateConnection(restaurantId);
 
     if (isEvoConfigured() && conn.status === 'connecting') {
+      let qrBase64 = null;
+      let errorDetail = null;
       try {
-        const qrResp = await evoApi.get(`/instance/connect/${conn.session_name}`);
-        const qrBase64 = qrResp.data?.base64 || qrResp.data?.qrcode?.base64 || null;
-
-        if (qrBase64) {
-          await query(
-            'UPDATE whatsapp_connections SET qr_code = ?, updated_at = NOW() WHERE restaurant_id = ?',
-            [qrBase64, restaurantId]
-          );
-          return res.json({ success: true, data: { qr_code: qrBase64 } });
+        const response = await evoApi.get(`/instance/connect/${conn.session_name}`);
+        console.log("QR Response:", response.data);
+        qrBase64 = extractQrCode(response.data);
+        if (!qrBase64) {
+          errorDetail = 'Evolution API connect responded successfully but did not contain a valid QR Code format.';
         }
-      } catch (_) {}
+      } catch (qrErr) {
+        console.error("[WhatsApp] Error fetching QR in getQrCode:", qrErr.message);
+        errorDetail = qrErr.message;
+        if (qrErr.response) {
+          console.error("[WhatsApp] Error detail:", qrErr.response.data);
+          errorDetail += ' - ' + JSON.stringify(qrErr.response.data);
+        }
+      }
+
+      if (qrBase64) {
+        await query(
+          'UPDATE whatsapp_connections SET qr_code = ?, updated_at = NOW() WHERE restaurant_id = ?',
+          [qrBase64, restaurantId]
+        );
+        return res.json({ success: true, data: { qr_code: qrBase64 } });
+      } else {
+        return res.status(422).json({
+          success: false,
+          message: 'A Evolution API não retornou o QR Code ao atualizar.',
+          details: errorDetail
+        });
+      }
     }
 
     return res.json({ success: true, data: { qr_code: conn.qr_code } });
@@ -296,7 +377,7 @@ const webhook = async (req, res, next) => {
 
     if (event === 'connection.update' || event === 'QRCODE_UPDATED') {
       const state  = payload?.data?.state || payload?.data?.instance?.state;
-      const qr     = payload?.data?.qrcode?.base64 || null;
+      const qr     = extractQrCode(payload) || extractQrCode(payload?.data) || payload?.data?.qrcode?.base64 || null;
       const phone  = payload?.data?.wuid?.replace('@s.whatsapp.net', '') || null;
       const pname  = payload?.data?.profileName || null;
 

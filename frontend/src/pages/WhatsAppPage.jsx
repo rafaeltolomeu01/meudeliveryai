@@ -195,6 +195,7 @@ export default function WhatsAppPage() {
   const [errorMsg, setErrorMsg]         = useState(null)
 
   const pollingRef  = useRef(null)
+  const pollingQrRef = useRef(null)
   const chatEndRef  = useRef(null)
 
   // ─── Load functions ───────────────────────────────────────────────────────
@@ -264,6 +265,28 @@ export default function WhatsAppPage() {
     return () => clearInterval(pollingRef.current)
   }, [conn?.status, loadStatus])
 
+  // Polling QR Code while connecting
+  useEffect(() => {
+    if (conn?.status === 'connecting') {
+      pollingQrRef.current = setInterval(async () => {
+        try {
+          const res = await whatsappApi.qrcode()
+          if (res.success && res.data?.qr_code) {
+            setConn(prev => {
+              if (!prev || prev.status !== 'connecting') return prev;
+              return { ...prev, qr_code: res.data.qr_code };
+            });
+          }
+        } catch (e) {
+          console.error("Erro ao atualizar QR no polling:", e);
+        }
+      }, 15000)
+    } else {
+      clearInterval(pollingQrRef.current)
+    }
+    return () => clearInterval(pollingQrRef.current)
+  }, [conn?.status])
+
   // Scroll chat to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -273,13 +296,17 @@ export default function WhatsAppPage() {
   const handleConnect = async () => {
     try {
       setActionLoading(true)
+      setQrLoading(true)
       setErrorMsg(null)
       const res = await whatsappApi.connect()
       if (res.success) { setConn(res.data); toast.success(res.message || 'Iniciando conexão...') }
     } catch (e) {
       setErrorMsg(e.message || 'Erro ao conectar')
       toast.error(e.message || 'Erro ao conectar')
-    } finally { setActionLoading(false) }
+    } finally {
+      setActionLoading(false)
+      setQrLoading(false)
+    }
   }
 
   const handleDisconnect = async () => {
