@@ -164,7 +164,33 @@ const login = async (req, res, next) => {
     );
 
     if (users.length === 0) {
-      return res.status(401).json({ success: false, message: 'E-mail ou senha incorretos.' });
+      if (email === 'demo@meudeliveryai.com' && password === '123456') {
+        console.log('🔄 Demo login requested but user not found. Seeding demo database dynamically...');
+        try {
+          const { seed } = require('../scripts/seed-demo');
+          await seed();
+          
+          // Re-fetch user details after seeding
+          const usersRetry = await query(
+            `SELECT u.*, r.name as restaurant_name, r.slug as restaurant_slug, r.status as restaurant_status, rs.is_open as restaurant_is_open
+             FROM users u
+             LEFT JOIN restaurants r ON r.id = u.restaurant_id
+             LEFT JOIN restaurant_settings rs ON rs.restaurant_id = u.restaurant_id
+             WHERE u.email = ? LIMIT 1`,
+            [email]
+          );
+          if (usersRetry.length > 0) {
+            users.push(usersRetry[0]);
+          } else {
+            return res.status(401).json({ success: false, message: 'Erro ao inicializar ambiente de demonstração.' });
+          }
+        } catch (seedErr) {
+          console.error('Erro ao semear banco de dados de demonstração dinamicamente:', seedErr);
+          return res.status(500).json({ success: false, message: 'Erro ao inicializar ambiente de demonstração no servidor.' });
+        }
+      } else {
+        return res.status(401).json({ success: false, message: 'E-mail ou senha incorretos.' });
+      }
     }
 
     const user = users[0];

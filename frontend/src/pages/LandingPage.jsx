@@ -180,14 +180,6 @@ export default function LandingPage() {
               Começar Grátis Agora
               <ArrowRight size={20} />
             </Link>
-            <Link
-              to="/login"
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl font-semibold text-base transition-all duration-200"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8f4ff' }}
-            >
-              Ver Demo
-              <ChevronRight size={20} />
-            </Link>
           </div>
 
           {/* Stats */}

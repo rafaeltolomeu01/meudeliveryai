@@ -567,7 +567,11 @@ async function seed() {
       console.log('     Senha : 123456');
       console.log('     Slug  : demo');
       console.log('');
-      process.exit(0);
+      
+      if (require.main === module) {
+        process.exit(0);
+      }
+      return true;
 
     } catch (err) {
       await connection.rollback();
@@ -576,8 +580,15 @@ async function seed() {
     }
   } catch (error) {
     console.error('\n❌ Erro durante o seeding do ambiente de demonstração:', error.message);
-    process.exit(1);
+    if (require.main === module) {
+      process.exit(1);
+    }
+    throw error;
   }
 }
 
-seed();
+if (require.main === module) {
+  seed();
+}
+
+module.exports = { seed };

@@ -162,31 +162,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-white/[0.06]"></div>
-            <span className="flex-shrink mx-4 text-xs text-[#6b5880]">ou</span>
-            <div className="flex-grow border-t border-white/[0.06]"></div>
-          </div>
-
-          <Button
-            type="button"
-            variant="secondary"
-            size="lg"
-            fullWidth
-            onClick={async () => {
-              setForm({ email: 'demo@meudeliveryai.com', password: '123456' })
-              setLoading(true)
-              const result = await login('demo@meudeliveryai.com', '123456')
-              setLoading(false)
-              if (result.success) {
-                navigate('/dashboard')
-              }
-            }}
-            id="login-demo-shortcut"
-          >
-            Acessar Modo Demonstração 🚀
-          </Button>
-
           <p className="text-center text-[#6b5880] text-xs mt-6">
             Ao entrar, você concorda com nossos{' '}
             <a href="#" className="text-[#a991c7] hover:underline">Termos</a>
