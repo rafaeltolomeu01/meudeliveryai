@@ -11,6 +11,7 @@
     "start:backend": "npm start --prefix backend",
     "db:migrate": "npm run db:migrate --prefix backend",
     "db:create-admin": "npm run db:create-admin --prefix backend",
+    "setup-db": "npm run setup-db --prefix backend",
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend"
   },

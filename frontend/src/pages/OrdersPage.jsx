@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Clock, User, MapPin, CreditCard, Search, X, Check, Printer, MessageSquare, Phone, AlertCircle, ShoppingBag, Loader2, CheckCircle, ChevronDown } from 'lucide-react'
+import { Clock, User, MapPin, CreditCard, Search, X, Check, Printer, MessageSquare, Phone, AlertCircle, ShoppingBag, Loader2, CheckCircle, ChevronDown, Truck } from 'lucide-react'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -79,6 +79,39 @@ export default function OrdersPage() {
   const [cancelReason, setCancelReason] = useState('')
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showPrintMenu, setShowPrintMenu] = useState(false)
+
+  // Drag and drop state and handlers
+  const [activeDragCol, setActiveDragCol] = useState(null)
+
+  const handleDragStart = (e, order) => {
+    e.dataTransfer.setData('orderId', order.id.toString())
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = async (e, targetColumnKey) => {
+    e.preventDefault()
+    const orderIdStr = e.dataTransfer.getData('orderId')
+    if (!orderIdStr) return
+    const orderId = parseInt(orderIdStr)
+    
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return
+
+    let newStatus = targetColumnKey
+    if (targetColumnKey === 'preparing') {
+      newStatus = order.status === 'pending' ? 'confirmed' : 'preparing'
+    } else if (targetColumnKey === 'delivered' && order.order_type === 'pickup') {
+      newStatus = 'picked_up'
+    }
+
+    if (order.status === newStatus || (order.status === 'confirmed' && newStatus === 'preparing') || (order.status === 'picked_up' && newStatus === 'delivered')) return
+
+    await handleUpdateStatus(order.id, newStatus)
+  }
 
   const loadOrders = async (isPoll = false) => {
     try {
@@ -359,10 +392,21 @@ export default function OrdersPage() {
       <div className="flex gap-4 overflow-x-auto pb-4 items-start select-none">
         {COLUMNS.map((col) => {
           const colOrders = getOrdersByColumn(col.key)
+          const isDraggingOver = activeDragCol === col.key
+
           return (
             <div
               key={col.key}
-              className={`flex-shrink-0 w-80 rounded-3xl border ${colColors[col.color]} flex flex-col max-h-[75vh]`}
+              onDragOver={handleDragOver}
+              onDragEnter={() => setActiveDragCol(col.key)}
+              onDragLeave={() => setActiveDragCol(null)}
+              onDrop={(e) => {
+                handleDrop(e, col.key)
+                setActiveDragCol(null)
+              }}
+              className={`flex-shrink-0 w-72 sm:w-80 rounded-3xl border ${colColors[col.color]} flex flex-col max-h-[75vh] transition-all duration-200 ${
+                isDraggingOver ? 'scale-[1.02] ring-2 ring-[#FF6B35]/50 bg-white/[0.03] border-[#FF6B35]/30 shadow-[0_0_25px_rgba(255,107,53,0.08)]' : ''
+              }`}
             >
               {/* Column Title */}
               <div className="p-4 border-b border-white/[0.05] flex items-center justify-between bg-black/10 rounded-t-3xl">
@@ -371,7 +415,7 @@ export default function OrdersPage() {
               </div>
 
               {/* Cards wrapper */}
-              <div className="p-3 space-y-3 overflow-y-auto flex-1 no-scrollbar">
+              <div className="p-3 space-y-3 overflow-y-auto flex-1 no-scrollbar min-h-[200px]">
                 {colOrders.length === 0 && (
                   <div className="text-center py-10 text-[#6b5880] text-xs italic">Nenhum pedido</div>
                 )}
@@ -381,7 +425,9 @@ export default function OrdersPage() {
                   return (
                     <div
                       key={order.id}
-                      className="glass rounded-2xl p-4 border border-white/[0.06] hover:border-white/10 card-hover cursor-pointer space-y-3 relative overflow-hidden"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, order)}
+                      className="glass rounded-2xl p-4 border border-white/[0.06] hover:border-white/10 card-hover cursor-grab active:cursor-grabbing active:opacity-40 space-y-3 relative overflow-hidden transition-all duration-150"
                       onClick={() => setSelectedOrder(order)}
                     >
                       {/* Card Header */}

@@ -98,7 +98,7 @@ export default function AppLayout() {
         )}
 
         <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6 overflow-auto">
-          <div className="max-w-7xl mx-auto animate-fade-in">
+          <div className={`${location.pathname === '/dashboard/pedidos' ? 'max-w-none w-full' : 'max-w-7xl mx-auto'} animate-fade-in`}>
             <Outlet context={{ subscriptionData, refreshSubscription: fetchSubscription, isExpired }} />
           </div>
         </main>

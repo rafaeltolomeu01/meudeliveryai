@@ -58,6 +58,24 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/api/health', async (req, res) => {
+  try {
+    const db = require('./src/config/database');
+    await db.query('SELECT 1');
+    return res.json({
+      status: "ok",
+      database: "connected",
+      environment: process.env.NODE_ENV || 'production'
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: "error",
+      database: "disconnected",
+      environment: process.env.NODE_ENV || 'production'
+    });
+  }
+});
+
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/v1', routes);
 
@@ -78,6 +96,22 @@ const PORT = process.env.PORT || 3001;
 async function startServer() {
   try {
     await testConnection();
+
+    // Auto-setup se o banco estiver vazio (sem tabelas)
+    try {
+      const { query } = require('./src/config/database');
+      const tables = await query('SHOW TABLES');
+      if (tables.length === 0) {
+        console.log('⚠️  Banco de dados detectado como vazio (sem tabelas). Iniciando setup automático...');
+        const setupDb = require('./scripts/setup-db');
+        await setupDb();
+      } else {
+        console.log(`📊 Banco de dados existente detectado com ${tables.length} tabelas.`);
+      }
+    } catch (dbErr) {
+      console.warn('⚠️  Aviso ao verificar tabelas para auto-setup:', dbErr.message);
+    }
+
     app.listen(PORT, () => {
       console.log('');
       console.log('╔════════════════════════════════════════╗');

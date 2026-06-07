@@ -34,15 +34,38 @@ const EXPECTED_TABLES = [
 ];
 
 async function migrate() {
-  // Normalizar variáveis DATABASE_* (Render / MySQL Externo) para DB_*
-  if (process.env.DATABASE_HOST) process.env.DB_HOST = process.env.DATABASE_HOST;
-  if (process.env.DATABASE_USER) process.env.DB_USER = process.env.DATABASE_USER;
-  if (process.env.DATABASE_PASSWORD) process.env.DB_PASSWORD = process.env.DATABASE_PASSWORD;
-  if (process.env.DATABASE_NAME) process.env.DB_NAME = process.env.DATABASE_NAME;
-  if (process.env.DATABASE_PORT) process.env.DB_PORT = process.env.DATABASE_PORT;
+  // 1. Parse de URL de Conexão se fornecida (MYSQL_PUBLIC_URL ou DATABASE_URL)
+  const urlString = process.env.MYSQL_PUBLIC_URL || process.env.DATABASE_URL;
+  if (urlString) {
+    try {
+      const parsedUrl = new URL(urlString);
+      process.env.DB_HOST = parsedUrl.hostname;
+      process.env.DB_PORT = parsedUrl.port || '3306';
+      process.env.DB_USER = parsedUrl.username;
+      process.env.DB_PASSWORD = decodeURIComponent(parsedUrl.password);
+      process.env.DB_NAME = parsedUrl.pathname.replace(/^\//, '');
+    } catch (e) {
+      console.error('❌ Erro ao decodificar URL do banco de dados (MYSQL_PUBLIC_URL / DATABASE_URL):', e.message);
+    }
+  } else {
+    // 2. Normalização alternativa das variáveis DATABASE_* para DB_*
+    if (process.env.DATABASE_HOST) process.env.DB_HOST = process.env.DATABASE_HOST;
+    if (process.env.DATABASE_USER) process.env.DB_USER = process.env.DATABASE_USER;
+    if (process.env.DATABASE_PASSWORD) process.env.DB_PASSWORD = process.env.DATABASE_PASSWORD;
+    if (process.env.DATABASE_NAME) process.env.DB_NAME = process.env.DATABASE_NAME;
+    if (process.env.DATABASE_PORT) process.env.DB_PORT = process.env.DATABASE_PORT;
+  }
 
-  // Suporte a SSL para bancos de dados gerenciados/externos na nuvem (como Render, AWS RDS, etc.)
-  const sslConfig = process.env.DB_SSL === 'true' || process.env.DATABASE_SSL === 'true'
+  // 3. Validação de produção: Não permitir localhost
+  if (process.env.NODE_ENV === 'production') {
+    const host = process.env.DB_HOST;
+    if (!host || host === 'localhost' || host === '127.0.0.1') {
+      throw new Error('❌ Segurança: Não é permitido usar localhost ou 127.0.0.1 como DB_HOST em ambiente de produção.');
+    }
+  }
+
+  // 4. Suporte SSL para bancos em nuvem (Render, Railway, Aiven, etc.)
+  const sslConfig = process.env.DB_SSL === 'true' || process.env.DATABASE_SSL === 'true' || process.env.MYSQL_PUBLIC_URL || process.env.DATABASE_URL
     ? { rejectUnauthorized: false }
     : undefined;
 
