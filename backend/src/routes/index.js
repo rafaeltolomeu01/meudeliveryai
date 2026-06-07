@@ -15,6 +15,7 @@ const userRoutes = require('./user.routes');
 const subscriptionRoutes = require('./subscription.routes');
 const adminRoutes = require('./admin.routes');
 const whatsappRoutes = require('./whatsapp.routes');
+const complementRoutes = require('./complement.routes');
 
 // ─── Montar Rotas ─────────────────────────────────────────────────────────────
 router.use('/auth', authRoutes);
@@ -31,5 +32,6 @@ router.use('/users', userRoutes);
 router.use('/subscription', subscriptionRoutes);
 router.use('/admin', adminRoutes);
 router.use('/whatsapp', whatsappRoutes);
+router.use('/complements', complementRoutes);
 
 module.exports = router;

@@ -352,3 +352,80 @@ input:focus, textarea:focus, select:focus {
 .bg-\[\#FF6B35\]\/20 {
   background-color: var(--theme-primary-alpha20, rgba(255, 107, 53, 0.2)) !important;
 }
+
+/* ===== MOBILE RESPONSIVENESS AND NO-SCROLL LAYOUT ===== */
+@media (max-width: 1024px) {
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+}
+
+/* Scrollable container styling */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom Scrollbar for modern look inside tables */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Responsive Table Helper: convert table to stack on small viewports */
+@media (max-width: 640px) {
+  .responsive-cards table,
+  .responsive-cards thead,
+  .responsive-cards tbody,
+  .responsive-cards th,
+  .responsive-cards td,
+  .responsive-cards tr {
+    display: block;
+    width: 100%;
+  }
+
+  .responsive-cards thead {
+    display: none; /* Hide header rows on mobile */
+  }
+
+  .responsive-cards tr {
+    margin-bottom: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 0.75rem;
+  }
+
+  .responsive-cards td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.25rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .responsive-cards td:last-child {
+    border-bottom: none;
+  }
+
+  /* Expose a data-label attribute for headers */
+  .responsive-cards td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #a991c7;
+    font-size: 11px;
+    text-transform: uppercase;
+    text-align: left;
+    margin-right: 1rem;
+  }
+}
+

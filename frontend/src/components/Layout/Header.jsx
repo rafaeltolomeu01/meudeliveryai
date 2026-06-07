@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight, Download } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePWA } from '../../contexts/PWAContext'
-import { restaurants as restaurantApi } from '../../services/api'
+import { restaurants as restaurantApi, orders as ordersApi } from '../../services/api'
 import toast from 'react-hot-toast'
 
 const pageNames = {
@@ -24,6 +24,7 @@ export default function Header() {
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState([])
 
   const pageName = pageNames[location.pathname] || 'Painel'
   const isOpen = user?.restaurant?.isOpen
@@ -45,11 +46,59 @@ export default function Header() {
     navigate('/login')
   }
 
-  const notifications = [
-    { id: 1, text: 'Novo pedido #BP-2847 recebido', time: '2min', unread: true },
-    { id: 2, text: 'Entregador João saiu para entrega', time: '8min', unread: true },
-    { id: 3, text: 'Relatório semanal disponível', time: '1h', unread: false },
-  ]
+  const fetchRecentOrders = async () => {
+    if (!user) return
+    try {
+      const res = await ordersApi.list({ limit: 5 })
+      if (res.success && res.data) {
+        const notifs = res.data.map(order => {
+          const createdTime = new Date(order.created_at)
+          const diffMs = new Date() - createdTime
+          const diffMins = Math.max(Math.floor(diffMs / 60000), 0)
+          let timeText = `${diffMins}min`
+          if (diffMins >= 60) {
+            timeText = `${Math.floor(diffMins / 60)}h`
+          }
+          if (diffMins >= 1440) {
+            timeText = `${Math.floor(diffMins / 1440)}d`
+          }
+          
+          let textText = ''
+          if (order.status === 'pending') {
+            textText = `Novo pedido ${order.order_number || ('#' + order.id)} recebido`
+          } else if (order.status === 'preparing') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} em preparação`
+          } else if (order.status === 'ready') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} pronto para entrega`
+          } else if (order.status === 'delivering') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} saiu para entrega`
+          } else if (order.status === 'delivered') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} entregue`
+          } else if (order.status === 'cancelled') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} cancelado`
+          } else {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} atualizado`
+          }
+
+          return {
+            id: order.id,
+            text: textText,
+            time: timeText,
+            unread: order.status === 'pending'
+          }
+        })
+        setNotifications(notifs)
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar notificações no header:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchRecentOrders()
+    const interval = setInterval(fetchRecentOrders, 15000)
+    return () => clearInterval(interval)
+  }, [user])
 
   return (
     <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-white/[0.06]"
@@ -97,22 +146,31 @@ export default function Header() {
             className="relative w-9 h-9 rounded-xl glass flex items-center justify-center text-[#a991c7] hover:text-white transition-colors"
           >
             <Bell size={18} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF6B35] rounded-full animate-pulse" />
+            {notifications.some(n => n.unread) && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF6B35] rounded-full animate-pulse" />
+            )}
           </button>
           {notifOpen && (
             <div className="absolute right-0 top-12 w-72 glass rounded-2xl border border-white/[0.08] shadow-2xl animate-slide-down z-50">
               <div className="px-4 py-3 border-b border-white/[0.06]">
                 <p className="text-white font-semibold text-sm">Notificações</p>
               </div>
-              {notifications.map((n) => (
-                <div key={n.id} className={`px-4 py-3 border-b border-white/[0.04] hover:bg-white/5 transition-colors cursor-pointer ${n.unread ? 'bg-white/[0.02]' : ''}`}>
-                  <p className={`text-xs ${n.unread ? 'text-white' : 'text-[#a991c7]'}`}>{n.text}</p>
-                  <p className="text-[#6b5880] text-[10px] mt-1">{n.time} atrás</p>
-                  {n.unread && <span className="inline-block w-1.5 h-1.5 bg-[#FF6B35] rounded-full mt-1" />}
-                </div>
-              ))}
-              <div className="px-4 py-3 text-center">
-                <button className="text-[#FF6B35] text-xs hover:underline">Ver todas</button>
+              <div className="max-h-64 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-[#a991c7] text-xs italic">
+                    Nenhum pedido encontrado
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} className={`px-4 py-3 border-b border-white/[0.04] hover:bg-white/5 transition-colors cursor-pointer ${n.unread ? 'bg-white/[0.02]' : ''}`}>
+                      <p className={`text-xs text-left ${n.unread ? 'text-white' : 'text-[#a991c7]'}`}>{n.text}</p>
+                      <p className="text-[#6b5880] text-[10px] mt-1 text-left">{n.time} atrás</p>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="px-4 py-3 text-center border-t border-white/[0.06]">
+                <button onClick={() => { navigate('/dashboard/pedidos'); setNotifOpen(false) }} className="text-[#FF6B35] text-xs hover:underline">Ver todos os pedidos</button>
               </div>
             </div>
           )}

@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Users,
   Bike, BarChart3, Settings, LogOut, Zap, ChevronRight,
-  ChefHat, Tag, Palette, UserCheck, CreditCard, MessageSquare
+  ChefHat, Tag, Palette, UserCheck, CreditCard, MessageSquare, Layers
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { orders as ordersApi } from '../../services/api'
@@ -14,6 +14,7 @@ const navItems = [
   { to: '/dashboard/cozinha', icon: ChefHat, label: 'Cozinha' },
   { to: '/dashboard/produtos', icon: UtensilsCrossed, label: 'Produtos' },
   { to: '/dashboard/categorias', icon: Tag, label: 'Categorias' },
+  { to: '/dashboard/complementos', icon: Layers, label: 'Complementos' },
   { to: '/dashboard/clientes', icon: Users, label: 'Clientes' },
   { to: '/dashboard/entregadores', icon: Bike, label: 'Entregadores' },
   { to: '/dashboard/relatorios', icon: BarChart3, label: 'Relatórios' },

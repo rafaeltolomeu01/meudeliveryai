@@ -51,6 +51,15 @@ export default function AppLayout() {
   const daysRemaining = subscriptionData?.days_remaining
   const showWarning = daysRemaining !== undefined && daysRemaining > 0 && daysRemaining <= 5 && !isExpired
 
+  const [mobileWarningDismissed, setMobileWarningDismissed] = useState(
+    () => sessionStorage.getItem('mda_mobile_warning_dismissed') === 'true'
+  )
+
+  const handleDismissMobileWarning = () => {
+    sessionStorage.setItem('mda_mobile_warning_dismissed', 'true')
+    setMobileWarningDismissed(true)
+  }
+
   // Bloqueio e redirecionamento caso a assinatura esteja vencida
   useEffect(() => {
     if (isExpired && location.pathname !== '/dashboard/assinatura') {
@@ -66,6 +75,24 @@ export default function AppLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         <Header />
+
+        {/* Mobile Viewport Warning Banner */}
+        {!mobileWarningDismissed && (
+          <div className="lg:hidden mx-4 mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-purple-800 to-indigo-900 text-white flex items-center justify-between gap-3 shadow-[0_0_15px_rgba(124,58,237,0.2)] border border-purple-500/20">
+            <div className="flex items-center gap-2">
+              <span className="text-base shrink-0">📱</span>
+              <p className="text-xs font-semibold text-left leading-snug">
+                Para gerenciar seu restaurante com todos os recursos e a melhor visualização, recomendamos usar um computador.
+              </p>
+            </div>
+            <button
+              onClick={handleDismissMobileWarning}
+              className="text-xs text-white/60 hover:text-white font-extrabold px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/15 transition-all shrink-0"
+            >
+              Fechar
+            </button>
+          </div>
+        )}
 
         {/* Warning Banner (Expiring soon) */}
         {showWarning && (

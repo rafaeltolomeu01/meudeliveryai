@@ -294,6 +294,8 @@ CREATE TABLE IF NOT EXISTS categories (
   name          VARCHAR(255) NOT NULL,
   description   TEXT,
   image_url     VARCHAR(500),
+  icon          VARCHAR(255) DEFAULT NULL,
+  color         VARCHAR(7) DEFAULT NULL,
   position      INT NOT NULL DEFAULT 0,
   is_active     TINYINT(1) NOT NULL DEFAULT 1,
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -319,6 +321,7 @@ CREATE TABLE IF NOT EXISTS products (
   promotional_price  DECIMAL(10,2) DEFAULT NULL,
   cost_price         DECIMAL(10,2) DEFAULT NULL,            -- Custo interno
   image_url          VARCHAR(500),
+  images             JSON DEFAULT NULL,
   sku                VARCHAR(100),                          -- Código interno
   barcode            VARCHAR(50),
   is_available       TINYINT(1) NOT NULL DEFAULT 1,
@@ -380,6 +383,7 @@ CREATE TABLE IF NOT EXISTS customers (
   document          VARCHAR(14),                            -- CPF
   birth_date        DATE,
   gender            ENUM('M','F','other','not_informed') DEFAULT 'not_informed',
+  password_hash     VARCHAR(255) DEFAULT NULL,
   -- Endereço padrão
   address           VARCHAR(500),
   address_number    VARCHAR(20),
@@ -1061,6 +1065,63 @@ VALUES
   (NULL, NULL, 'info',  'system',  'system.started',    'MeuDeliveryAI iniciado com sucesso', JSON_OBJECT('version', '2.0.0')),
   (1,    1,    'info',  'auth',    'user.login',         'Usuário autenticado', JSON_OBJECT('email', 'admin@burgerhouse.com')),
   (1,    1,    'info',  'order',   'order.created',      'Novo pedido criado', JSON_OBJECT('order_number', 'BH-004', 'total', 57.90));
+
+-- ============================================================
+-- 21. COMPLEMENTS & CUSTOMER ADDRESSES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS complement_groups (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  restaurant_id INT UNSIGNED NOT NULL,
+  name          VARCHAR(255) NOT NULL,
+  description   TEXT,
+  is_required   TINYINT(1) NOT NULL DEFAULT 0,
+  min_quantity  INT NOT NULL DEFAULT 0,
+  max_quantity  INT NOT NULL DEFAULT 1,
+  is_active     TINYINT(1) NOT NULL DEFAULT 1,
+  position      INT NOT NULL DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS complement_items (
+  id                  INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  complement_group_id INT UNSIGNED NOT NULL,
+  name                VARCHAR(255) NOT NULL,
+  price               DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  is_active           TINYINT(1) NOT NULL DEFAULT 1,
+  max_quantity        INT NOT NULL DEFAULT 1,
+  position            INT NOT NULL DEFAULT 0,
+  created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (complement_group_id) REFERENCES complement_groups(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS product_complements (
+  product_id          INT UNSIGNED NOT NULL,
+  complement_group_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (product_id, complement_group_id),
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  FOREIGN KEY (complement_group_id) REFERENCES complement_groups(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS customer_addresses (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  customer_id   INT UNSIGNED NOT NULL,
+  zip_code      VARCHAR(20) NOT NULL,
+  street        VARCHAR(255) NOT NULL,
+  number        VARCHAR(50) NOT NULL,
+  complement    VARCHAR(255),
+  neighborhood  VARCHAR(255) NOT NULL,
+  city          VARCHAR(100) NOT NULL,
+  state         CHAR(2) NOT NULL,
+  reference     VARCHAR(255),
+  is_default    TINYINT(1) NOT NULL DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
 -- FIM DO SCHEMA

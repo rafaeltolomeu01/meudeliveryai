@@ -72,12 +72,12 @@ const create = async (req, res, next) => {
       return res.status(422).json({ success: false, message: 'Dados inválidos.', errors: errors.array() });
     }
 
-    const { name, description, position = 0, is_active = 1 } = req.body;
+    const { name, description, position = 0, is_active = 1, icon = null, color = null } = req.body;
     const restaurant_id = req.user.restaurant_id;
 
     const result = await query(
-      'INSERT INTO categories (restaurant_id, name, description, position, is_active) VALUES (?, ?, ?, ?, ?)',
-      [restaurant_id, name, description || null, position, is_active ? 1 : 0]
+      'INSERT INTO categories (restaurant_id, name, description, position, is_active, icon, color) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [restaurant_id, name, description || null, position, is_active ? 1 : 0, icon || null, color || null]
     );
 
     const created = await query('SELECT * FROM categories WHERE id = ? LIMIT 1', [result.insertId]);
@@ -105,17 +105,21 @@ const update = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Categoria não encontrada.' });
     }
 
-    const { name, description, position, is_active } = req.body;
+    const { name, description, position, is_active, icon, color } = req.body;
 
     await query(
       `UPDATE categories SET
         name = COALESCE(?, name),
         description = COALESCE(?, description),
         position = COALESCE(?, position),
-        is_active = COALESCE(?, is_active)
+        is_active = COALESCE(?, is_active),
+        icon = COALESCE(?, icon),
+        color = COALESCE(?, color)
        WHERE id = ? AND restaurant_id = ?`,
       [name, description, position,
        is_active !== undefined ? (is_active ? 1 : 0) : null,
+       icon !== undefined ? icon : null,
+       color !== undefined ? color : null,
        id, restaurant_id]
     );
 
@@ -175,4 +179,30 @@ const reorder = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, getOne, create, update, remove, reorder };
+const uploadImage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const restaurant_id = req.user.restaurant_id;
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Nenhuma imagem enviada.' });
+    }
+
+    const image_url = `/uploads/${req.file.filename}`;
+
+    await query(
+      'UPDATE categories SET image_url = ? WHERE id = ? AND restaurant_id = ?',
+      [image_url, id, restaurant_id]
+    );
+
+    return res.json({
+      success: true,
+      message: 'Imagem da categoria atualizada com sucesso!',
+      data: { image_url },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAll, getOne, create, update, remove, reorder, uploadImage };

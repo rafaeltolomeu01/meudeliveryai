@@ -25,6 +25,8 @@ export default function CategoriesPage() {
   const [form, setForm] = useState({
     name: '',
     description: '',
+    icon: 'Tag',
+    color: '#FF6B35',
     position: '0',
     is_active: true
   })
@@ -53,6 +55,8 @@ export default function CategoriesPage() {
     setForm({
       name: '',
       description: '',
+      icon: 'Tag',
+      color: '#FF6B35',
       position: String(categories.length + 1),
       is_active: true
     })
@@ -64,6 +68,8 @@ export default function CategoriesPage() {
     setForm({
       name: category.name,
       description: category.description || '',
+      icon: category.icon || 'Tag',
+      color: category.color || '#FF6B35',
       position: String(category.position || 0),
       is_active: !!category.is_active
     })
@@ -81,6 +87,8 @@ export default function CategoriesPage() {
     const data = {
       name: form.name,
       description: form.description,
+      icon: form.icon,
+      color: form.color,
       position: parseInt(form.position) || 0,
       is_active: form.is_active ? 1 : 0
     }
@@ -254,7 +262,18 @@ export default function CategoriesPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-white text-sm font-medium">{cat.name}</td>
+                    <td className="px-6 py-4 text-white text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow-sm"
+                          style={{ backgroundColor: cat.color || '#FF6B35' }}
+                        />
+                        <span className="text-gray-400 font-mono text-[10px] bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                          {cat.icon || 'Tag'}
+                        </span>
+                        <span>{cat.name}</span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-[#a991c7] text-xs max-w-xs truncate">{cat.description || '-'}</td>
                     <td className="px-6 py-4">
                       <button onClick={() => toggleStatus(cat)} className="hover:opacity-85 transition-opacity">
@@ -323,6 +342,42 @@ export default function CategoriesPage() {
                   rows={2}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF6B35]/60 resize-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-semibold text-[#d4bfee]">Ícone</label>
+                  <select
+                    value={form.icon}
+                    onChange={(e) => setForm(p => ({ ...p, icon: e.target.value }))}
+                    className="w-full bg-[#240e3c] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF6B35]/60"
+                  >
+                    {['Tag', 'Flame', 'CircleDot', 'Sparkles', 'Scale', 'TrendingUp', 'Coffee', 'Smile', 'IceCream', 'Pizza', 'Utensils', 'Beer', 'Apple', 'Cake'].map(ico => (
+                      <option key={ico} value={ico} className="bg-[#1A0533]">{ico}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-semibold text-[#d4bfee]">Cor de Destaque</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={form.color}
+                      onChange={(e) => setForm(p => ({ ...p, color: e.target.value }))}
+                      className="w-10 h-10 bg-transparent border-0 cursor-pointer p-0"
+                    />
+                    <select
+                      value={form.color}
+                      onChange={(e) => setForm(p => ({ ...p, color: e.target.value }))}
+                      className="flex-1 bg-[#240e3c] border border-white/10 rounded-xl px-2 py-2.5 text-xs text-white focus:outline-none focus:border-[#FF6B35]/60"
+                    >
+                      {['#FF6B35', '#FF8C00', '#FF4500', '#FFD700', '#32CD32', '#00FA9A', '#00CED1', '#1E90FF', '#9370DB', '#FF69B4', '#FF1493', '#BA55D3'].map(col => (
+                        <option key={col} value={col} className="bg-[#1A0533]">{col}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

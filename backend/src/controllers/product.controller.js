@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { validationResult } = require('express-validator');
+const { optimizeAndSaveImage } = require('../utils/image.helper');
 
 /**
  * GET /api/v1/products
@@ -30,6 +31,15 @@ const getAll = async (req, res, next) => {
 
     const products = await query(sql, params);
 
+    const productsWithParsedData = products.map(p => {
+      try {
+        p.images = p.images ? (typeof p.images === 'string' ? JSON.parse(p.images) : p.images) : [];
+      } catch (err) {
+        p.images = [];
+      }
+      return p;
+    });
+
     // Count total
     let countSql = 'SELECT COUNT(*) as total FROM products WHERE restaurant_id = ?';
     const countParams = [restaurant_id];
@@ -41,7 +51,7 @@ const getAll = async (req, res, next) => {
 
     return res.json({
       success: true,
-      data: products,
+      data: productsWithParsedData,
       pagination: {
         total,
         page: parseInt(page),
@@ -61,8 +71,7 @@ const getOne = async (req, res, next) => {
   try {
     const products = await query(
       `SELECT p.*, c.name as category_name,
-       (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', po.id, 'name', po.name, 'price', po.price, 'is_required', po.is_required, 'max_quantity', po.max_quantity))
-        FROM product_options po WHERE po.product_id = p.id) as options
+       (SELECT JSON_ARRAYAGG(pc.complement_group_id) FROM product_complements pc WHERE pc.product_id = p.id) as complement_group_ids
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
        WHERE p.id = ? AND p.restaurant_id = ? LIMIT 1`,
@@ -74,8 +83,19 @@ const getOne = async (req, res, next) => {
     }
 
     const product = products[0];
-    if (product.options && typeof product.options === 'string') {
-      product.options = JSON.parse(product.options);
+    
+    // Parse complement groups
+    if (product.complement_group_ids && typeof product.complement_group_ids === 'string') {
+      product.complement_group_ids = JSON.parse(product.complement_group_ids);
+    } else if (!product.complement_group_ids) {
+      product.complement_group_ids = [];
+    }
+
+    // Parse images array
+    if (product.images && typeof product.images === 'string') {
+      product.images = JSON.parse(product.images);
+    } else if (!product.images) {
+      product.images = [];
     }
 
     return res.json({ success: true, data: product });
@@ -98,25 +118,41 @@ const create = async (req, res, next) => {
       category_id, name, description, price, promotional_price,
       is_available = 1, is_featured = 0, serves_how_many,
       preparation_time, position = 0, image_url,
+      sku = null, track_stock = 0, stock_quantity = null, images = null,
+      complement_group_ids = []
     } = req.body;
 
     const restaurant_id = req.user.restaurant_id;
 
     const result = await query(
       `INSERT INTO products (restaurant_id, category_id, name, description, price, promotional_price,
-        is_available, is_featured, serves_how_many, preparation_time, position, image_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        is_available, is_featured, serves_how_many, preparation_time, position, image_url, sku, track_stock, stock_quantity, images)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [restaurant_id, category_id || null, name, description || null, price,
        promotional_price || null, is_available ? 1 : 0, is_featured ? 1 : 0,
-       serves_how_many || null, preparation_time || null, position, image_url || null]
+       serves_how_many || null, preparation_time || null, position, image_url || null,
+       sku || null, track_stock ? 1 : 0, stock_quantity !== undefined ? stock_quantity : null,
+       images ? (typeof images === 'string' ? images : JSON.stringify(images)) : null]
     );
 
-    const products = await query('SELECT * FROM products WHERE id = ? LIMIT 1', [result.insertId]);
+    const productId = result.insertId;
+
+    // Link complement groups
+    if (Array.isArray(complement_group_ids) && complement_group_ids.length > 0) {
+      for (const groupId of complement_group_ids) {
+        await query(
+          'INSERT INTO product_complements (product_id, complement_group_id) VALUES (?, ?)',
+          [productId, groupId]
+        );
+      }
+    }
+
+    const created = await query('SELECT * FROM products WHERE id = ? LIMIT 1', [productId]);
 
     return res.status(201).json({
       success: true,
       message: 'Produto criado com sucesso!',
-      data: products[0],
+      data: created[0],
     });
   } catch (error) {
     next(error);
@@ -144,6 +180,7 @@ const update = async (req, res, next) => {
     const {
       category_id, name, description, price, promotional_price,
       is_available, is_featured, serves_how_many, preparation_time, position, image_url,
+      sku, track_stock, stock_quantity, images, complement_group_ids
     } = req.body;
 
     await query(
@@ -158,13 +195,35 @@ const update = async (req, res, next) => {
         serves_how_many = COALESCE(?, serves_how_many),
         preparation_time = COALESCE(?, preparation_time),
         position = COALESCE(?, position),
-        image_url = COALESCE(?, image_url)
+        image_url = COALESCE(?, image_url),
+        sku = COALESCE(?, sku),
+        track_stock = COALESCE(?, track_stock),
+        stock_quantity = COALESCE(?, stock_quantity),
+        images = COALESCE(?, images)
        WHERE id = ? AND restaurant_id = ?`,
-      [category_id, name, description, price, promotional_price !== undefined ? promotional_price : null,
-       is_available !== undefined ? (is_available ? 1 : 0) : null,
-       is_featured !== undefined ? (is_featured ? 1 : 0) : null,
-       serves_how_many, preparation_time, position, image_url, id, restaurant_id]
+      [
+        category_id, name, description, price, promotional_price !== undefined ? promotional_price : null,
+        is_available !== undefined ? (is_available ? 1 : 0) : null,
+        is_featured !== undefined ? (is_featured ? 1 : 0) : null,
+        serves_how_many, preparation_time, position, image_url,
+        sku !== undefined ? sku : null,
+        track_stock !== undefined ? (track_stock ? 1 : 0) : null,
+        stock_quantity !== undefined ? stock_quantity : null,
+        images ? (typeof images === 'string' ? images : JSON.stringify(images)) : null,
+        id, restaurant_id
+      ]
     );
+
+    // Update complement linkage
+    if (complement_group_ids !== undefined && Array.isArray(complement_group_ids)) {
+      await query('DELETE FROM product_complements WHERE product_id = ?', [id]);
+      for (const groupId of complement_group_ids) {
+        await query(
+          'INSERT INTO product_complements (product_id, complement_group_id) VALUES (?, ?)',
+          [id, groupId]
+        );
+      }
+    }
 
     const updated = await query('SELECT * FROM products WHERE id = ? LIMIT 1', [id]);
     return res.json({ success: true, message: 'Produto atualizado com sucesso!', data: updated[0] });
@@ -254,13 +313,15 @@ const uploadImage = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Produto não encontrado.' });
     }
 
-    const image_url = `/uploads/${req.file.filename}`;
+    const result = await optimizeAndSaveImage(req.file, 'produtos');
+    const image_url = result.imageUrl;
+
     await query('UPDATE products SET image_url = ? WHERE id = ? AND restaurant_id = ?', [image_url, id, restaurant_id]);
 
     return res.json({
       success: true,
       message: 'Imagem do produto atualizada com sucesso!',
-      data: { image_url },
+      data: { image_url, thumbUrl: result.thumbUrl },
     });
   } catch (error) {
     next(error);

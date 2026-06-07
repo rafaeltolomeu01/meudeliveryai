@@ -162,11 +162,30 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Demo hint */}
-          <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(255,107,53,0.05)', border: '1px solid rgba(255,107,53,0.15)' }}>
-            <p className="text-[#FF6B35] text-xs font-medium mb-1">💡 Dica — Modo Demo</p>
-            <p className="text-[#a991c7] text-xs">Use qualquer email e senha para acessar o painel de demonstração.</p>
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-white/[0.06]"></div>
+            <span className="flex-shrink mx-4 text-xs text-[#6b5880]">ou</span>
+            <div className="flex-grow border-t border-white/[0.06]"></div>
           </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            fullWidth
+            onClick={async () => {
+              setForm({ email: 'demo@meudeliveryai.com', password: '123456' })
+              setLoading(true)
+              const result = await login('demo@meudeliveryai.com', '123456')
+              setLoading(false)
+              if (result.success) {
+                navigate('/dashboard')
+              }
+            }}
+            id="login-demo-shortcut"
+          >
+            Acessar Modo Demonstração 🚀
+          </Button>
 
           <p className="text-center text-[#6b5880] text-xs mt-6">
             Ao entrar, você concorda com nossos{' '}

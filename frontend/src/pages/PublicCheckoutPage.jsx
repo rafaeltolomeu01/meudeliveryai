@@ -35,6 +35,21 @@ export default function PublicCheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('pix')
   const [copiedPix, setCopiedPix] = useState(false)
 
+  // Customer Auth States
+  const [customer, setCustomer] = useState(null)
+  const [customerToken, setCustomerToken] = useState(() => localStorage.getItem(`mda_customer_token_${slug}`))
+  const [authMode, setAuthMode] = useState('login') // 'login' | 'register'
+  const [authForm, setAuthForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    document: ''
+  })
+  const [authLoading, setAuthLoading] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState([])
+  const [selectedAddressId, setSelectedAddressId] = useState('new')
+
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -52,6 +67,54 @@ export default function PublicCheckoutPage() {
   })
 
   const [errors, setErrors] = useState({})
+
+  const loadCustomerData = async () => {
+    const token = localStorage.getItem(`mda_customer_token_${slug}`)
+    if (!token) return
+    try {
+      const meRes = await publicApi.customerMe(slug)
+      if (meRes.success && meRes.data) {
+        setCustomer(meRes.data)
+        setForm(f => ({
+          ...f,
+          name: meRes.data.name || '',
+          phone: meRes.data.phone || '',
+          email: meRes.data.email || ''
+        }))
+        
+        // Load saved addresses
+        const addrRes = await publicApi.getAddresses(slug)
+        if (addrRes.success && addrRes.data) {
+          setSavedAddresses(addrRes.data)
+          const defAddr = addrRes.data.find(a => a.is_default) || addrRes.data[0]
+          if (defAddr) {
+            setSelectedAddressId(defAddr.id.toString())
+            setForm(f => ({
+              ...f,
+              zipCode: defAddr.zip_code || '',
+              address: defAddr.street || '',
+              number: defAddr.number || '',
+              complement: defAddr.complement || '',
+              neighborhood: defAddr.neighborhood || '',
+              city: defAddr.city || '',
+              state: defAddr.state || ''
+            }))
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar dados do cliente:', err)
+      localStorage.removeItem(`mda_customer_token_${slug}`)
+      setCustomer(null)
+      setCustomerToken(null)
+    }
+  }
+
+  useEffect(() => {
+    if (customerToken) {
+      loadCustomerData()
+    }
+  }, [customerToken, slug])
 
   useEffect(() => {
     async function loadData() {
@@ -96,6 +159,80 @@ export default function PublicCheckoutPage() {
     }
   }, [restaurant])
 
+  const handleSelectAddress = (e) => {
+    const addrId = e.target.value
+    setSelectedAddressId(addrId)
+    if (addrId === 'new') {
+      setForm(f => ({
+        ...f,
+        zipCode: '',
+        address: '',
+        number: '',
+        complement: '',
+        reference: '',
+        neighborhood: '',
+        city: '',
+        state: ''
+      }))
+    } else {
+      const selected = savedAddresses.find(a => a.id.toString() === addrId)
+      if (selected) {
+        setForm(f => ({
+          ...f,
+          zipCode: selected.zip_code || '',
+          address: selected.street || '',
+          number: selected.number || '',
+          complement: selected.complement || '',
+          neighborhood: selected.neighborhood || '',
+          city: selected.city || '',
+          state: selected.state || ''
+        }))
+      }
+    }
+  }
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault()
+    setAuthLoading(true)
+    try {
+      if (authMode === 'login') {
+        const res = await publicApi.customerLogin(slug, {
+          email: authForm.email || authForm.phone,
+          phone: authForm.phone,
+          password: authForm.password
+        })
+        if (res.success) {
+          localStorage.setItem(`mda_customer_token_${slug}`, res.token)
+          setCustomerToken(res.token)
+          toast.success('Login efetuado com sucesso!')
+        }
+      } else {
+        if (!authForm.name || !authForm.password || !authForm.phone) {
+          toast.error('Nome, Senha e WhatsApp são obrigatórios.')
+          setAuthLoading(false)
+          return
+        }
+        const res = await publicApi.customerRegister(slug, {
+          name: authForm.name,
+          email: authForm.email,
+          phone: authForm.phone,
+          password: authForm.password,
+          document: authForm.document
+        })
+        if (res.success) {
+          localStorage.setItem(`mda_customer_token_${slug}`, res.token)
+          setCustomerToken(res.token)
+          toast.success('Cadastro realizado com sucesso!')
+        }
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error(err.message || 'Erro na autenticação. Verifique os dados.')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
   const handleChange = (field) => (e) => {
     let value = e.target.value
     if (field === 'state') value = value.toUpperCase().slice(0, 2)
@@ -137,6 +274,12 @@ export default function PublicCheckoutPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (!customer) {
+      toast.error('Você precisa se identificar antes de finalizar o pedido.')
+      return
+    }
+
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
@@ -151,6 +294,23 @@ export default function PublicCheckoutPage() {
     }
 
     setSubmitLoading(true)
+
+    // Save address if new and delivery
+    if (orderType === 'delivery' && selectedAddressId === 'new') {
+      try {
+        await publicApi.addAddress(slug, {
+          zip_code: form.zipCode,
+          street: form.address,
+          number: form.number,
+          complement: form.complement,
+          neighborhood: form.neighborhood,
+          city: form.city,
+          state: form.state
+        })
+      } catch (addrErr) {
+        console.warn('Erro ao salvar endereço no perfil do cliente:', addrErr)
+      }
+    }
 
     const orderData = {
       customer_name: form.name,
@@ -179,13 +339,11 @@ export default function PublicCheckoutPage() {
       const res = await publicApi.createOrder(slug, orderData)
       if (res.success) {
         toast.success('Pedido enviado com sucesso! 🚀')
-        // Clean cart
         localStorage.removeItem(`mda_cart_${slug}`)
         navigate(`/cardapio/${slug}/pedido/${res.data.id}`)
       }
     } catch (err) {
       console.warn('Erro ao conectar com servidor para checkout, simulando.', err)
-      // Dev simulation when backend is down/offline
       if (err.message?.includes('Network Error') || err.status === undefined) {
         toast.success('Pedido enviado com sucesso! (Modo Simulação) 🚀')
         localStorage.removeItem(`mda_cart_${slug}`)
@@ -243,44 +401,128 @@ export default function PublicCheckoutPage() {
           {/* Checkout forms */}
           <div className="md:col-span-2 space-y-6">
             
-            {/* Customer info */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-4">
-              <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2">
-                <span className="w-1.5 h-4.5 rounded-full" style={{ backgroundColor: primaryColor }} />
-                Seus Dados
-              </h3>
+            {/* Customer Auth / Identification Block */}
+            {!customer ? (
+              <div className="bg-[#1A0533]/90 border border-[#FF6B35]/20 rounded-[32px] p-6 space-y-5 shadow-2xl backdrop-blur-md">
+                <div className="flex border-b border-white/5 pb-1 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('login')}
+                    className={`pb-3 text-sm font-extrabold transition-all relative ${
+                      authMode === 'login' ? 'text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Identificar-se (Entrar)
+                    {authMode === 'login' && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: primaryColor }} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('register')}
+                    className={`pb-3 text-sm font-extrabold transition-all relative ${
+                      authMode === 'register' ? 'text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Criar Cadastro
+                    {authMode === 'register' && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: primaryColor }} />
+                    )}
+                  </button>
+                </div>
 
-              <Input
-                label="Seu Nome"
-                placeholder="Ex: Rafael Silva"
-                value={form.name}
-                onChange={handleChange('name')}
-                error={errors.name}
-                required
-                id="chk-name"
-              />
+                <form onSubmit={handleAuthSubmit} className="space-y-4">
+                  {authMode === 'register' && (
+                    <Input
+                      label="Nome Completo *"
+                      placeholder="Ex: João da Silva"
+                      value={authForm.name}
+                      onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                      required
+                    />
+                  )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="WhatsApp (Celular)"
-                  placeholder="Ex: (11) 99999-9999"
-                  value={form.phone}
-                  onChange={handleChange('phone')}
-                  error={errors.phone}
-                  required
-                  id="chk-phone"
-                />
-                <Input
-                  label="E-mail (Opcional)"
-                  placeholder="Ex: rafael@email.com"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange('email')}
-                  error={errors.email}
-                  id="chk-email"
-                />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="WhatsApp (com DDD) *"
+                      placeholder="Ex: 33999998888"
+                      value={authForm.phone}
+                      onChange={(e) => setAuthForm({ ...authForm, phone: e.target.value })}
+                      required
+                    />
+
+                    <Input
+                      label="E-mail (Opcional)"
+                      placeholder="Ex: joao@email.com"
+                      type="email"
+                      value={authForm.email}
+                      onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                    />
+                  </div>
+
+                  {authMode === 'register' && (
+                    <Input
+                      label="CPF (Opcional)"
+                      placeholder="Ex: 12345678909"
+                      value={authForm.document}
+                      onChange={(e) => setAuthForm({ ...authForm, document: e.target.value })}
+                    />
+                  )}
+
+                  <Input
+                    label="Senha *"
+                    type="password"
+                    placeholder="Sua senha de acesso"
+                    value={authForm.password}
+                    onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                    required
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    loading={authLoading}
+                    className="w-full py-3 rounded-2xl font-bold shadow-lg"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {authMode === 'login' ? 'Entrar e Continuar' : 'Cadastrar e Continuar'}
+                  </Button>
+                </form>
               </div>
-            </div>
+            ) : (
+              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-4 text-left">
+                <div className="flex items-center justify-between border-b border-white/5 pb-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF6B35] to-purple-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md">
+                      {customer.name?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-white">Identificado como {customer.name}</h4>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{customer.phone} • {customer.email || 'Sem e-mail'}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem(`mda_customer_token_${slug}`)
+                      setCustomer(null)
+                      setCustomerToken(null)
+                      setForm(f => ({ ...f, name: '', phone: '', email: '' }))
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300 font-bold hover:underline"
+                  >
+                    Sair / Mudar Conta
+                  </button>
+                </div>
+                <p className="text-[10px] text-green-400 font-semibold flex items-center gap-1">
+                  ✓ Cadastro vinculado. Selecione a entrega e forma de pagamento abaixo.
+                </p>
+              </div>
+            )}
+
+            {customer && (
+              <>
 
             {/* Address fields for Delivery */}
             {orderType === 'delivery' && (
@@ -554,6 +796,9 @@ export default function PublicCheckoutPage() {
                 onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
+            
+            </>
+            )}
 
           </div>
 

@@ -134,15 +134,37 @@ export default function ProductsPage() {
           </h2>
           <p className="text-[#a991c7] text-sm">Gerencie os pratos, preços, fotos e visibilidade do seu cardápio público</p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={Plus}
-          onClick={() => navigate('/dashboard/produtos/novo')}
-        >
-          Novo Produto
-        </Button>
+        {categories.length === 0 ? (
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={Tag}
+            onClick={() => navigate('/dashboard/categorias')}
+          >
+            Criar primeira categoria
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={Plus}
+            onClick={() => navigate('/dashboard/produtos/novo')}
+          >
+            Novo Produto
+          </Button>
+        )}
       </div>
+
+      {/* Warning banner if no categories */}
+      {!loading && categories.length === 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 flex items-center gap-3 text-yellow-400">
+          <AlertTriangle size={20} className="shrink-0" />
+          <div className="text-sm">
+            <p className="font-extrabold">Nenhuma categoria cadastrada!</p>
+            <p className="text-xs text-yellow-500/80 mt-0.5">Você precisa criar pelo menos uma categoria antes de poder cadastrar produtos no cardápio.</p>
+          </div>
+        </div>
+      )}
 
       {/* Filter Row */}
       <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">

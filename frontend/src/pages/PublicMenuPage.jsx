@@ -204,72 +204,137 @@ export default function PublicMenuPage() {
     setModalQuantity(1)
     setItemNotes('')
     
-    // Initialize default required options
+    // Initialize default required complement selections
     const defaults = {}
-    product.options?.forEach(opt => {
-      if (opt.is_required) {
-        // If single select is expected
-        if (opt.max_quantity === 1) {
-          if (!defaults[opt.group_name]) {
-            defaults[opt.group_name] = opt.id
-          }
-        } else {
-          // Multiselect
-          if (!defaults[opt.group_name]) defaults[opt.group_name] = []
-          defaults[opt.group_name].push(opt.id)
-        }
+    const comps = product.complements || []
+    comps.forEach(group => {
+      defaults[group.id] = {}
+      if (group.is_required && group.min_quantity === 1 && group.items && group.items.length > 0) {
+        // Pre-select first item
+        defaults[group.id][group.items[0].id] = 1
       }
     })
     setSelectedOptions(defaults)
   }
 
-  const handleOptionChange = (groupName, option, isSingleSelect) => {
-    if (isSingleSelect) {
-      setSelectedOptions(prev => ({
-        ...prev,
-        [groupName]: option.id
-      }))
-    } else {
-      setSelectedOptions(prev => {
-        const current = prev[groupName] || []
-        if (current.includes(option.id)) {
-          return {
-            ...prev,
-            [groupName]: current.filter(id => id !== option.id)
-          }
-        } else {
-          return {
-            ...prev,
-            [groupName]: [...current, option.id]
-          }
+  const handleAdjustItemQuantity = (groupId, item, change) => {
+    const group = selectedProduct.complements.find(g => g.id === groupId)
+    if (!group) return
+
+    setSelectedOptions(prev => {
+      const groupSelections = { ...(prev[groupId] || {}) }
+      const currentQty = groupSelections[item.id] || 0
+      const newQty = currentQty + change
+
+      // Calculate total quantity selected in this group currently (excluding this item's current quantity)
+      const otherItemsQty = Object.entries(groupSelections)
+        .filter(([id]) => parseInt(id) !== item.id)
+        .reduce((sum, [, qty]) => sum + qty, 0)
+
+      if (newQty <= 0) {
+        delete groupSelections[item.id]
+      } else {
+        // Check group-level max quantity limit
+        if (otherItemsQty + newQty > group.max_quantity) {
+          toast.error(`Você pode selecionar no máximo ${group.max_quantity} itens no grupo "${group.name}".`)
+          return prev
         }
-      })
-    }
+        // Check item-level max quantity limit
+        if (newQty > item.max_quantity) {
+          toast.error(`Você pode selecionar no máximo ${item.max_quantity}x do item "${item.name}".`)
+          return prev
+        }
+        groupSelections[item.id] = newQty
+      }
+
+      return {
+        ...prev,
+        [groupId]: groupSelections
+      }
+    })
   }
 
-  const handleAddToCart = () => {
-    // Validate required options
-    const missingRequired = []
-    const groups = {}
-    
-    selectedProduct.options?.forEach(opt => {
-      if (!groups[opt.group_name]) {
-        groups[opt.group_name] = {
-          is_required: opt.is_required,
-          name: opt.group_name,
-          min: opt.min_quantity,
-          max: opt.max_quantity,
+  const handleToggleItemSelection = (groupId, item, isSingleSelect) => {
+    const group = selectedProduct.complements.find(g => g.id === groupId)
+    if (!group) return
+
+    setSelectedOptions(prev => {
+      const groupSelections = { ...(prev[groupId] || {}) }
+      const isSelected = !!groupSelections[item.id]
+
+      if (isSingleSelect) {
+        // Radio style: clear others and set this one
+        return {
+          ...prev,
+          [groupId]: { [item.id]: 1 }
+        }
+      } else {
+        if (isSelected) {
+          delete groupSelections[item.id]
+        } else {
+          // Check group-level max quantity limit
+          const totalQtySelected = Object.values(groupSelections).reduce((sum, q) => sum + q, 0)
+          if (totalQtySelected + 1 > group.max_quantity) {
+            toast.error(`Você pode selecionar no máximo ${group.max_quantity} itens no grupo "${group.name}".`)
+            return prev
+          }
+          groupSelections[item.id] = 1
+        }
+        return {
+          ...prev,
+          [groupId]: groupSelections
         }
       }
     })
+  }
 
-    Object.values(groups).forEach(g => {
-      if (g.is_required) {
-        const selected = selectedOptions[g.name]
-        if (!selected || (Array.isArray(selected) && selected.length < g.min)) {
-          missingRequired.push(g.name)
+  const getModalTotalPrice = () => {
+    if (!selectedProduct) return 0
+    let extraPrice = 0
+    const comps = selectedProduct.complements || []
+    comps.forEach(group => {
+      const selections = selectedOptions[group.id] || {}
+      Object.entries(selections).forEach(([itemId, qty]) => {
+        const item = group.items.find(i => i.id === parseInt(itemId))
+        if (item) {
+          extraPrice += parseFloat(item.price || 0) * qty
         }
+      })
+    })
+    const basePrice = parseFloat(selectedProduct.promotional_price || selectedProduct.price || 0)
+    return (basePrice + extraPrice) * modalQuantity
+  }
+
+  const handleAddToCart = () => {
+    const missingRequired = []
+    const chosenOptionsIds = []
+    const chosenOptionsDetails = []
+    let extraPrice = 0
+
+    selectedProduct.complements?.forEach(group => {
+      const selections = selectedOptions[group.id] || {}
+      const totalQty = Object.values(selections).reduce((sum, q) => sum + q, 0)
+
+      // Validate required and minimum
+      if (group.is_required && totalQty < group.min_quantity) {
+        missingRequired.push(`${group.name} (mínimo ${group.min_quantity})`)
       }
+
+      // Collect selections details and calculate price
+      Object.entries(selections).forEach(([itemId, qty]) => {
+        const item = group.items.find(i => i.id === parseInt(itemId))
+        if (item) {
+          extraPrice += parseFloat(item.price || 0) * qty
+          chosenOptionsIds.push(item.id)
+          chosenOptionsDetails.push({
+            id: item.id,
+            name: qty > 1 ? `${qty}x ${item.name}` : item.name,
+            price: item.price,
+            quantity: qty,
+            group_name: group.name
+          })
+        }
+      })
     })
 
     if (missingRequired.length > 0) {
@@ -277,55 +342,28 @@ export default function PublicMenuPage() {
       return
     }
 
-    // Prepare item options structure
-    const chosenOptionsIds = []
-    const chosenOptionsDetails = []
-    let extraPrice = 0
-
-    Object.keys(selectedOptions).forEach(groupName => {
-      const val = selectedOptions[groupName]
-      if (Array.isArray(val)) {
-        val.forEach(id => {
-          const opt = selectedProduct.options.find(o => o.id === id)
-          if (opt) {
-            chosenOptionsIds.push(id)
-            chosenOptionsDetails.push(opt)
-            extraPrice += parseFloat(opt.price || 0)
-          }
-        })
-      } else if (val) {
-        const opt = selectedProduct.options.find(o => o.id === val)
-        if (opt) {
-          chosenOptionsIds.push(val)
-          chosenOptionsDetails.push(opt)
-          extraPrice += parseFloat(opt.price || 0)
-        }
-      }
-    })
-
     const unitPrice = parseFloat(selectedProduct.promotional_price || selectedProduct.price)
     const finalUnitPrice = unitPrice + extraPrice
     const itemTotal = finalUnitPrice * modalQuantity
 
-    // Check if an identical item is already in the cart to avoid incorrect duplicates
     const existingIndex = cart.findIndex(item => {
-      if (item.product_id !== selectedProduct.id) return false;
-      if ((item.notes || '').trim() !== (itemNotes || '').trim()) return false;
-      
-      const itemOpts = [...(item.options || [])].sort();
-      const newOpts = [...chosenOptionsIds].sort();
-      if (itemOpts.length !== newOpts.length) return false;
-      return itemOpts.every((val, index) => val === newOpts[index]);
-    });
+      if (item.product_id !== selectedProduct.id) return false
+      if ((item.notes || '').trim() !== (itemNotes || '').trim()) return false
 
-    let newCart;
+      const itemOpts = [...(item.options || [])].sort()
+      const newOpts = [...chosenOptionsIds].sort()
+      if (itemOpts.length !== newOpts.length) return false
+      return itemOpts.every((val, index) => val === newOpts[index])
+    })
+
+    let newCart
     if (existingIndex > -1) {
-      newCart = [...cart];
-      newCart[existingIndex].quantity += modalQuantity;
-      newCart[existingIndex].total_price = newCart[existingIndex].unit_price * newCart[existingIndex].quantity;
+      newCart = [...cart]
+      newCart[existingIndex].quantity += modalQuantity
+      newCart[existingIndex].total_price = newCart[existingIndex].unit_price * newCart[existingIndex].quantity
     } else {
       const cartItem = {
-        id: Date.now() + Math.random(), // unique reference for item in cart
+        id: Date.now() + Math.random(),
         product_id: selectedProduct.id,
         name: selectedProduct.name,
         quantity: modalQuantity,
@@ -333,9 +371,9 @@ export default function PublicMenuPage() {
         total_price: itemTotal,
         options: chosenOptionsIds,
         optionsDetails: chosenOptionsDetails,
-        notes: itemNotes,
-      };
-      newCart = [...cart, cartItem];
+        notes: itemNotes
+      }
+      newCart = [...cart, cartItem]
     }
 
     saveCart(newCart)
@@ -719,27 +757,28 @@ export default function PublicMenuPage() {
                 )}
               </div>
 
-              {/* Options list */}
-              {selectedProduct.options?.length > 0 && (
+              {/* Complements list */}
+              {selectedProduct.complements?.length > 0 && (
                 <div className="space-y-6 text-left">
-                  {/* Group options by group_name */}
-                  {Object.entries(
-                    selectedProduct.options.reduce((acc, opt) => {
-                      if (!acc[opt.group_name]) acc[opt.group_name] = []
-                      acc[opt.group_name].push(opt)
-                      return acc
-                    }, {})
-                  ).map(([groupName, opts]) => {
-                    const isRequired = opts[0].is_required
-                    const isSingleSelect = opts[0].max_quantity === 1
+                  {selectedProduct.complements.map((group) => {
+                    const isRequired = group.is_required === 1
+                    const isSingleSelect = group.max_quantity === 1
+                    const selections = selectedOptions[group.id] || {}
+                    const totalSelected = Object.values(selections).reduce((sum, q) => sum + q, 0)
                     
                     return (
-                      <div key={groupName} className="space-y-3">
+                      <div key={group.id} className="space-y-3">
                         <div className="flex justify-between items-center bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
                           <div>
-                            <h4 className="text-sm font-bold text-white">{groupName}</h4>
-                            <p className="text-[10px] text-gray-400 mt-0.5">
-                              {isSingleSelect ? 'Escolha 1 opção' : `Escolha de ${opts[0].min_quantity} a ${opts[0].max_quantity} opções`}
+                            <h4 className="text-sm font-bold text-white">{group.name}</h4>
+                            {group.description && (
+                              <p className="text-[10px] text-gray-400 mt-0.5">{group.description}</p>
+                            )}
+                            <p className="text-[9px] text-[#a991c7] mt-0.5">
+                              {isSingleSelect 
+                                ? 'Escolha 1 opção' 
+                                : `Selecione até ${group.max_quantity} opções (${totalSelected}/${group.max_quantity})`
+                              }
                             </p>
                           </div>
                           {isRequired && (
@@ -750,31 +789,67 @@ export default function PublicMenuPage() {
                         </div>
 
                         <div className="divide-y divide-white/5">
-                          {opts.map((opt) => {
-                            const isSelected = isSingleSelect
-                              ? selectedOptions[groupName] === opt.id
-                              : (selectedOptions[groupName] || []).includes(opt.id)
+                          {group.items?.map((item) => {
+                            const quantitySelected = selections[item.id] || 0
+                            const isSelected = quantitySelected > 0
+                            const itemCanMultiply = item.max_quantity > 1
 
                             return (
-                              <label
-                                key={opt.id}
-                                className="flex items-center justify-between py-3 cursor-pointer group"
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between py-3 group border-b border-white/[0.03] last:border-0"
                               >
-                                <div className="flex items-center gap-3">
-                                  <input
-                                    type={isSingleSelect ? 'radio' : 'checkbox'}
-                                    name={groupName}
-                                    checked={isSelected}
-                                    onChange={() => handleOptionChange(groupName, opt, isSingleSelect)}
-                                    className="accent-[#FF6B35] h-4.5 w-4.5"
-                                    style={{ accentColor: primaryColor }}
-                                  />
-                                  <span className="text-xs text-gray-300 group-hover:text-white transition-colors">{opt.name}</span>
+                                <div className="flex items-center gap-3 text-left">
+                                  {isSingleSelect ? (
+                                    <input
+                                      type="radio"
+                                      name={`group_${group.id}`}
+                                      checked={isSelected}
+                                      onChange={() => handleToggleItemSelection(group.id, item, true)}
+                                      className="accent-[#FF6B35] h-4.5 w-4.5 cursor-pointer"
+                                      style={{ accentColor: primaryColor }}
+                                    />
+                                  ) : !itemCanMultiply ? (
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => handleToggleItemSelection(group.id, item, false)}
+                                      className="accent-[#FF6B35] rounded h-4.5 w-4.5 cursor-pointer"
+                                      style={{ accentColor: primaryColor }}
+                                    />
+                                  ) : null}
+
+                                  <div className="text-left">
+                                    <p className="text-xs text-gray-300 group-hover:text-white transition-colors">{item.name}</p>
+                                    {item.price > 0 && (
+                                      <p className="text-[10px] text-[#FF6B35] font-semibold mt-0.5">+ R$ {parseFloat(item.price).toFixed(2)}</p>
+                                    )}
+                                  </div>
                                 </div>
-                                {opt.price > 0 && (
-                                  <span className="text-xs text-gray-400 font-semibold">+ R$ {parseFloat(opt.price).toFixed(2)}</span>
-                                )}
-                              </label>
+
+                                {/* Quantity controls for items that can multiply, otherwise price or simple select state */}
+                                {itemCanMultiply && !isSingleSelect ? (
+                                  <div className="flex items-center border border-white/10 rounded-lg overflow-hidden bg-white/5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAdjustItemQuantity(group.id, item, -1)}
+                                      className="px-2 py-1 text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                                    >
+                                      <Minus size={10} />
+                                    </button>
+                                    <span className="px-2.5 text-xs text-white font-extrabold min-w-6 text-center">
+                                      {quantitySelected}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAdjustItemQuantity(group.id, item, 1)}
+                                      className="px-2 py-1 text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                                    >
+                                      <Plus size={10} />
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </div>
                             )
                           })}
                         </div>
@@ -824,16 +899,7 @@ export default function PublicMenuPage() {
                 Adicionar
                 <span>•</span>
                 <span>
-                  R$ {((parseFloat(selectedProduct.promotional_price || selectedProduct.price) + 
-                    Object.keys(selectedOptions).reduce((sum, g) => {
-                      const val = selectedOptions[g]
-                      if (Array.isArray(val)) {
-                        return sum + val.reduce((s, id) => s + parseFloat(selectedProduct.options.find(o => o.id === id)?.price || 0), 0)
-                      } else if (val) {
-                        return sum + parseFloat(selectedProduct.options.find(o => o.id === val)?.price || 0)
-                      }
-                      return sum
-                    }, 0)) * modalQuantity).toFixed(2)}
+                  R$ {getModalTotalPrice().toFixed(2)}
                 </span>
               </Button>
             </div>

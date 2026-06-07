@@ -158,10 +158,42 @@ export const subscription = {
 export const publicApi = {
   getRestaurant: (slug) => api.get(`/public/restaurant/${slug}`),
   getMenu: (slug) => api.get(`/public/restaurant/${slug}/menu`),
-  createOrder: (slug, data) => api.post(`/public/restaurant/${slug}/orders`, data),
+  createOrder: (slug, data) => {
+    const token = localStorage.getItem(`mda_customer_token_${slug}`)
+    return api.post(`/public/restaurant/${slug}/orders`, data, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+  },
   getOrder: (slug, orderId) => api.get(`/public/restaurant/${slug}/orders/${orderId}`),
   getMessages: (slug, orderId) => api.get(`/public/restaurant/${slug}/orders/${orderId}/messages`),
   sendMessage: (slug, orderId, message) => api.post(`/public/restaurant/${slug}/orders/${orderId}/messages`, { message }),
+  
+  customerRegister: (slug, data) => api.post(`/public/restaurant/${slug}/auth/register`, data),
+  customerLogin: (slug, data) => api.post(`/public/restaurant/${slug}/auth/login`, data),
+  customerMe: (slug) => {
+    const token = localStorage.getItem(`mda_customer_token_${slug}`)
+    return api.get(`/public/restaurant/${slug}/auth/me`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+  },
+  getAddresses: (slug) => {
+    const token = localStorage.getItem(`mda_customer_token_${slug}`)
+    return api.get(`/public/restaurant/${slug}/customer/addresses`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+  },
+  addAddress: (slug, data) => {
+    const token = localStorage.getItem(`mda_customer_token_${slug}`)
+    return api.post(`/public/restaurant/${slug}/customer/addresses`, data, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+  },
+  deleteAddress: (slug, id) => {
+    const token = localStorage.getItem(`mda_customer_token_${slug}`)
+    return api.delete(`/public/restaurant/${slug}/customer/addresses/${id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+  },
 }
 
 // ===== ADMIN (SUPER ADMIN) =====
@@ -188,6 +220,22 @@ export const whatsapp = {
   getAISettings:    () => api.get('/whatsapp/ai-settings'),
   updateAISettings: (data) => api.put('/whatsapp/ai-settings', data),
   testAI:           (question) => api.post('/whatsapp/ai-test', { question }),
+}
+
+// ===== COMPLEMENTS =====
+export const complements = {
+  listGroups: () => api.get('/complements/groups'),
+  getGroup: (id) => api.get(`/complements/groups/${id}`),
+  createGroup: (data) => api.post('/complements/groups', data),
+  updateGroup: (id, data) => api.put(`/complements/groups/${id}`, data),
+  deleteGroup: (id) => api.delete(`/complements/groups/${id}`),
+  reorderGroups: (items) => api.put('/complements/groups/reorder', { items }),
+
+  listItems: (groupId) => api.get(`/complements/groups/${groupId}/items`),
+  createItem: (data) => api.post('/complements/items', data),
+  updateItem: (id, data) => api.put(`/complements/items/${id}`, data),
+  deleteItem: (id) => api.delete(`/complements/items/${id}`),
+  reorderItems: (items) => api.put('/complements/items/reorder', { items }),
 }
 
 export default api

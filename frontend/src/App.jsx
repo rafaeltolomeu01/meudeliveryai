@@ -24,6 +24,7 @@ import PublicCartPage from './pages/PublicCartPage'
 import PublicCheckoutPage from './pages/PublicCheckoutPage'
 import PublicOrderTrackingPage from './pages/PublicOrderTrackingPage'
 import CategoriesPage from './pages/CategoriesPage'
+import ComplementsPage from './pages/ComplementsPage'
 import UsersPage from './pages/UsersPage'
 import SubscriptionPage from './pages/SubscriptionPage'
 import AppearancePage from './pages/AppearancePage'
@@ -144,6 +145,7 @@ export default function App() {
         <Route path="dashboard/configuracoes" element={<SettingsPage />} />
         <Route path="dashboard/aparencia" element={<AppearancePage />} />
         <Route path="dashboard/categorias" element={<CategoriesPage />} />
+        <Route path="dashboard/complementos" element={<ComplementsPage />} />
         <Route path="dashboard/usuarios" element={<UsersPage />} />
         <Route path="dashboard/assinatura" element={<SubscriptionPage />} />
         <Route path="dashboard/whatsapp" element={<WhatsAppPage />} />

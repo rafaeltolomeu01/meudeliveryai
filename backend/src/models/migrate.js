@@ -197,6 +197,116 @@ async function migrate() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       console.log('     + Tabela order_messages verificada/criada.');
+
+      console.log('  🔄 Verificando e atualizando colunas incrementais de categories...');
+      const [catColumnsCheck] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'categories'
+      `, [dbName]);
+      const catColumns = catColumnsCheck.map(c => c.COLUMN_NAME);
+
+      if (!catColumns.includes('icon')) {
+        await connection.query('ALTER TABLE categories ADD COLUMN icon VARCHAR(255) DEFAULT NULL');
+        console.log('     + Coluna icon adicionada.');
+      }
+      if (!catColumns.includes('color')) {
+        await connection.query('ALTER TABLE categories ADD COLUMN color VARCHAR(7) DEFAULT NULL');
+        console.log('     + Coluna color adicionada.');
+      }
+
+      console.log('  🔄 Verificando e atualizando colunas incrementais de products...');
+      const [prodColumnsCheck] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'products'
+      `, [dbName]);
+      const prodColumns = prodColumnsCheck.map(c => c.COLUMN_NAME);
+
+      if (!prodColumns.includes('images')) {
+        await connection.query('ALTER TABLE products ADD COLUMN images JSON DEFAULT NULL');
+        console.log('     + Coluna images adicionada.');
+      }
+
+      console.log('  🔄 Verificando e atualizando colunas incrementais de customers...');
+      const [custColumnsCheck] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'customers'
+      `, [dbName]);
+      const custColumns = custColumnsCheck.map(c => c.COLUMN_NAME);
+
+      if (!custColumns.includes('password_hash')) {
+        await connection.query('ALTER TABLE customers ADD COLUMN password_hash VARCHAR(255) DEFAULT NULL');
+        console.log('     + Coluna password_hash adicionada.');
+      }
+
+      console.log('  🔄 Verificando e criando tabelas de complementos...');
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS complement_groups (
+          id            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          restaurant_id INT UNSIGNED NOT NULL,
+          name          VARCHAR(255) NOT NULL,
+          description   TEXT,
+          is_required   TINYINT(1) NOT NULL DEFAULT 0,
+          min_quantity  INT NOT NULL DEFAULT 0,
+          max_quantity  INT NOT NULL DEFAULT 1,
+          is_active     TINYINT(1) NOT NULL DEFAULT 1,
+          position      INT NOT NULL DEFAULT 0,
+          created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('     + Tabela complement_groups verificada/criada.');
+
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS complement_items (
+          id                  INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          complement_group_id INT UNSIGNED NOT NULL,
+          name                VARCHAR(255) NOT NULL,
+          price               DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+          is_active           TINYINT(1) NOT NULL DEFAULT 1,
+          max_quantity        INT NOT NULL DEFAULT 1,
+          position            INT NOT NULL DEFAULT 0,
+          created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (complement_group_id) REFERENCES complement_groups(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('     + Tabela complement_items verificada/criada.');
+
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS product_complements (
+          product_id          INT UNSIGNED NOT NULL,
+          complement_group_id INT UNSIGNED NOT NULL,
+          PRIMARY KEY (product_id, complement_group_id),
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+          FOREIGN KEY (complement_group_id) REFERENCES complement_groups(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('     + Tabela product_complements verificada/criada.');
+
+      console.log('  🔄 Verificando e criando tabela de endereços de clientes...');
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS customer_addresses (
+          id            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          customer_id   INT UNSIGNED NOT NULL,
+          zip_code      VARCHAR(20) NOT NULL,
+          street        VARCHAR(255) NOT NULL,
+          number        VARCHAR(50) NOT NULL,
+          complement    VARCHAR(255),
+          neighborhood  VARCHAR(255) NOT NULL,
+          city          VARCHAR(100) NOT NULL,
+          state         CHAR(2) NOT NULL,
+          reference     VARCHAR(255),
+          is_default    TINYINT(1) NOT NULL DEFAULT 0,
+          created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log('     + Tabela customer_addresses verificada/criada.');
     } catch (colErr) {
       console.warn('  ⚠️ Aviso ao tentar atualizar colunas incrementais:', colErr.message);
     }

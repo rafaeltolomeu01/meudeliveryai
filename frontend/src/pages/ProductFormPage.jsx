@@ -4,7 +4,7 @@ import { ArrowLeft, Save, Loader2, Upload, Star, CheckCircle, Tag } from 'lucide
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
-import { products as productsApi, categories as categoriesApi } from '../services/api'
+import { products as productsApi, categories as categoriesApi, complements as complementsApi } from '../services/api'
 import toast from 'react-hot-toast'
 
 export default function ProductFormPage() {
@@ -13,6 +13,8 @@ export default function ProductFormPage() {
   const isEdit = !!id
 
   const [categories, setCategories] = useState([])
+  const [complementGroups, setComplementGroups] = useState([])
+  const [selectedGroups, setSelectedGroups] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [submitting, setSubmitting] = useState(false)
   const [imageFile, setImageFile] = useState(null)
@@ -28,7 +30,10 @@ export default function ProductFormPage() {
     is_featured: false,
     preparation_time: '15',
     position: '0',
-    image_url: ''
+    image_url: '',
+    sku: '',
+    track_stock: false,
+    stock_quantity: '0'
   })
 
   useEffect(() => {
@@ -42,6 +47,12 @@ export default function ProductFormPage() {
           if (!isEdit && catRes.data.length > 0) {
             setForm(f => ({ ...f, category_id: catRes.data[0].id.toString() }))
           }
+        }
+
+        // Load complement groups
+        const compRes = await complementsApi.listGroups()
+        if (compRes.success && compRes.data) {
+          setComplementGroups(compRes.data)
         }
 
         if (isEdit) {
@@ -58,10 +69,19 @@ export default function ProductFormPage() {
               is_featured: !!p.is_featured,
               preparation_time: p.preparation_time ? p.preparation_time.toString() : '15',
               position: p.position ? p.position.toString() : '0',
-              image_url: p.image_url || ''
+              image_url: p.image_url || '',
+              sku: p.sku || '',
+              track_stock: !!p.track_stock,
+              stock_quantity: p.stock_quantity ? p.stock_quantity.toString() : '0'
             })
             if (p.image_url) {
               setImagePreview(p.image_url)
+            }
+            if (p.complement_group_ids) {
+              const groupIds = Array.isArray(p.complement_group_ids)
+                ? p.complement_group_ids
+                : JSON.parse(p.complement_group_ids || '[]')
+              setSelectedGroups(groupIds)
             }
           }
         }
@@ -116,7 +136,11 @@ export default function ProductFormPage() {
       is_available: form.is_available ? 1 : 0,
       is_featured: form.is_featured ? 1 : 0,
       preparation_time: parseInt(form.preparation_time) || 15,
-      position: parseInt(form.position) || 0
+      position: parseInt(form.position) || 0,
+      sku: form.sku || null,
+      track_stock: form.track_stock ? 1 : 0,
+      stock_quantity: form.track_stock ? parseInt(form.stock_quantity) || 0 : null,
+      complement_group_ids: selectedGroups
     }
 
     try {
@@ -265,6 +289,47 @@ export default function ProductFormPage() {
                   onChange={(e) => setForm(f => ({ ...f, position: e.target.value }))}
                 />
               </div>
+
+              {/* SKU & Stock Management */}
+              <div className="border-t border-white/5 pt-4 mt-4 space-y-4">
+                <h4 className="text-sm font-bold text-white">Estoque e SKU</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="SKU (Código do Produto)"
+                    placeholder="Ex: HMB-001"
+                    value={form.sku}
+                    onChange={(e) => setForm(f => ({ ...f, sku: e.target.value }))}
+                  />
+
+                  <div className="flex flex-col gap-1.5 text-left">
+                    <label className="text-xs font-semibold text-[#d4bfee]">Controlar Estoque?</label>
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, track_stock: !f.track_stock }))}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-sm font-semibold transition-all ${
+                        form.track_stock
+                          ? 'border-orange-500/30 bg-orange-500/10 text-orange-400'
+                          : 'border-white/10 bg-white/5 text-gray-400'
+                      }`}
+                    >
+                      {form.track_stock ? 'Sim, controlar estoque' : 'Não controlar'}
+                    </button>
+                  </div>
+                </div>
+
+                {form.track_stock && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Quantidade em Estoque"
+                      type="number"
+                      placeholder="0"
+                      value={form.stock_quantity}
+                      onChange={(e) => setForm(f => ({ ...f, stock_quantity: e.target.value }))}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
         </div>
@@ -299,6 +364,44 @@ export default function ProductFormPage() {
                 />
               </div>
             </div>
+          </Card>
+
+          {/* Complement groups card */}
+          <Card title="Complementos / Adicionais" subtitle="Vincule grupos de opcionais a este produto">
+            {complementGroups.length === 0 ? (
+              <p className="text-xs text-gray-500 italic text-left">
+                Nenhum grupo de complementos criado. Vá em "Complementos" para cadastrar adicionais.
+              </p>
+            ) : (
+              <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                {complementGroups.map((group) => {
+                  const isChecked = selectedGroups.includes(group.id)
+                  return (
+                    <label
+                      key={group.id}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 cursor-pointer text-left transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          if (isChecked) {
+                            setSelectedGroups(prev => prev.filter(id => id !== group.id))
+                          } else {
+                            setSelectedGroups(prev => [...prev, group.id])
+                          }
+                        }}
+                        className="rounded border-white/10 bg-[#240e3c] text-[#FF6B35] focus:ring-[#FF6B35]/50 w-4 h-4"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-white leading-none">{group.name}</p>
+                        <p className="text-[10px] text-gray-500 mt-1 leading-none">{group.description || 'Sem descrição'}</p>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
           </Card>
 
           {/* Visibility and Featured settings */}

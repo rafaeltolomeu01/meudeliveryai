@@ -25,7 +25,7 @@ const statusMap = {
 
 export default function DashboardPage() {
   const { user, updateUser } = useAuth()
-  const [isOpen, setIsOpen] = useState(user?.restaurant?.isOpen ?? true)
+  const isOpen = !!user?.restaurant?.isOpen
   const [loading, setLoading] = useState(true)
   const [recentOrders, setRecentOrders] = useState([])
   const [weeklyData, setWeeklyData] = useState(() => {
@@ -140,7 +140,6 @@ export default function DashboardPage() {
 
   const toggleRestaurant = async () => {
     const next = !isOpen
-    setIsOpen(next)
     
     try {
       await restaurantApi.toggleOpen()

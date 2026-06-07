@@ -1,6 +1,7 @@
 const { query } = require('../config/database');
 const { validationResult } = require('express-validator');
 const path = require('path');
+const { optimizeAndSaveImage } = require('../utils/image.helper');
 
 /**
  * GET /api/v1/restaurant
@@ -128,7 +129,8 @@ const uploadLogo = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Nenhuma imagem enviada.' });
     }
 
-    const logo = `/uploads/${req.file.filename}`;
+    const result = await optimizeAndSaveImage(req.file, 'restaurantes');
+    const logo = result.imageUrl;
 
     await query(
       'UPDATE restaurants SET logo = ? WHERE id = ?',
@@ -138,7 +140,7 @@ const uploadLogo = async (req, res, next) => {
     return res.json({
       success: true,
       message: 'Logo atualizada com sucesso!',
-      data: { logo, logo_url: logo },
+      data: { logo, logo_url: logo, thumbUrl: result.thumbUrl },
     });
   } catch (error) {
     next(error);
@@ -154,7 +156,8 @@ const uploadCover = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Nenhuma imagem enviada.' });
     }
 
-    const cover_image = `/uploads/${req.file.filename}`;
+    const result = await optimizeAndSaveImage(req.file, 'restaurantes');
+    const cover_image = result.imageUrl;
 
     await query(
       'UPDATE restaurants SET cover_image = ? WHERE id = ?',
@@ -164,7 +167,7 @@ const uploadCover = async (req, res, next) => {
     return res.json({
       success: true,
       message: 'Capa atualizada com sucesso!',
-      data: { cover_image, cover_url: cover_image },
+      data: { cover_image, cover_url: cover_image, thumbUrl: result.thumbUrl },
     });
   } catch (error) {
     next(error);

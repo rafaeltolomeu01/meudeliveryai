@@ -1,7 +1,9 @@
 const { query, beginTransaction, queryTransaction } = require('../config/database');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 /**
- * Gera número único do pedido para clientes anônimos
+ * Gera número único do pedido para clientes
  */
 async function generatePublicOrderNumber(restaurant_id) {
   const date = new Date();
@@ -19,7 +21,7 @@ async function generatePublicOrderNumber(restaurant_id) {
 }
 
 /**
- * Busca detalhes de um restaurante (incluindo configurações, cores e tema) por seu slug público.
+ * Busca detalhes de um restaurante por seu slug público.
  */
 const getRestaurantBySlug = async (req, res, next) => {
   try {
@@ -65,7 +67,7 @@ const getRestaurantBySlug = async (req, res, next) => {
 };
 
 /**
- * Retorna as categorias e produtos disponíveis no cardápio de um restaurante.
+ * Retorna as categorias e produtos com seus complementos (estilo iFood)
  */
 const getRestaurantMenu = async (req, res, next) => {
   try {
@@ -84,43 +86,76 @@ const getRestaurantMenu = async (req, res, next) => {
     
     // Seleciona categorias ativas do cardápio
     const categories = await query(
-      'SELECT id, name, description, position FROM categories WHERE restaurant_id = ? AND is_active = 1 ORDER BY position ASC',
+      'SELECT id, name, description, position, icon, color, image_url FROM categories WHERE restaurant_id = ? AND is_active = 1 ORDER BY position ASC',
       [restaurant.id]
     );
     
-    // Seleciona produtos disponíveis
+    // Seleciona produtos disponíveis (oculta automaticamente se is_available for 0)
     const products = await query(
-      `SELECT id, category_id, name, description, price, promotional_price, image_url, 
-              is_available, is_featured, serves_how_many, preparation_time, position 
+      `SELECT id, category_id, name, description, price, promotional_price, image_url, images,
+              is_available, is_featured, serves_how_many, preparation_time, position, sku, track_stock, stock_quantity 
        FROM products 
        WHERE restaurant_id = ? AND is_available = 1 
        ORDER BY position ASC, name ASC`,
       [restaurant.id]
     );
     
-    // Seleciona opcionais/adicionais dos produtos
-    const options = await query(
-      `SELECT id, product_id, group_name, name, price, is_required, min_quantity, max_quantity 
-       FROM product_options 
-       WHERE restaurant_id = ? AND is_active = 1 
-       ORDER BY group_name ASC, position ASC`,
+    // Seleciona complementos/opcionais dos produtos
+    const productComplements = await query(
+      `SELECT pc.product_id, cg.id AS group_id, cg.name AS group_name, cg.description, cg.is_required, cg.min_quantity, cg.max_quantity, cg.position
+       FROM product_complements pc
+       JOIN complement_groups cg ON cg.id = pc.complement_group_id
+       WHERE cg.restaurant_id = ? AND cg.is_active = 1
+       ORDER BY cg.position ASC`,
       [restaurant.id]
     );
-    
-    // Agrupa opções por ID de produto
-    const optionsByProduct = {};
-    options.forEach(opt => {
-      if (!optionsByProduct[opt.product_id]) {
-        optionsByProduct[opt.product_id] = [];
+
+    const complementItems = await query(
+      `SELECT ci.id, ci.complement_group_id, ci.name, ci.price, ci.max_quantity, ci.position
+       FROM complement_items ci
+       JOIN complement_groups cg ON cg.id = ci.complement_group_id
+       WHERE cg.restaurant_id = ? AND ci.is_active = 1
+       ORDER BY ci.position ASC`,
+      [restaurant.id]
+    );
+
+    const itemsByGroup = {};
+    complementItems.forEach(item => {
+      if (!itemsByGroup[item.complement_group_id]) {
+        itemsByGroup[item.complement_group_id] = [];
       }
-      optionsByProduct[opt.product_id].push(opt);
+      itemsByGroup[item.complement_group_id].push(item);
+    });
+
+    const groupsByProduct = {};
+    productComplements.forEach(pc => {
+      if (!groupsByProduct[pc.product_id]) {
+        groupsByProduct[pc.product_id] = [];
+      }
+      const groupWithItems = {
+        id: pc.group_id,
+        name: pc.group_name,
+        description: pc.description,
+        is_required: pc.is_required,
+        min_quantity: pc.min_quantity,
+        max_quantity: pc.max_quantity,
+        position: pc.position,
+        items: itemsByGroup[pc.group_id] || []
+      };
+      groupsByProduct[pc.product_id].push(groupWithItems);
     });
     
     // Anexa as opções correspondentes a cada produto
     const productsWithOptions = products.map(prod => {
+      try {
+        prod.images = prod.images ? (typeof prod.images === 'string' ? JSON.parse(prod.images) : prod.images) : [];
+      } catch (err) {
+        prod.images = [];
+      }
       return {
         ...prod,
-        options: optionsByProduct[prod.id] || []
+        complements: groupsByProduct[prod.id] || [],
+        options: [] // Compatibilidade com frontend legado se necessário
       };
     });
     
@@ -137,17 +172,21 @@ const getRestaurantMenu = async (req, res, next) => {
 };
 
 /**
- * Cria um pedido no cardápio de forma anônima (checkout público)
+ * Cria um pedido no cardápio - Requer autenticação do cliente
  */
 const createPublicOrder = async (req, res, next) => {
   try {
     const { slug } = req.params;
     const {
-      customer_name, customer_phone, customer_email,
       order_type = 'delivery', payment_method = 'cash',
-      delivery_address, delivery_number, delivery_complement, delivery_neighborhood, delivery_city, delivery_state, delivery_zip_code,
+      delivery_address, delivery_number, delivery_complement, delivery_neighborhood, delivery_city, delivery_state, delivery_zip_code, reference,
       items, notes, change_for
     } = req.body;
+
+    const customerId = req.customer.id;
+    const customer_name = req.customer.name;
+    const customer_phone = req.customer.phone;
+    const customer_email = req.customer.email;
 
     // 1. Busca restaurante pelo slug
     const restaurants = await query('SELECT id, status, name FROM restaurants WHERE slug = ? LIMIT 1', [slug]);
@@ -160,7 +199,7 @@ const createPublicOrder = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Este restaurante não está aceitando pedidos.' });
     }
 
-    // 2. Valida Status de Assinatura (Regra: bloquear pedidos se assinatura estiver vencida)
+    // 2. Valida Status de Assinatura
     const subscriptions = await query(
       `SELECT * FROM subscriptions WHERE restaurant_id = ? ORDER BY id DESC LIMIT 1`,
       [restaurant.id]
@@ -218,7 +257,7 @@ const createPublicOrder = async (req, res, next) => {
 
     for (const item of items) {
       const products = await query(
-        'SELECT id, name, price, promotional_price, is_available FROM products WHERE id = ? AND restaurant_id = ? LIMIT 1',
+        'SELECT id, name, price, promotional_price, is_available, track_stock, stock_quantity FROM products WHERE id = ? AND restaurant_id = ? LIMIT 1',
         [item.product_id, restaurant.id]
       );
 
@@ -231,19 +270,42 @@ const createPublicOrder = async (req, res, next) => {
         return res.status(400).json({ success: false, message: `Produto "${product.name}" está temporariamente esgotado.` });
       }
 
+      // Verifica estoque se ativo
+      if (product.track_stock && product.stock_quantity !== null && product.stock_quantity < item.quantity) {
+        return res.status(400).json({ success: false, message: `O produto "${product.name}" possui apenas ${product.stock_quantity} unidades em estoque.` });
+      }
+
       const unit_price = parseFloat(product.promotional_price || product.price);
       let optionsPrice = 0;
       const optionsArray = [];
 
-      if (item.options && item.options.length > 0) {
-        for (const optId of item.options) {
-          const opts = await query(
-            'SELECT name, price FROM product_options WHERE id = ? AND product_id = ? LIMIT 1',
-            [optId, product.id]
+      // Processa complementos estilo iFood
+      if (item.complements && item.complements.length > 0) {
+        for (const compSelection of item.complements) {
+          const compItems = await query(
+            `SELECT ci.name, ci.price, ci.max_quantity
+             FROM complement_items ci
+             JOIN complement_groups cg ON cg.id = ci.complement_group_id
+             WHERE ci.id = ? AND cg.is_active = 1 LIMIT 1`,
+            [compSelection.id]
           );
-          if (opts.length > 0) {
-            optionsPrice += parseFloat(opts[0].price || 0);
-            optionsArray.push({ id: optId, name: opts[0].name, price: opts[0].price });
+
+          if (compItems.length > 0) {
+            const ci = compItems[0];
+            const selQty = parseInt(compSelection.quantity) || 1;
+            
+            if (selQty > ci.max_quantity) {
+              return res.status(400).json({ success: false, message: `Quantidade do item "${ci.name}" excede o limite máximo permitido (${ci.max_quantity}).` });
+            }
+
+            const itemTotalPrice = parseFloat(ci.price || 0) * selQty;
+            optionsPrice += itemTotalPrice;
+            optionsArray.push({
+              id: compSelection.id,
+              name: ci.name,
+              price: ci.price,
+              quantity: selQty
+            });
           }
         }
       }
@@ -259,7 +321,9 @@ const createPublicOrder = async (req, res, next) => {
         unit_price: final_unit_price,
         total_price,
         notes: item.notes || null,
-        options: optionsArray.length > 0 ? JSON.stringify(optionsArray) : null
+        options: optionsArray.length > 0 ? JSON.stringify(optionsArray) : null,
+        track_stock: product.track_stock,
+        stock_quantity: product.stock_quantity
       });
     }
 
@@ -272,26 +336,23 @@ const createPublicOrder = async (req, res, next) => {
 
     const total = subtotal + deliveryFee;
 
-    // 4b. Valida duplicidade de pedido no backend (mesmo telefone, mesmo total, nos últimos 2 minutos)
-    if (customer_phone) {
-      const duplicateOrders = await query(
-        `SELECT o.id FROM orders o
-         JOIN customers c ON c.id = o.customer_id
-         WHERE o.restaurant_id = ?
-           AND c.phone = ?
-           AND o.total = ?
-           AND o.status = 'pending'
-           AND o.created_at >= NOW() - INTERVAL 2 MINUTE
-         LIMIT 1`,
-        [restaurant.id, customer_phone, total]
-      );
+    // 4b. Valida duplicidade de pedido no backend (nos últimos 2 minutos)
+    const duplicateOrders = await query(
+      `SELECT o.id FROM orders o
+       WHERE o.restaurant_id = ?
+         AND o.customer_id = ?
+         AND o.total = ?
+         AND o.status = 'pending'
+         AND o.created_at >= NOW() - INTERVAL 2 MINUTE
+       LIMIT 1`,
+      [restaurant.id, customerId, total]
+    );
 
-      if (duplicateOrders.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: 'Um pedido idêntico foi enviado nos últimos 2 minutos. Aguarde a confirmação do estabelecimento.'
-        });
-      }
+    if (duplicateOrders.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Um pedido idêntico foi enviado nos últimos 2 minutos. Aguarde a confirmação do estabelecimento.'
+      });
     }
 
     const order_number = await generatePublicOrderNumber(restaurant.id);
@@ -299,37 +360,18 @@ const createPublicOrder = async (req, res, next) => {
     // 5. Inicia gravação atômica do pedido
     const connection = await beginTransaction();
     try {
-      // Cria ou vincula cliente
-      let customerId = null;
-      if (customer_phone) {
-        const existingCust = await queryTransaction(connection,
-          'SELECT id FROM customers WHERE restaurant_id = ? AND phone = ? LIMIT 1',
-          [restaurant.id, customer_phone]
+      // Salva endereço no histórico do cliente se for novo
+      if (order_type === 'delivery' && delivery_zip_code && delivery_address && delivery_number) {
+        const addressCheck = await queryTransaction(connection,
+          'SELECT id FROM customer_addresses WHERE customer_id = ? AND zip_code = ? AND street = ? AND number = ? LIMIT 1',
+          [customerId, delivery_zip_code, delivery_address, delivery_number]
         );
-        if (existingCust.length > 0) {
-          customerId = existingCust[0].id;
+        if (addressCheck.length === 0) {
           await queryTransaction(connection,
-            `UPDATE customers SET
-              name = ?, email = COALESCE(?, email),
-              address = COALESCE(?, address), address_number = COALESCE(?, address_number),
-              complement = COALESCE(?, complement), neighborhood = COALESCE(?, neighborhood),
-              city = COALESCE(?, city), state = COALESCE(?, state), zip_code = COALESCE(?, zip_code)
-             WHERE id = ?`,
-            [customer_name, customer_email || null,
-             delivery_address || null, delivery_number || null,
-             delivery_complement || null, delivery_neighborhood || null,
-             delivery_city || null, delivery_state || null, delivery_zip_code || null, customerId]
+            `INSERT INTO customer_addresses (customer_id, zip_code, street, number, complement, neighborhood, city, state, reference, is_default)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+            [customerId, delivery_zip_code, delivery_address, delivery_number, delivery_complement || null, delivery_neighborhood, delivery_city, delivery_state, reference || null]
           );
-        } else {
-          const custResult = await queryTransaction(connection,
-            `INSERT INTO customers (restaurant_id, name, phone, email, address, address_number, complement, neighborhood, city, state, zip_code)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [restaurant.id, customer_name, customer_phone, customer_email || null,
-             delivery_address || null, delivery_number || null,
-             delivery_complement || null, delivery_neighborhood || null,
-             delivery_city || null, delivery_state || null, delivery_zip_code || null]
-          );
-          customerId = custResult.insertId;
         }
       }
 
@@ -346,12 +388,19 @@ const createPublicOrder = async (req, res, next) => {
       );
       const order_id = orderResult.insertId;
 
-      // Grava itens
+      // Grava itens e deduz estoque se rastreado
       for (const item of validatedItems) {
         await queryTransaction(connection,
           'INSERT INTO order_items (order_id, restaurant_id, product_id, product_name, quantity, unit_price, total_price, options, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [order_id, restaurant.id, item.product_id, item.product_name, item.quantity, item.unit_price, item.total_price, item.options, item.notes]
         );
+
+        if (item.track_stock) {
+          await queryTransaction(connection,
+            'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
+            [item.quantity, item.product_id]
+          );
+        }
       }
 
       // Adiciona histórico de status inicial
@@ -367,12 +416,10 @@ const createPublicOrder = async (req, res, next) => {
       );
 
       // Incrementa estatísticas do cliente
-      if (customerId) {
-        await queryTransaction(connection,
-          'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ?, last_order_at = NOW() WHERE id = ?',
-          [total, customerId]
-        );
-      }
+      await queryTransaction(connection,
+        'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ?, last_order_at = NOW() WHERE id = ?',
+        [total, customerId]
+      );
 
       await connection.commit();
       connection.release();
@@ -397,7 +444,7 @@ const createPublicOrder = async (req, res, next) => {
 };
 
 /**
- * Retorna os detalhes de um pedido público para a tela de acompanhamento de status do cliente.
+ * Retorna os detalhes de um pedido público
  */
 const getPublicOrder = async (req, res, next) => {
   try {
@@ -454,7 +501,7 @@ const getPublicOrder = async (req, res, next) => {
 };
 
 /**
- * GET /api/v1/public/restaurant/:slug/orders/:id/messages
+ * Retorna mensagens do chat de um pedido
  */
 const getPublicMessages = async (req, res, next) => {
   try {
@@ -466,13 +513,10 @@ const getPublicMessages = async (req, res, next) => {
     }
     const restaurant_id = restaurants[0].id;
 
-    const orders = await query('SELECT id FROM orders WHERE id = ? AND restaurant_id = ? LIMIT 1', [id, restaurant_id]);
-    if (orders.length === 0) {
-      return res.status(404).json({ success: false, message: 'Pedido não encontrado.' });
-    }
-
     const messages = await query(
-      'SELECT * FROM order_messages WHERE order_id = ? AND restaurant_id = ? ORDER BY created_at ASC',
+      `SELECT * FROM order_messages 
+       WHERE order_id = ? AND restaurant_id = ? 
+       ORDER BY created_at ASC`,
       [id, restaurant_id]
     );
 
@@ -483,7 +527,7 @@ const getPublicMessages = async (req, res, next) => {
 };
 
 /**
- * POST /api/v1/public/restaurant/:slug/orders/:id/messages
+ * Envia uma mensagem no chat do pedido
  */
 const sendPublicMessage = async (req, res, next) => {
   try {
@@ -525,11 +569,237 @@ const sendPublicMessage = async (req, res, next) => {
   }
 };
 
+// === CUSTOMER AUTH ACTIONS ===
+
+const customerRegister = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const { name, email, phone, document, password } = req.body;
+
+    if (!name || !phone || !document || !password) {
+      return res.status(400).json({ success: false, message: 'Preencha todos os campos obrigatórios (Nome, WhatsApp, CPF e Senha).' });
+    }
+
+    const restaurants = await query('SELECT id FROM restaurants WHERE slug = ? LIMIT 1', [slug]);
+    if (restaurants.length === 0) {
+      return res.status(404).json({ success: false, message: 'Restaurante não encontrado.' });
+    }
+    const restaurant_id = restaurants[0].id;
+
+    const existing = await query(
+      'SELECT id FROM customers WHERE restaurant_id = ? AND (phone = ? OR (email IS NOT NULL AND email = ?) OR document = ?) LIMIT 1',
+      [restaurant_id, phone, email || null, document]
+    );
+
+    if (existing.length > 0) {
+      return res.status(409).json({ success: false, message: 'Este WhatsApp, E-mail ou CPF já está cadastrado para este estabelecimento.' });
+    }
+
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    const result = await query(
+      `INSERT INTO customers (restaurant_id, name, email, phone, document, password_hash)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [restaurant_id, name, email || null, phone, document, password_hash]
+    );
+
+    const customerId = result.insertId;
+
+    const token = jwt.sign(
+      { id: customerId, email, name, restaurant_id, role: 'customer' },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Cadastro realizado com sucesso!',
+      data: {
+        token,
+        customer: { id: customerId, name, email, phone, document }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const customerLogin = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Informe seu identificador (WhatsApp/E-mail) e sua Senha.' });
+    }
+
+    const restaurants = await query('SELECT id FROM restaurants WHERE slug = ? LIMIT 1', [slug]);
+    if (restaurants.length === 0) {
+      return res.status(404).json({ success: false, message: 'Restaurante não encontrado.' });
+    }
+    const restaurant_id = restaurants[0].id;
+
+    const customers = await query(
+      'SELECT * FROM customers WHERE restaurant_id = ? AND (email = ? OR phone = ? OR document = ?) LIMIT 1',
+      [restaurant_id, email, email, email]
+    );
+
+    if (customers.length === 0) {
+      return res.status(401).json({ success: false, message: 'WhatsApp/E-mail ou senha incorretos.' });
+    }
+
+    const customer = customers[0];
+
+    if (customer.is_blocked) {
+      return res.status(403).json({ success: false, message: 'Sua conta está suspensa neste estabelecimento.' });
+    }
+
+    if (!customer.password_hash) {
+      return res.status(400).json({
+        success: false,
+        message: 'Esta conta ainda não possui senha. Por favor, registre-se para criar sua senha.'
+      });
+    }
+
+    const isValid = await bcrypt.compare(password, customer.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ success: false, message: 'WhatsApp/E-mail ou senha incorretos.' });
+    }
+
+    const token = jwt.sign(
+      { id: customer.id, email: customer.email, name: customer.name, restaurant_id: customer.restaurant_id, role: 'customer' },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Login realizado com sucesso!',
+      data: {
+        token,
+        customer: { id: customer.id, name: customer.name, email: customer.email, phone: customer.phone, document: customer.document }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const customerMe = async (req, res, next) => {
+  try {
+    return res.json({
+      success: true,
+      data: {
+        id: req.customer.id,
+        name: req.customer.name,
+        email: req.customer.email,
+        phone: req.customer.phone,
+        document: req.customer.document
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getCustomerOrders = async (req, res, next) => {
+  try {
+    const customerId = req.customer.id;
+    const orders = await query(
+      `SELECT o.* 
+       FROM orders o
+       WHERE o.customer_id = ?
+       ORDER BY o.created_at DESC`,
+      [customerId]
+    );
+
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const items = await query(
+          'SELECT oi.*, p.image_url as product_image FROM order_items oi LEFT JOIN products p ON p.id = oi.product_id WHERE oi.order_id = ?',
+          [order.id]
+        );
+        return { ...order, items };
+      })
+    );
+
+    return res.json({ success: true, data: ordersWithItems });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// === SAVED ADDRESSES ACTIONS ===
+
+const getCustomerAddresses = async (req, res, next) => {
+  try {
+    const customerId = req.customer.id;
+    const addresses = await query(
+      'SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC',
+      [customerId]
+    );
+    return res.json({ success: true, data: addresses });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addCustomerAddress = async (req, res, next) => {
+  try {
+    const customerId = req.customer.id;
+    const { zip_code, street, number, complement, neighborhood, city, state, reference, is_default = 0 } = req.body;
+
+    if (!zip_code || !street || !number || !neighborhood || !city || !state) {
+      return res.status(400).json({ success: false, message: 'Preencha todos os campos obrigatórios do endereço.' });
+    }
+
+    if (is_default) {
+      await query('UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?', [customerId]);
+    }
+
+    const result = await query(
+      `INSERT INTO customer_addresses (customer_id, zip_code, street, number, complement, neighborhood, city, state, reference, is_default)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [customerId, zip_code, street, number, complement || null, neighborhood, city, state, reference || null, is_default ? 1 : 0]
+    );
+
+    const created = await query('SELECT * FROM customer_addresses WHERE id = ? LIMIT 1', [result.insertId]);
+    return res.status(201).json({ success: true, message: 'Endereço salvo com sucesso!', data: created[0] });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteCustomerAddress = async (req, res, next) => {
+  try {
+    const customerId = req.customer.id;
+    const { id } = req.params;
+
+    const check = await query('SELECT id FROM customer_addresses WHERE id = ? AND customer_id = ? LIMIT 1', [id, customerId]);
+    if (check.length === 0) {
+      return res.status(404).json({ success: false, message: 'Endereço não encontrado.' });
+    }
+
+    await query('DELETE FROM customer_addresses WHERE id = ?', [id]);
+    return res.json({ success: true, message: 'Endereço removido com sucesso.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getRestaurantBySlug,
   getRestaurantMenu,
   createPublicOrder,
   getPublicOrder,
   getPublicMessages,
-  sendPublicMessage
+  sendPublicMessage,
+  customerRegister,
+  customerLogin,
+  customerMe,
+  getCustomerOrders,
+  getCustomerAddresses,
+  addCustomerAddress,
+  deleteCustomerAddress
 };
