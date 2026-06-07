@@ -1,0 +1,20 @@
+{
+  "name": "meudeliveryai-root",
+  "version": "1.0.0",
+  "description": "MeuDeliveryAI - Root Monorepo Scripts for Render and Local Development",
+  "scripts": {
+    "install:backend": "npm install --prefix backend",
+    "install:frontend": "npm install --prefix frontend",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm install --prefix backend",
+    "start:backend": "npm start --prefix backend",
+    "db:migrate": "npm run db:migrate --prefix backend",
+    "db:create-admin": "npm run db:create-admin --prefix backend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
