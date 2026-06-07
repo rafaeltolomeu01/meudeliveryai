@@ -13,24 +13,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { orders as ordersApi, products as productsApi, customers as customersApi, restaurants as restaurantApi } from '../services/api'
 import toast from 'react-hot-toast'
 
-const weeklyData = [
-  { day: 'Seg', orders: 32, revenue: 2890 },
-  { day: 'Ter', orders: 41, revenue: 3650 },
-  { day: 'Qua', orders: 38, revenue: 3200 },
-  { day: 'Qui', orders: 55, revenue: 4870 },
-  { day: 'Sex', orders: 72, revenue: 6340 },
-  { day: 'Sáb', orders: 89, revenue: 7820 },
-  { day: 'Dom', orders: 47, revenue: 3847 },
-]
-
-const recentOrders = [
-  { id: '#BP-2847', customer: 'Maria Silva', items: 'X-Burguer + Batata G + Coca-Cola', total: 68.90, status: 'delivering', time: '18min' },
-  { id: '#BP-2846', customer: 'João Mendes', items: 'Double Smash + Onion Rings', total: 54.50, status: 'preparing', time: '25min' },
-  { id: '#BP-2845', customer: 'Ana Oliveira', items: 'Veggie Burguer + Batata P', total: 42.00, status: 'confirmed', time: '32min' },
-  { id: '#BP-2844', customer: 'Carlos Souza', items: '2x X-Bacon + 2x Suco de Laranja', total: 98.00, status: 'delivered', time: '1h' },
-  { id: '#BP-2843', customer: 'Patricia Lima', items: 'Combo Família (4 pessoas)', total: 156.00, status: 'delivered', time: '1h20' },
-]
-
 const statusMap = {
   pending: { label: 'Pendente', color: 'yellow' },
   confirmed: { label: 'Confirmado', color: 'blue' },
@@ -45,25 +27,42 @@ export default function DashboardPage() {
   const { user, updateUser } = useAuth()
   const [isOpen, setIsOpen] = useState(user?.restaurant?.isOpen ?? true)
   const [loading, setLoading] = useState(true)
+  const [recentOrders, setRecentOrders] = useState([])
+  const [weeklyData, setWeeklyData] = useState(() => {
+    const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    const last7Days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      last7Days.push({
+        dateStr: d.toISOString().split('T')[0],
+        day: daysOfWeek[d.getDay()],
+        orders: 0,
+        revenue: 0
+      })
+    }
+    return last7Days
+  })
   
   const [stats, setStats] = useState({
-    revenue: 3847.50,
-    ordersCount: 47,
-    ticketAvg: 81.86,
-    pending: 8,
-    preparing: 14,
-    finalized: 25,
-    totalProducts: 34,
-    totalCustomers: 234
+    revenue: 0,
+    ordersCount: 0,
+    ticketAvg: 0,
+    pending: 0,
+    preparing: 0,
+    finalized: 0,
+    totalProducts: 0,
+    totalCustomers: 0
   })
 
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      const [statsRes, prodRes, custRes] = await Promise.all([
+      const [statsRes, prodRes, custRes, ordersRes] = await Promise.all([
         ordersApi.stats(),
         productsApi.list({ limit: 1 }),
-        customersApi.list({ limit: 1 })
+        customersApi.list({ limit: 1 }),
+        ordersApi.list({ limit: 5 })
       ])
       
       if (statsRes.success) {
@@ -96,8 +95,40 @@ export default function DashboardPage() {
           totalCustomers: custRes.pagination?.total || 0
         })
       }
+
+      if (ordersRes.success && ordersRes.data) {
+        setRecentOrders(ordersRes.data)
+      }
+
+      // Calculate last 7 days sales dynamically
+      const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+      const last7Days = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        last7Days.push({
+          dateStr: d.toISOString().split('T')[0],
+          day: daysOfWeek[d.getDay()],
+          orders: 0,
+          revenue: 0
+        })
+      }
+
+      const dateFrom = last7Days[0].dateStr
+      const allOrdersRes = await ordersApi.list({ date_from: dateFrom, limit: 1000 })
+      if (allOrdersRes.success && allOrdersRes.data) {
+        allOrdersRes.data.forEach(order => {
+          const orderDate = new Date(order.created_at).toLocaleDateString('en-CA')
+          const dayObj = last7Days.find(d => d.dateStr === orderDate)
+          if (dayObj) {
+            dayObj.orders += 1
+            dayObj.revenue += parseFloat(order.total || 0)
+          }
+        })
+      }
+      setWeeklyData(last7Days)
     } catch (err) {
-      console.warn('Erro ao conectar com API do dashboard, mantendo simulações padrão.', err)
+      console.warn('Erro ao carregar dados do dashboard.', err)
     } finally {
       setLoading(false)
     }
@@ -122,7 +153,7 @@ export default function DashboardPage() {
     }
   }
 
-  const maxOrders = Math.max(...weeklyData.map((d) => d.orders))
+  const maxOrders = Math.max(...weeklyData.map((d) => d.orders), 1)
 
   return (
     <div className="space-y-6 text-left">
@@ -412,20 +443,36 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map((order) => (
-                <tr key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                  <td className="px-5 py-3.5 text-[#FF6B35] font-bold text-sm">{order.id}</td>
-                  <td className="px-5 py-3.5 text-white text-sm font-medium">{order.customer}</td>
-                  <td className="px-5 py-3.5 text-[#a991c7] text-xs max-w-[200px] truncate">{order.items}</td>
-                  <td className="px-5 py-3.5 text-white text-sm font-semibold">{formatCurrency(order.total)}</td>
-                  <td className="px-5 py-3.5">
-                    <Badge color={statusMap[order.status]?.color || 'gray'}>
-                      {statusMap[order.status]?.label}
-                    </Badge>
+              {recentOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-xs text-gray-500 italic">
+                    Nenhum pedido registrado hoje. Compartilhe seu link para começar a receber pedidos!
                   </td>
-                  <td className="px-5 py-3.5 text-[#6b5880] text-xs">{order.time}</td>
                 </tr>
-              ))}
+              ) : (
+                recentOrders.map((order) => {
+                  const itemsList = Array.isArray(order.items)
+                    ? order.items.map(i => `${i.quantity}x ${i.product_name}`).join(', ')
+                    : (order.items || '');
+                    
+                  return (
+                    <tr key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                      <td className="px-5 py-3.5 text-[#FF6B35] font-bold text-sm">{order.order_number || `#${order.id}`}</td>
+                      <td className="px-5 py-3.5 text-white text-sm font-medium">{order.customer_name || 'Anônimo'}</td>
+                      <td className="px-5 py-3.5 text-[#a991c7] text-xs max-w-[200px] truncate" title={itemsList}>{itemsList}</td>
+                      <td className="px-5 py-3.5 text-white text-sm font-semibold">{formatCurrency(order.total)}</td>
+                      <td className="px-5 py-3.5">
+                        <Badge color={statusMap[order.status]?.color || 'gray'}>
+                          {statusMap[order.status]?.label || order.status}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3.5 text-[#6b5880] text-xs">
+                        {new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
