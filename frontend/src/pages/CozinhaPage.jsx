@@ -1,3 +1,4 @@
+import { playNewOrderBell } from '../utils/orderSound'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChefHat, Clock, Check, Play, Bell, LogOut, Loader2, Volume2, VolumeX, RefreshCw, LayoutDashboard } from 'lucide-react'
@@ -93,7 +94,7 @@ export default function CozinhaPage() {
         )
 
         if (hasNewPending && !isFirstLoad.current) {
-          playBeep()
+          playNewOrderBell(5000)
           toast('Novo pedido na fila da cozinha!', { icon: '🔔', duration: 4000 })
         }
 

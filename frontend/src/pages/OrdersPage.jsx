@@ -1,3 +1,4 @@
+import { playNewOrderBell } from '../utils/orderSound'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -171,7 +172,7 @@ export default function OrdersPage() {
 
         if (hasNewPending && !isFirstLoad.current) {
           if (soundEnabled) {
-            playDoorbellSound();
+            playNewOrderBell(5000);
           }
           toast('Novo pedido recebido! 🔔', { icon: '🔔', duration: 4000 });
         }
