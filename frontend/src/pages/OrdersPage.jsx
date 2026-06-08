@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Clock, User, MapPin, CreditCard, Search, X, Check, Printer, MessageSquare, Phone, AlertCircle, ShoppingBag, Loader2, CheckCircle, ChevronDown, Truck } from 'lucide-react'
+import { Clock, User, MapPin, CreditCard, Search, X, Check, Printer, MessageSquare, Phone, AlertCircle, ShoppingBag, Loader2, CheckCircle, ChevronDown, Truck, Volume2, VolumeX } from 'lucide-react'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { formatCurrency } from '../utils/helpers'
-import { orders as ordersApi } from '../services/api'
+import { orders as ordersApi, settings as settingsApi } from '../services/api'
 import toast from 'react-hot-toast'
 
 const COLUMNS = [
@@ -80,6 +80,48 @@ export default function OrdersPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showPrintMenu, setShowPrintMenu] = useState(false)
 
+  // Sound and Printing Configuration States/Refs
+  const seenOrderIds = useRef(new Set())
+  const isFirstLoad = useRef(true)
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('mda_dashboard_sound')
+    return saved !== 'false'
+  })
+  const [printFormat, setPrintFormat] = useState('ask')
+
+  const playDoorbellSound = () => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      gain1.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 1.0);
+      
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(440.00, ctx.currentTime + 0.3); // A4
+      gain2.gain.setValueAtTime(0, ctx.currentTime);
+      gain2.gain.setValueAtTime(0.12, ctx.currentTime + 0.3);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.5);
+      osc2.start(ctx.currentTime + 0.3);
+      osc2.stop(ctx.currentTime + 1.5);
+    } catch (err) {
+      console.warn('Erro ao reproduzir áudio:', err);
+    }
+  }
+
   // Drag and drop state and handlers
   const [activeDragCol, setActiveDragCol] = useState(null)
 
@@ -121,6 +163,22 @@ export default function OrdersPage() {
       const res = await ordersApi.list({ limit: 100 })
       if (res.success && res.data) {
         setOrders(res.data)
+
+        // Check for new pending orders to trigger the doorbell sound
+        const hasNewPending = res.data.some(
+          (o) => o.status === 'pending' && !seenOrderIds.current.has(o.id)
+        )
+
+        if (hasNewPending && !isFirstLoad.current) {
+          if (soundEnabled) {
+            playDoorbellSound();
+          }
+          toast('Novo pedido recebido! 🔔', { icon: '🔔', duration: 4000 });
+        }
+
+        // Update seen IDs
+        res.data.forEach(o => seenOrderIds.current.add(o.id));
+        isFirstLoad.current = false;
       }
     } catch (err) {
       console.error('Erro ao buscar pedidos no servidor:', err)
@@ -134,9 +192,22 @@ export default function OrdersPage() {
     loadOrders()
     const timer = setInterval(() => {
       loadOrders(true)
-    }, 10000) // Atualiza automaticamente a cada 10 segundos
+    }, 10000) // fire every 10s
+
+    async function fetchPrintSettings() {
+      try {
+        const res = await settingsApi.get()
+        if (res.success && res.data) {
+          setPrintFormat(res.data.default_print_format || 'ask')
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar configurações de impressão:', err)
+      }
+    }
+    fetchPrintSettings()
+
     return () => clearInterval(timer)
-  }, [])
+  }, [soundEnabled])
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
@@ -376,15 +447,37 @@ export default function OrdersPage() {
           </p>
         </div>
         
-        {/* Search */}
-        <div className="relative flex-1 sm:w-80 w-full">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b5880]" />
-          <input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por N° pedido ou nome do cliente..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-[#6b5880] focus:outline-none focus:border-[#FF6B35]/50 focus:bg-white/10"
-          />
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          {/* Sound Control */}
+          <button
+            onClick={() => {
+              setSoundEnabled(prev => {
+                const val = !prev;
+                localStorage.setItem('mda_dashboard_sound', String(val));
+                return val;
+              });
+              toast.success(!soundEnabled ? 'Sons de novos pedidos ativados! 🔊' : 'Sons de novos pedidos desativados! 🔇');
+            }}
+            className={`p-2.5 rounded-xl transition-all border shrink-0 ${
+              soundEnabled 
+                ? 'bg-green-600/10 text-green-400 border-green-500/20 hover:bg-green-600/20' 
+                : 'bg-white/5 text-gray-400 border-white/5 hover:bg-white/10'
+            }`}
+            title={soundEnabled ? 'Silenciar novos pedidos' : 'Ativar som de novos pedidos'}
+          >
+            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+
+          {/* Search */}
+          <div className="relative flex-1 sm:w-80">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b5880]" />
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por N° pedido ou nome do cliente..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-[#6b5880] focus:outline-none focus:border-[#FF6B35]/50 focus:bg-white/10"
+            />
+          </div>
         </div>
       </div>
 
@@ -487,6 +580,17 @@ export default function OrdersPage() {
                           {paymentLabels[order.payment_method] || order.payment_method}
                         </span>
                       </div>
+
+                      {order.status === 'pending' && (
+                        <div className="pt-2 border-t border-white/5" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleUpdateStatus(order.id, 'confirmed')}
+                            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-bold bg-green-600 hover:bg-green-500 text-white transition-all shadow-sm active:scale-95 cursor-pointer"
+                          >
+                            <Check size={14} /> Aceitar Pedido
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -603,16 +707,26 @@ export default function OrdersPage() {
                 </Button>
               )}
 
-              <div className="relative">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={Printer}
-                  rightIcon={ChevronDown}
-                  onClick={() => setShowPrintMenu(!showPrintMenu)}
+              <div className="relative inline-flex">
+                <button
+                  onClick={() => {
+                    if (printFormat === 'ask') {
+                      setShowPrintMenu(!showPrintMenu);
+                    } else {
+                      handlePrint(selectedOrder, printFormat);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center font-medium transition-all duration-200 bg-[#1e1035] hover:bg-purple-700/60 text-white border border-purple-500/30 px-3 py-1.5 text-sm rounded-l-lg gap-1.5 active:scale-95 border-r-0 cursor-pointer"
                 >
-                  Imprimir
-                </Button>
+                  <Printer size={14} />
+                  <span>Imprimir {printFormat !== 'ask' ? `(${printFormat})` : ''}</span>
+                </button>
+                <button
+                  onClick={() => setShowPrintMenu(!showPrintMenu)}
+                  className="inline-flex items-center justify-center bg-[#1e1035] hover:bg-purple-700/60 text-white border border-purple-500/30 px-2.5 py-1.5 text-sm rounded-r-lg active:scale-95 cursor-pointer"
+                >
+                  <ChevronDown size={14} />
+                </button>
                 {showPrintMenu && (
                   <div className="absolute right-0 bottom-full mb-2 bg-[#160b29] border border-white/10 rounded-xl py-1 shadow-xl z-50 min-w-[120px] text-left">
                     <button

@@ -7,7 +7,7 @@ import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Modal from '../components/ui/Modal'
 import { formatCurrency } from '../utils/helpers'
-import { orders as ordersApi, drivers as driversApi } from '../services/api'
+import { orders as ordersApi, drivers as driversApi, settings as settingsApi } from '../services/api'
 import toast from 'react-hot-toast'
 
 const statusColors = {
@@ -55,6 +55,7 @@ export default function OrderDetailPage() {
   const [showPrintMenu, setShowPrintMenu] = useState(false)
   const [messages, setMessages] = useState([])
   const [newMessageText, setNewMessageText] = useState('')
+  const [printFormat, setPrintFormat] = useState('ask')
 
   const loadOrderDetails = async () => {
     try {
@@ -122,6 +123,18 @@ export default function OrderDetailPage() {
     loadOrderDetails()
     loadDriversList()
     loadChatMessages()
+
+    const fetchPrintSettings = async () => {
+      try {
+        const res = await settingsApi.get()
+        if (res.success && res.data) {
+          setPrintFormat(res.data.default_print_format || 'ask')
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar configurações de impressão:', err)
+      }
+    }
+    fetchPrintSettings()
 
     const interval = setInterval(() => {
       loadChatMessages()
@@ -670,15 +683,26 @@ export default function OrderDetailPage() {
                 </Button>
               )}
 
-              <div className="relative">
-                <Button
-                  onClick={() => setShowPrintMenu(!showPrintMenu)}
-                  leftIcon={Printer}
-                  rightIcon={ChevronDown}
-                  fullWidth
+              <div className="relative flex w-full">
+                <button
+                  onClick={() => {
+                    if (printFormat === 'ask') {
+                      setShowPrintMenu(!showPrintMenu);
+                    } else {
+                      handlePrint(printFormat);
+                    }
+                  }}
+                  className="flex-1 inline-flex items-center justify-center font-semibold transition-all duration-200 bg-[#FF6B35] hover:bg-[#e84e15] text-white shadow-[0_0_20px_rgba(255,107,53,0.3)] hover:shadow-[0_0_30px_rgba(255,107,53,0.5)] px-4 py-2 text-sm rounded-l-xl gap-2 active:scale-95 border border-[#FF6B35] border-r-0 cursor-pointer"
                 >
-                  Imprimir Recibo
-                </Button>
+                  <Printer size={16} className="flex-shrink-0" />
+                  <span>Imprimir Recibo {printFormat !== 'ask' ? `(${printFormat})` : ''}</span>
+                </button>
+                <button
+                  onClick={() => setShowPrintMenu(!showPrintMenu)}
+                  className="inline-flex items-center justify-center bg-[#FF6B35] hover:bg-[#e84e15] text-white border border-[#FF6B35] px-3 py-2 text-sm rounded-r-xl active:scale-95 cursor-pointer"
+                >
+                  <ChevronDown size={16} />
+                </button>
                 {showPrintMenu && (
                   <div className="absolute right-0 left-0 bottom-full mb-2 bg-[#160b29] border border-white/10 rounded-xl py-1 shadow-xl z-50 text-center">
                     <button

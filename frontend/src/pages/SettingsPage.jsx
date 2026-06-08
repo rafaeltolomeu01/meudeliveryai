@@ -43,6 +43,7 @@ export default function SettingsPage() {
     order_dispatched_message: '',
     whatsapp_number: '',
     auto_accept_orders: false,
+    default_print_format: 'ask',
   })
 
   const [paymentForm, setPaymentForm] = useState({
@@ -93,6 +94,7 @@ export default function SettingsPage() {
             order_dispatched_message: d.order_dispatched_message || '',
             whatsapp_number: d.whatsapp_number || '',
             auto_accept_orders: d.auto_accept_orders === 1 || d.auto_accept_orders === true,
+            default_print_format: d.default_print_format || 'ask',
           })
 
           if (d.opening_hours) {
@@ -164,6 +166,7 @@ export default function SettingsPage() {
         order_dispatched_message: form.order_dispatched_message,
         whatsapp_number: form.whatsapp_number,
         auto_accept_orders: form.auto_accept_orders,
+        default_print_format: form.default_print_format,
       }
 
       await settingsApi.update(payload)
@@ -345,6 +348,33 @@ export default function SettingsPage() {
                     <ToggleLeft size={44} className="text-gray-500" />
                   )}
                 </button>
+              </div>
+
+              <div className="md:col-span-2 flex flex-col p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                <div>
+                  <label className="text-sm font-bold text-white block">Formato de Impressão Padrão</label>
+                  <span className="text-xs text-[#a991c7] mt-0.5 font-medium">Defina o tamanho padrão da bobina para pular a caixa de seleção ao imprimir comandas de pedidos.</span>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  {[
+                    { key: 'ask', label: 'Perguntar sempre' },
+                    { key: '58mm', label: 'Bobina 58mm' },
+                    { key: '80mm', label: 'Bobina 80mm' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, default_print_format: opt.key }))}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold border transition-all text-center cursor-pointer ${
+                        form.default_print_format === opt.key
+                          ? 'bg-[#FF6B35] border-[#FF6B35] text-white shadow-lg shadow-[#FF6B35]/25 font-bold'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white font-semibold'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
             </div>

@@ -78,7 +78,7 @@ export default function CozinhaPage() {
       if (res.success && res.data) {
         // Filtrar apenas pendentes de aprovação e em preparo
         const kitchenList = res.data.filter(
-          (o) => o.status === 'pending' || o.status === 'preparing'
+          (o) => o.status === 'pending' || o.status === 'confirmed' || o.status === 'preparing'
         )
         
         // Ordenar FIFO (pedidos mais antigos primeiro)
@@ -233,7 +233,7 @@ export default function CozinhaPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {orders.map((order) => {
-            const isPending = order.status === 'pending'
+            const isPending = order.status === 'pending' || order.status === 'confirmed'
             
             return (
               <div

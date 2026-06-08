@@ -30,33 +30,30 @@ const evoApi = getEvoApi();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function extractQrCode(data) {
-  console.log("Resposta Evolution connect:", data);
+  console.log("Connect QR Response:", data);
   if (!data) return null;
 
   let qr = null;
   if (typeof data === 'string') {
     qr = data;
   } else {
-    // aceitar base64, qrcode, code, qr ou data.qrcode
-    qr = data.base64 ||
-         data.qrcode ||
-         data.code ||
-         data.qr ||
-         data.data?.qrcode ||
+    qr = data.qrcode || 
+         data.base64 || 
+         data.qr || 
+         data.code || 
+         data.pairingCode || 
          data.data?.base64 ||
+         data.data?.qrcode || 
          data.data?.code ||
-         data.data?.qr ||
+         data.instance?.qrcode || 
          data.qrcode?.base64 ||
          data.qrcode?.code ||
-         data.qrcode?.qr ||
-         data.qrcode?.qrcode ||
-         data.instance?.qrcode ||
          data.instance?.connect?.qrcode ||
          null;
   }
 
   if (typeof qr === 'object' && qr !== null) {
-    qr = qr.base64 || qr.qrcode || qr.code || qr.qr || null;
+    qr = qr.base64 || qr.qrcode || qr.code || null;
   }
 
   if (qr && typeof qr === 'string') {
@@ -64,7 +61,6 @@ function extractQrCode(data) {
     if (qr.startsWith('data:')) {
       return qr;
     }
-    // se vier base64 sem prefixo, adicionar data:image/png;base64,
     if (/^[A-Za-z0-9+/=]+$/.test(qr.replace(/\s/g, '')) || qr.length > 100) {
       return `data:image/png;base64,${qr}`;
     }
@@ -75,9 +71,7 @@ function extractQrCode(data) {
 }
 
 function sessionName(restaurantId) {
-  // Permite usar uma instância fixa já criada/conectada na Evolution API.
-  // No Render/Railway, crie a variável EVOLUTION_INSTANCE_NAME=restaurant_8
-  return process.env.EVOLUTION_INSTANCE_NAME || `restaurant_${restaurantId}`;
+  return `restaurant_${restaurantId}`;
 }
 
 async function getOrCreateConnection(restaurantId) {
@@ -294,21 +288,55 @@ const reconnect = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
     const conn = await getOrCreateConnection(restaurantId);
+    const name = conn.session_name;
 
     if (isEvoConfigured()) {
+      // Criar instância caso não exista
       try {
-        await evoApi.delete(`/instance/logout/${conn.session_name}`);
-        await evoApi.get(`/instance/connect/${conn.session_name}`);
+        await evoApi.post('/instance/create', {
+          instanceName: name,
+          qrcode: true,
+          integration: 'EVOLUTION',
+        });
       } catch (_) {}
+
+      // Conectar / Rebuscar QR
+      try {
+        const response = await evoApi.get(`/instance/connect/${name}`);
+        const qrBase64 = extractQrCode(response.data);
+        if (qrBase64) {
+          await query(
+            "UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW() WHERE restaurant_id = ?",
+            [qrBase64, restaurantId]
+          );
+        } else {
+          await query(
+            "UPDATE whatsapp_connections SET status = 'connecting', updated_at = NOW() WHERE restaurant_id = ?",
+            [restaurantId]
+          );
+        }
+      } catch (err) {
+        console.error("[WhatsApp] Error connecting in reconnect:", err.message);
+        await query(
+          "UPDATE whatsapp_connections SET status = 'connecting', updated_at = NOW() WHERE restaurant_id = ?",
+          [restaurantId]
+        );
+      }
+    } else {
+      // Modo demo
+      await query(
+        `UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW()
+         WHERE restaurant_id = ?`,
+        ['DEMO_QR_' + Date.now(), restaurantId]
+      );
     }
 
-    await query(
-      `UPDATE whatsapp_connections SET status = 'connecting', updated_at = NOW()
-       WHERE restaurant_id = ?`,
+    const updated = await query(
+      'SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1',
       [restaurantId]
     );
 
-    return res.json({ success: true, message: 'Reconectando WhatsApp...' });
+    return res.json({ success: true, message: 'Reconectando WhatsApp...', data: updated[0] });
   } catch (error) {
     next(error);
   }
@@ -471,7 +499,7 @@ const webhook = async (req, res, next) => {
             const jid = `${customerPhone}@s.whatsapp.net`;
             await evoApi.post(`/message/sendText/${activeConn.session_name}`, {
               number: jid,
-              textMessage: { text: aiReply },
+              text: aiReply,
             });
             await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'sent');
           } catch (sendErr) {
@@ -520,7 +548,7 @@ const sendMessage = async (req, res, next) => {
 
     await evoApi.post(`/message/sendText/${conn.session_name}`, {
       number: jid,
-      textMessage: { text: message },
+      text: message,
     });
 
     await saveLog(restaurantId, 'manual', cleanPhone, message, 'sent');
@@ -829,7 +857,7 @@ async function autoSendOrderNotification(restaurantId, order, newStatus) {
 
     await evoApi.post(`/message/sendText/${conn.session_name}`, {
       number: jid,
-      textMessage: { text: template },
+      text: template,
     });
 
     await saveLog(restaurantId, `order_${newStatus}`, phone, template, 'sent');
