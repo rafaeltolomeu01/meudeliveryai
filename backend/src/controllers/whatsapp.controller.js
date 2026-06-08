@@ -20,28 +20,33 @@ console.log("EVOLUTION_API_KEY existe:", !!process.env.EVOLUTION_API_KEY);
 console.log("WHATSAPP_PROVIDER:", getProvider());
 console.log("ZAPI_INSTANCE_ID existe:", !!process.env.ZAPI_INSTANCE_ID);
 
-async function callEvoApi(method, path, data = null) {
+async function callEvoApi(method, path, data = undefined) {
   const rawBaseUrl = getEvoUrl();
   const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const fullUrl = `${baseUrl}${cleanPath}`;
 
   console.log(`[Evolution API Call] ${method.toUpperCase()} ${fullUrl}`);
-  if (data) {
+  if (data !== undefined && data !== null) {
     console.log(`[Evolution API Request Body]:`, JSON.stringify(data));
   }
 
   try {
-    const response = await axios({
+    const config = {
       method: method,
       url: fullUrl,
-      data: data,
       headers: {
-        'Content-Type': 'application/json',
         'apikey': getEvoKey()
       },
       timeout: 15000
-    });
+    };
+
+    if (data !== undefined && data !== null) {
+      config.data = data;
+      config.headers['Content-Type'] = 'application/json';
+    }
+
+    const response = await axios(config);
 
     console.log(`[Evolution API Response] Status: ${response.status}`);
     const responseStr = JSON.stringify(response.data);
