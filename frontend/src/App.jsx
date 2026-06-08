@@ -20,6 +20,7 @@ import CozinhaPage from './pages/CozinhaPage'
 import EntregadorPage from './pages/EntregadorPage'
 import PlansPage from './pages/PlansPage'
 import PublicMenuPage from './pages/PublicMenuPage'
+import PublicCustomerProfilePage from './pages/PublicCustomerProfilePage'
 import PublicCartPage from './pages/PublicCartPage'
 import PublicCheckoutPage from './pages/PublicCheckoutPage'
 import PublicOrderTrackingPage from './pages/PublicOrderTrackingPage'
@@ -76,6 +77,7 @@ export default function App() {
       
       {/* Rotas Públicas do Cardápio Digital */}
       <Route path="/cardapio/:slug" element={<PublicMenuPage />} />
+      <Route path="/cardapio/:slug/minha-conta" element={<PublicCustomerProfilePage />} />
       <Route path="/cardapio/:slug/carrinho" element={<PublicCartPage />} />
       <Route path="/cardapio/:slug/checkout" element={<PublicCheckoutPage />} />
       <Route path="/cardapio/:slug/pedido/:id" element={<PublicOrderTrackingPage />} />

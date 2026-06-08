@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, CreditCard, DollarSign, QrCode, Clipboard, ShoppingBag, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, CheckCircle, CreditCard, DollarSign, QrCode, Clipboard, ShoppingBag, ShieldCheck, User } from 'lucide-react'
 import { publicApi } from '../services/api'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
@@ -408,92 +408,24 @@ export default function PublicCheckoutPage() {
             
             {/* Customer Auth / Identification Block */}
             {!customer ? (
-              <div className="bg-[#1A0533]/90 border border-[#FF6B35]/20 rounded-[32px] p-6 space-y-5 shadow-2xl backdrop-blur-md">
-                <div className="flex border-b border-white/5 pb-1 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode('login')}
-                    className={`pb-3 text-sm font-extrabold transition-all relative ${
-                      authMode === 'login' ? 'text-white' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    Identificar-se (Entrar)
-                    {authMode === 'login' && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: primaryColor }} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode('register')}
-                    className={`pb-3 text-sm font-extrabold transition-all relative ${
-                      authMode === 'register' ? 'text-white' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    Criar Cadastro
-                    {authMode === 'register' && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: primaryColor }} />
-                    )}
-                  </button>
+              <div className="bg-[#1A0533]/90 border border-white/5 rounded-[32px] p-8 space-y-6 text-center shadow-2xl backdrop-blur-md">
+                <div className="w-16 h-16 rounded-full bg-[#FF6B35]/10 flex items-center justify-center mx-auto" style={{ backgroundColor: `${primaryColor}15` }}>
+                  <User size={32} style={{ color: primaryColor }} />
                 </div>
-
-                <form onSubmit={handleAuthSubmit} className="space-y-4">
-                  {authMode === 'register' && (
-                    <Input
-                      label="Nome Completo *"
-                      placeholder="Ex: João da Silva"
-                      value={authForm.name}
-                      onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
-                      required
-                    />
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input
-                      label="WhatsApp (com DDD) *"
-                      placeholder="Ex: 33999998888"
-                      value={authForm.phone}
-                      onChange={(e) => setAuthForm({ ...authForm, phone: e.target.value })}
-                      required={authMode === 'register'}
-                    />
-
-                    <Input
-                      label="E-mail (Opcional)"
-                      placeholder="Ex: joao@email.com"
-                      type="email"
-                      value={authForm.email}
-                      onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-                    />
-                  </div>
-
-                  {authMode === 'register' && (
-                    <Input
-                      label="CPF (Opcional)"
-                      placeholder="Ex: 12345678909"
-                      value={authForm.document}
-                      onChange={(e) => setAuthForm({ ...authForm, document: e.target.value })}
-                    />
-                  )}
-
-                  <Input
-                    label="Senha *"
-                    type="password"
-                    placeholder="Sua senha de acesso"
-                    value={authForm.password}
-                    onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                    required
-                  />
-
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="lg"
-                    loading={authLoading}
-                    className="w-full py-3 rounded-2xl font-bold shadow-lg"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    {authMode === 'login' ? 'Entrar e Continuar' : 'Cadastrar e Continuar'}
-                  </Button>
-                </form>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-extrabold text-white">Identificação Necessária</h3>
+                  <p className="text-xs text-gray-400 leading-relaxed max-w-sm mx-auto">
+                    Para confirmar e enviar o seu pedido ao restaurante, você precisa estar logado na sua conta.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => navigate(`/cardapio/${slug}/minha-conta?redirect=checkout`)}
+                  variant="primary"
+                  className="w-full py-3.5 rounded-2xl font-bold shadow-lg"
+                  style={{ backgroundColor: buttonColor }}
+                >
+                  Entrar ou Cadastrar-se
+                </Button>
               </div>
             ) : (
               <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-4 text-left">
@@ -536,6 +468,24 @@ export default function PublicCheckoutPage() {
                   <span className="w-1.5 h-4.5 rounded-full" style={{ backgroundColor: primaryColor }} />
                   Endereço de Entrega
                 </h3>
+
+                {savedAddresses.length > 0 && (
+                  <div className="flex flex-col gap-1.5 pb-2 border-b border-white/5">
+                    <label className="text-xs font-bold text-gray-400">Escolha um endereço salvo:</label>
+                    <select
+                      value={selectedAddressId}
+                      onChange={handleSelectAddress}
+                      className="w-full bg-[#1A0533]/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#FF6B35] transition-colors animate-fade-in"
+                    >
+                      {savedAddresses.map(addr => (
+                        <option key={addr.id} value={addr.id.toString()} className="bg-[#1A0533] text-white">
+                          {addr.street}, {addr.number} ({addr.neighborhood})
+                        </option>
+                      ))}
+                      <option value="new" className="bg-[#1A0533] text-[#FF6B35] font-bold">+ Cadastrar outro endereço / Digitar novo</option>
+                    </select>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-1">

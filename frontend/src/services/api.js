@@ -177,6 +177,12 @@ export const publicApi = {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
   },
+  getCustomerOrders: (slug) => {
+    const token = localStorage.getItem(`mda_customer_token_${slug}`)
+    return api.get(`/public/restaurant/${slug}/customer/orders`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+  },
   getAddresses: (slug) => {
     const token = localStorage.getItem(`mda_customer_token_${slug}`)
     return api.get(`/public/restaurant/${slug}/customer/addresses`, {

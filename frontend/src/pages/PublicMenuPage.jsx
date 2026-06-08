@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ShoppingBag, ChevronRight, Info, AlertTriangle, Plus, Minus, X, Clock, HelpCircle, ArrowLeft, Download } from 'lucide-react'
+import { ShoppingBag, ChevronRight, Info, AlertTriangle, Plus, Minus, X, Clock, HelpCircle, ArrowLeft, Download, User } from 'lucide-react'
 import { publicApi } from '../services/api'
 import Button from '../components/ui/Button'
 import toast from 'react-hot-toast'
@@ -457,8 +457,12 @@ export default function PublicMenuPage() {
           </button>
         )}
 
-        {/* Operational status badge */}
-        <div className="absolute top-4 right-4 z-10">
+        {/* Top Right Actions */}
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          <Link to={`/cardapio/${slug}/minha-conta`} className="bg-black/40 backdrop-blur-md text-white text-xs px-3.5 py-1.5 rounded-full hover:bg-black/60 transition-all flex items-center gap-1.5 font-bold border border-white/5">
+            <User size={12} style={{ color: primaryColor }} />
+            <span>Minha Conta</span>
+          </Link>
           <span
             className={`text-xs font-bold px-3.5 py-1.5 rounded-full text-white shadow-md uppercase tracking-wider ${
               restaurant.is_open ? 'bg-green-600' : 'bg-red-600'
