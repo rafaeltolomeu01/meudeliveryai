@@ -120,7 +120,18 @@ const update = async (req, res, next) => {
         zip_code = COALESCE(?, zip_code),
         notes = COALESCE(?, notes)
        WHERE id = ? AND restaurant_id = ?`,
-      [name, email, phone, address, city, neighborhood, complement, zip_code, notes, id, restaurant_id]
+      [
+        name !== undefined ? name : null,
+        email !== undefined ? email : null,
+        phone !== undefined ? phone : null,
+        address !== undefined ? address : null,
+        city !== undefined ? city : null,
+        neighborhood !== undefined ? neighborhood : null,
+        complement !== undefined ? complement : null,
+        zip_code !== undefined ? zip_code : null,
+        notes !== undefined ? notes : null,
+        id, restaurant_id
+      ]
     );
 
     const updated = await query('SELECT * FROM customers WHERE id = ? LIMIT 1', [id]);

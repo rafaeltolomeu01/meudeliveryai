@@ -113,13 +113,13 @@ const updateGroup = async (req, res, next) => {
         position = COALESCE(?, position)
        WHERE id = ? AND restaurant_id = ?`,
       [
-        name,
-        description,
+        name !== undefined ? name : null,
+        description !== undefined ? description : null,
         is_required !== undefined ? (is_required ? 1 : 0) : null,
-        min_quantity,
-        max_quantity,
+        min_quantity !== undefined ? min_quantity : null,
+        max_quantity !== undefined ? max_quantity : null,
         is_active !== undefined ? (is_active ? 1 : 0) : null,
-        position,
+        position !== undefined ? position : null,
         id,
         restaurant_id
       ]
@@ -269,11 +269,11 @@ const updateItem = async (req, res, next) => {
         position = COALESCE(?, position)
        WHERE id = ?`,
       [
-        name,
-        price,
-        max_quantity,
+        name !== undefined ? name : null,
+        price !== undefined ? price : null,
+        max_quantity !== undefined ? max_quantity : null,
         is_active !== undefined ? (is_active ? 1 : 0) : null,
-        position,
+        position !== undefined ? position : null,
         id
       ]
     );

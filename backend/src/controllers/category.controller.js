@@ -116,11 +116,15 @@ const update = async (req, res, next) => {
         icon = COALESCE(?, icon),
         color = COALESCE(?, color)
        WHERE id = ? AND restaurant_id = ?`,
-      [name, description, position,
-       is_active !== undefined ? (is_active ? 1 : 0) : null,
-       icon !== undefined ? icon : null,
-       color !== undefined ? color : null,
-       id, restaurant_id]
+      [
+        name !== undefined ? name : null,
+        description !== undefined ? description : null,
+        position !== undefined ? position : null,
+        is_active !== undefined ? (is_active ? 1 : 0) : null,
+        icon !== undefined ? icon : null,
+        color !== undefined ? color : null,
+        id, restaurant_id
+      ]
     );
 
     const updated = await query('SELECT * FROM categories WHERE id = ? LIMIT 1', [id]);

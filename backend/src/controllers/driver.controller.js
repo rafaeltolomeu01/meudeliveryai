@@ -101,9 +101,16 @@ const update = async (req, res, next) => {
         license_plate = COALESCE(?, license_plate),
         is_active = COALESCE(?, is_active)
        WHERE id = ? AND restaurant_id = ?`,
-      [name, email, phone, vehicle_type, vehicle_model, license_plate,
-       is_active !== undefined ? (is_active ? 1 : 0) : null,
-       id, restaurant_id]
+      [
+        name !== undefined ? name : null,
+        email !== undefined ? email : null,
+        phone !== undefined ? phone : null,
+        vehicle_type !== undefined ? vehicle_type : null,
+        vehicle_model !== undefined ? vehicle_model : null,
+        license_plate !== undefined ? license_plate : null,
+        is_active !== undefined ? (is_active ? 1 : 0) : null,
+        id, restaurant_id
+      ]
     );
 
     const updated = await query('SELECT * FROM delivery_drivers WHERE id = ? LIMIT 1', [id]);

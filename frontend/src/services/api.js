@@ -31,7 +31,8 @@ api.interceptors.response.use(
       }
     }
     const message = error.response?.data?.message || 'Erro inesperado. Tente novamente.'
-    return Promise.reject({ message, status: error.response?.status, original: error })
+    const details = error.response?.data?.details || null
+    return Promise.reject({ message, details, status: error.response?.status, original: error })
   }
 )
 

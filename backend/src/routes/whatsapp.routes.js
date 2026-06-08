@@ -42,6 +42,7 @@ router.post('/reconnect',  subscriptionMiddleware, roleMiddleware('dono', 'geren
 
 // Envio manual de mensagem
 router.post('/send', subscriptionMiddleware, roleMiddleware('dono', 'gerente', 'atendente', 'admin_geral'), sendMessage);
+router.post('/send-test', subscriptionMiddleware, roleMiddleware('dono', 'gerente', 'atendente', 'admin_geral'), sendMessage);
 
 // Histórico de mensagens
 router.get('/logs', getLogs);

@@ -103,23 +103,34 @@ export default function AppearancePage() {
       let currentLogoPath = form.logo
       let currentCoverPath = form.cover_image
 
+      const uploadPromises = []
+
       // 1. Upload Logo if selected
       if (logoFile) {
         const formData = new FormData()
         formData.append('logo', logoFile)
-        const resLogo = await restaurantsApi.uploadLogo(formData)
-        if (resLogo.success) {
-          currentLogoPath = resLogo.data.logo
-        }
+        uploadPromises.push(
+          restaurantsApi.uploadLogo(formData).then(res => ({ type: 'logo', res }))
+        )
       }
 
       // 2. Upload Cover Image if selected
       if (coverFile) {
         const formData = new FormData()
         formData.append('cover', coverFile)
-        const resCover = await restaurantsApi.uploadCover(formData)
-        if (resCover.success) {
-          currentCoverPath = resCover.data.cover_image
+        uploadPromises.push(
+          restaurantsApi.uploadCover(formData).then(res => ({ type: 'cover', res }))
+        )
+      }
+
+      if (uploadPromises.length > 0) {
+        const results = await Promise.all(uploadPromises)
+        for (const result of results) {
+          if (result.type === 'logo' && result.res.success) {
+            currentLogoPath = result.res.data.logo
+          } else if (result.type === 'cover' && result.res.success) {
+            currentCoverPath = result.res.data.cover_image
+          }
         }
       }
 

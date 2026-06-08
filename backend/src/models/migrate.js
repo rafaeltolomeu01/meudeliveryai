@@ -245,6 +245,23 @@ async function migrate() {
         console.log('     + Coluna password_hash adicionada.');
       }
 
+      console.log('  🔄 Verificando e atualizando colunas incrementais de restaurant_theme...');
+      const [themeColumnsCheck] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'restaurant_theme'
+      `, [dbName]);
+      const themeColumns = themeColumnsCheck.map(c => c.COLUMN_NAME);
+
+      if (!themeColumns.includes('logo')) {
+        await connection.query('ALTER TABLE restaurant_theme ADD COLUMN logo VARCHAR(500) DEFAULT NULL');
+        console.log('     + Coluna logo adicionada a restaurant_theme.');
+      }
+      if (!themeColumns.includes('cover_image')) {
+        await connection.query('ALTER TABLE restaurant_theme ADD COLUMN cover_image VARCHAR(500) DEFAULT NULL');
+        console.log('     + Coluna cover_image adicionada a restaurant_theme.');
+      }
+
       console.log('  🔄 Verificando e criando tabelas de complementos...');
       await connection.query(`
         CREATE TABLE IF NOT EXISTS complement_groups (

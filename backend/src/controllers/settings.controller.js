@@ -229,25 +229,37 @@ const updateAppearance = async (req, res, next) => {
     } = req.body;
 
     await query(
-      `INSERT INTO restaurant_theme (restaurant_id, primary_color, secondary_color, background_color, button_color, text_color,
-        font_family, card_style, border_radius, theme_mode, logo, cover_image)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-        primary_color = COALESCE(VALUES(primary_color), primary_color),
-        secondary_color = COALESCE(VALUES(secondary_color), secondary_color),
-        background_color = COALESCE(VALUES(background_color), background_color),
-        button_color = COALESCE(VALUES(button_color), button_color),
-        text_color = COALESCE(VALUES(text_color), text_color),
-        font_family = COALESCE(VALUES(font_family), font_family),
-        card_style = COALESCE(VALUES(card_style), card_style),
-        border_radius = COALESCE(VALUES(border_radius), border_radius),
-        theme_mode = COALESCE(VALUES(theme_mode), theme_mode),
-        logo = COALESCE(VALUES(logo), logo),
-        cover_image = COALESCE(VALUES(cover_image), cover_image)`,
+      `INSERT IGNORE INTO restaurant_theme (restaurant_id) VALUES (?)`,
+      [restaurant_id]
+    );
+
+    await query(
+      `UPDATE restaurant_theme SET
+        primary_color = COALESCE(?, primary_color),
+        secondary_color = COALESCE(?, secondary_color),
+        background_color = COALESCE(?, background_color),
+        button_color = COALESCE(?, button_color),
+        text_color = COALESCE(?, text_color),
+        font_family = COALESCE(?, font_family),
+        card_style = COALESCE(?, card_style),
+        border_radius = COALESCE(?, border_radius),
+        theme_mode = COALESCE(?, theme_mode),
+        logo = COALESCE(?, logo),
+        cover_image = COALESCE(?, cover_image)
+       WHERE restaurant_id = ?`,
       [
-        restaurant_id,
-        primary_color || null, secondary_color || null, background_color || null, button_color || null, text_color || null,
-        font_family || null, card_style || null, border_radius || null, theme_mode || null, logo || null, cover_image || null
+        primary_color !== undefined && primary_color !== null && primary_color !== '' ? primary_color : null,
+        secondary_color !== undefined && secondary_color !== null && secondary_color !== '' ? secondary_color : null,
+        background_color !== undefined && background_color !== null && background_color !== '' ? background_color : null,
+        button_color !== undefined && button_color !== null && button_color !== '' ? button_color : null,
+        text_color !== undefined && text_color !== null && text_color !== '' ? text_color : null,
+        font_family !== undefined && font_family !== null && font_family !== '' ? font_family : null,
+        card_style !== undefined && card_style !== null && card_style !== '' ? card_style : null,
+        border_radius !== undefined && border_radius !== null && border_radius !== '' ? border_radius : null,
+        theme_mode !== undefined && theme_mode !== null && theme_mode !== '' ? theme_mode : null,
+        logo !== undefined && logo !== null && logo !== '' ? logo : null,
+        cover_image !== undefined && cover_image !== null && cover_image !== '' ? cover_image : null,
+        restaurant_id
       ]
     );
 

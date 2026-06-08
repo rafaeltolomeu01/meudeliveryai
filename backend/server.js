@@ -96,6 +96,7 @@ app.get('/api/v1/health', healthCheckHandler);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/v1', routes);
+app.use('/api', routes);
 
 // ─── SPA Fallback Route ───────────────────────────────────────────────────────
 app.get('*', (req, res, next) => {

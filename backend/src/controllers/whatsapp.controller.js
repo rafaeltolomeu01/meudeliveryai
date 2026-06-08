@@ -1,32 +1,141 @@
 const { query } = require('../config/database');
 const axios = require('axios');
+const QRCode = require('qrcode');
 const aiService = require('../services/ai.service');
 
-// ─── Evolution API Config ──────────────────────────────────────────────────────
-// Leitura lazy (via função) para garantir que process.env já foi carregado pelo dotenv
+// ─── WhatsApp Provider Config ──────────────────────────────────────────────────
+function getProvider() { return process.env.WHATSAPP_PROVIDER || 'evolution'; }
+
+// Evolution API Config
 function getEvoUrl()  { return process.env.EVOLUTION_API_URL || 'http://localhost:8080'; }
 function getEvoKey()  { return process.env.EVOLUTION_API_KEY || ''; }
 function isEvoConfigured() { return !!(process.env.EVOLUTION_API_KEY && process.env.EVOLUTION_API_KEY.trim()); }
 
+// Z-API Config
+function isZapiConfigured() { return !!(process.env.ZAPI_INSTANCE_ID && process.env.ZAPI_INSTANCE_TOKEN); }
+
 // Logs solicitados
 console.log("EVOLUTION_API_URL:", process.env.EVOLUTION_API_URL);
 console.log("EVOLUTION_API_KEY existe:", !!process.env.EVOLUTION_API_KEY);
+console.log("WHATSAPP_PROVIDER:", getProvider());
+console.log("ZAPI_INSTANCE_ID existe:", !!process.env.ZAPI_INSTANCE_ID);
 
-function getEvoApi() {
-  return axios.create({
-    baseURL: getEvoUrl(),
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': getEvoKey(),
-    },
-    timeout: 15000,
-  });
+async function callEvoApi(method, path, data = null) {
+  const rawBaseUrl = getEvoUrl();
+  const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const fullUrl = `${baseUrl}${cleanPath}`;
+
+  console.log(`[Evolution API Call] ${method.toUpperCase()} ${fullUrl}`);
+  if (data) {
+    console.log(`[Evolution API Request Body]:`, JSON.stringify(data));
+  }
+
+  try {
+    const response = await axios({
+      method: method,
+      url: fullUrl,
+      data: data,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': getEvoKey()
+      },
+      timeout: 15000
+    });
+
+    console.log(`[Evolution API Response] Status: ${response.status}`);
+    const responseStr = JSON.stringify(response.data);
+    console.log(`[Evolution API Response Body]:`, responseStr.length > 1000 ? responseStr.substring(0, 1000) + '... (truncated)' : responseStr);
+    return response;
+  } catch (error) {
+    console.error(`[Evolution API Error] ${method.toUpperCase()} ${cleanPath} failed:`, error.message);
+    if (error.response) {
+      console.error(`[Evolution API Error Status]:`, error.response.status);
+      console.error(`[Evolution API Error Body]:`, JSON.stringify(error.response.data));
+      const apiMessage = error.response.data?.message || 
+                         (error.response.data?.error && typeof error.response.data.error === 'string' ? error.response.data.error : null) ||
+                         (error.response.data?.error?.message) ||
+                         null;
+      const detailedMessage = apiMessage ? `${error.message} - ${apiMessage}` : error.message;
+      const newErr = new Error(detailedMessage);
+      newErr.status = error.response.status;
+      newErr.response = error.response;
+      throw newErr;
+    }
+    throw error;
+  }
 }
 
-// Compatibilidade retroativa — usa getter lazy
+async function ensureFreshInstance(name) {
+  try {
+    console.log(`[WhatsApp] reset: Deleting instance if it exists: ${name}`);
+    try {
+      await callEvoApi('delete', `/instance/delete/${name}`);
+      console.log(`[WhatsApp] reset: Deleted instance ${name}.`);
+    } catch (delErr) {
+      console.log(`[WhatsApp] reset: Delete instance ${name} returned error (likely did not exist):`, delErr.message);
+    }
+
+    console.log(`[WhatsApp] reset: Creating fresh instance ${name}...`);
+    await callEvoApi('post', '/instance/create', {
+      instanceName: name,
+      qrcode: true,
+      integration: 'WHATSAPP-BAILEYS',
+    });
+    console.log(`[WhatsApp] reset: Created fresh instance ${name}.`);
+  } catch (err) {
+    console.error(`[WhatsApp] reset: Failed to ensure fresh instance for ${name}:`, err.message);
+    throw err;
+  }
+}
+
+async function ensureQrDataUrl(qr) {
+  if (!qr) return null;
+  qr = qr.trim();
+  if (qr.startsWith('data:')) {
+    return qr;
+  }
+  if (/^[A-Za-z0-9+/=]+$/.test(qr.replace(/\s/g, '')) && qr.length > 100) {
+    return `data:image/png;base64,${qr}`;
+  }
+  try {
+    const dataUrl = await QRCode.toDataURL(qr);
+    return dataUrl;
+  } catch (err) {
+    console.error("[WhatsApp] Error generating QR code image from text:", err.message);
+    return qr;
+  }
+}
+
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '';
-const evoApi = getEvoApi();
+
+// Helper para enviar mensagens por texto abstraindo os dois provedores
+async function sendTextHelper(phone, message, restaurantId) {
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (getProvider() === 'zapi') {
+    if (!isZapiConfigured()) {
+      throw new Error('Z-API não configurada no .env');
+    }
+    await axios.post(
+      `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_INSTANCE_TOKEN}/send-text`,
+      {
+        phone: cleanPhone,
+        message: message
+      },
+      {
+        headers: { 'client-token': process.env.ZAPI_CLIENT_TOKEN || '' },
+        timeout: 15000
+      }
+    );
+  } else {
+    const conn = await getOrCreateConnection(restaurantId);
+    await callEvoApi('post', `/message/sendText/${conn.session_name}`, {
+      number: cleanPhone,
+      text: message
+    });
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function extractQrCode(data) {
@@ -37,23 +146,31 @@ function extractQrCode(data) {
   if (typeof data === 'string') {
     qr = data;
   } else {
-    qr = data.qrcode || 
-         data.base64 || 
-         data.qr || 
-         data.code || 
-         data.pairingCode || 
-         data.data?.base64 ||
-         data.data?.qrcode || 
-         data.data?.code ||
-         data.instance?.qrcode || 
+    qr = data.base64 || 
+         data.qrcode || 
          data.qrcode?.base64 ||
          data.qrcode?.code ||
+         data.code || 
+         data.pairingCode || 
+         data.qr || 
+         data.data?.base64 ||
+         data.data?.qrcode || 
+         data.data?.qrcode?.base64 ||
+         data.data?.qrcode?.code ||
+         data.data?.code ||
+         data.data?.pairingCode ||
+         data.data?.qr ||
+         data.instance?.qrcode || 
+         data.instance?.qrcode?.base64 ||
+         data.instance?.qrcode?.code ||
          data.instance?.connect?.qrcode ||
+         data.instance?.connect?.qrcode?.base64 ||
+         data.instance?.connect?.qrcode?.code ||
          null;
   }
 
   if (typeof qr === 'object' && qr !== null) {
-    qr = qr.base64 || qr.qrcode || qr.code || null;
+    qr = qr.base64 || qr.qrcode || qr.code || qr.pairingCode || null;
   }
 
   if (qr && typeof qr === 'string') {
@@ -128,15 +245,47 @@ const getStatus = async (req, res, next) => {
     );
     const todayCount = countRows[0]?.total || 0;
 
-    // Tenta checar status real na Evolution API (não-bloqueante)
+    // Tenta checar status real (não-bloqueante)
     let liveStatus = conn.status;
-    if (isEvoConfigured() && conn.status !== 'disconnected') {
+    let isConnected = liveStatus === 'connected';
+    let state = liveStatus === 'connected' ? 'open' : (liveStatus === 'connecting' ? 'connecting' : 'close');
+
+    if (getProvider() === 'zapi') {
+      if (isZapiConfigured()) {
+        try {
+          const resp = await axios.get(`https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_INSTANCE_TOKEN}/status`, {
+            headers: { 'client-token': process.env.ZAPI_CLIENT_TOKEN || '' },
+            timeout: 10000
+          });
+          const isConn = resp.data?.connected;
+          liveStatus = isConn ? 'connected' : 'disconnected';
+          isConnected = isConn;
+          state = isConn ? 'open' : 'close';
+          if (liveStatus !== conn.status) {
+            await query(
+              'UPDATE whatsapp_connections SET status = ?, updated_at = NOW() WHERE restaurant_id = ?',
+              [liveStatus, restaurantId]
+            );
+          }
+        } catch (err) {
+          console.error('[WhatsApp] Z-API status error:', err.message);
+        }
+      }
+    } else if (isEvoConfigured() && conn.status !== 'disconnected') {
       try {
-        const resp = await evoApi.get(`/instance/connectionState/${conn.session_name}`);
-        const state = resp.data?.instance?.state;
-        if (state === 'open') liveStatus = 'connected';
-        else if (state === 'connecting') liveStatus = 'connecting';
-        else liveStatus = 'disconnected';
+        const resp = await callEvoApi('get', `/instance/connectionState/${conn.session_name}`);
+        const apiState = resp.data?.instance?.state || resp.data?.state || 'close';
+        state = apiState;
+        if (state === 'open') {
+          liveStatus = 'connected';
+          isConnected = true;
+        } else if (state === 'connecting') {
+          liveStatus = 'connecting';
+          isConnected = false;
+        } else {
+          liveStatus = 'disconnected';
+          isConnected = false;
+        }
 
         if (liveStatus !== conn.status) {
           await query(
@@ -151,12 +300,16 @@ const getStatus = async (req, res, next) => {
 
     return res.json({
       success: true,
+      connected: isConnected,
+      state: state,
       data: {
         ...conn,
         status: liveStatus,
         messages_today: todayCount,
         evolution_configured: isEvoConfigured(),
         evolution_url: getEvoUrl(),
+        zapi_configured: isZapiConfigured(),
+        whatsapp_provider: getProvider(),
       },
     });
   } catch (error) {
@@ -174,12 +327,61 @@ const connect = async (req, res, next) => {
     const conn = await getOrCreateConnection(restaurantId);
     const name = conn.session_name;
 
-    if (!isEvoConfigured()) {
-      // Modo demo: gera QR Code fictício
+    if (getProvider() === 'zapi') {
+      if (!isZapiConfigured()) {
+        return res.status(400).json({ success: false, message: 'Z-API não configurada no arquivo .env.' });
+      }
+      let qrBase64 = null;
+      let errorDetail = null;
+      try {
+        const response = await axios.get(`https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_INSTANCE_TOKEN}/qr-code`, {
+          headers: { 'client-token': process.env.ZAPI_CLIENT_TOKEN || '' },
+          timeout: 10000
+        });
+        qrBase64 = response.data?.value;
+        if (!qrBase64) {
+          errorDetail = 'Z-API QR-code responded successfully but did not contain value field.';
+        }
+      } catch (qrErr) {
+        console.error("[WhatsApp] Error fetching QR in Z-API connect:", qrErr.message);
+        errorDetail = qrErr.message;
+      }
+
+      if (!qrBase64) {
+        return res.status(422).json({
+          success: false,
+          message: 'A Z-API não retornou o QR Code. Certifique-se de que a instância está ativa no painel.',
+          details: errorDetail
+        });
+      }
+
       await query(
         `UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW()
          WHERE restaurant_id = ?`,
-        ['DEMO_QR_' + Date.now(), restaurantId]
+        [qrBase64, restaurantId]
+      );
+
+      const updated = await query(
+        'SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1',
+        [restaurantId]
+      );
+
+      return res.json({
+        success: true,
+        instanceName: name,
+        qrcode: qrBase64,
+        status: "connecting",
+        data: updated[0],
+      });
+    }
+
+    if (!isEvoConfigured()) {
+      // Modo demo: gera QR Code fictício
+      const demoQr = 'DEMO_QR_' + Date.now();
+      await query(
+        `UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW()
+         WHERE restaurant_id = ?`,
+        [demoQr, restaurantId]
       );
       const updated = await query(
         'SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1',
@@ -187,45 +389,46 @@ const connect = async (req, res, next) => {
       );
       return res.json({
         success: true,
-        message: 'Modo demo: Evolution API não configurada. Configure EVOLUTION_API_URL e EVOLUTION_API_KEY.',
+        instanceName: name,
+        qrcode: demoQr,
+        status: "connecting",
         data: { ...updated[0], demo_mode: true },
       });
     }
 
-    // Criar instância na Evolution API (ignora se já existe)
+    // 1. Criar a instância (não quebra se já existir)
     try {
-      await evoApi.post('/instance/create', {
+      await callEvoApi('post', '/instance/create', {
         instanceName: name,
         qrcode: true,
-        integration: 'EVOLUTION',
+        integration: 'WHATSAPP-BAILEYS',
       });
-    } catch (e) {
-      // Instância pode já existir — seguir em frente
+      console.log(`[WhatsApp] Instance ${name} created successfully.`);
+    } catch (createErr) {
+      console.log(`[WhatsApp] Instance ${name} already exists or failed to create (ignoring error):`, createErr.message);
     }
 
-    // Buscar QR Code
-    let qrBase64 = null;
+    // 2. Chamar /instance/connect/:instanceName
+    let qrRaw = null;
     let errorDetail = null;
     try {
-      const response = await evoApi.get(`/instance/connect/${name}`);
-      console.log("Connect QR Response:", response.data);
-      qrBase64 = extractQrCode(response.data);
-      if (!qrBase64) {
-        errorDetail = 'Evolution API connect responded successfully but did not contain a valid QR Code format.';
+      const response = await callEvoApi('get', `/instance/connect/${name}`);
+      qrRaw = extractQrCode(response.data);
+      if (!qrRaw) {
+        errorDetail = 'A resposta de conexão da Evolution API não continha nenhum formato de QR Code válido (base64, code, pairingCode).';
       }
     } catch (qrErr) {
       console.error("[WhatsApp] Error fetching QR in connect:", qrErr.message);
       errorDetail = qrErr.message;
-      if (qrErr.response) {
-        console.error("[WhatsApp] Error detail:", qrErr.response.data);
-        errorDetail += ' - ' + JSON.stringify(qrErr.response.data);
-      }
     }
 
-    if (!qrBase64) {
+    // 3. Gerar imagem se for code/texto
+    const qrCode = await ensureQrDataUrl(qrRaw);
+
+    if (!qrCode) {
       return res.status(422).json({
         success: false,
-        message: 'A Evolution API não retornou o QR Code. Certifique-se de que a instância está ativa.',
+        message: `Não foi possível obter o QR Code da Evolution API: ${errorDetail}`,
         details: errorDetail
       });
     }
@@ -233,7 +436,7 @@ const connect = async (req, res, next) => {
     await query(
       `UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW()
        WHERE restaurant_id = ?`,
-      [qrBase64, restaurantId]
+      [qrCode, restaurantId]
     );
 
     const updated = await query(
@@ -243,8 +446,10 @@ const connect = async (req, res, next) => {
 
     return res.json({
       success: true,
-      message: 'QR Code gerado! Escaneie com o WhatsApp.',
-      data: updated[0],
+      instanceName: name,
+      qrcode: qrCode,
+      status: "connecting",
+      data: updated[0]
     });
   } catch (error) {
     next(error);
@@ -260,9 +465,18 @@ const disconnect = async (req, res, next) => {
     const restaurantId = req.user.restaurant_id;
     const conn = await getOrCreateConnection(restaurantId);
 
-    if (isEvoConfigured()) {
+    if (getProvider() === 'zapi') {
+      if (isZapiConfigured()) {
+        try {
+          await axios.get(`https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_INSTANCE_TOKEN}/disconnect`, {
+            headers: { 'client-token': process.env.ZAPI_CLIENT_TOKEN || '' },
+            timeout: 10000
+          });
+        } catch (_) {}
+      }
+    } else if (isEvoConfigured()) {
       try {
-        await evoApi.delete(`/instance/logout/${conn.session_name}`);
+        await callEvoApi('delete', `/instance/logout/${conn.session_name}`);
       } catch (_) {}
     }
 
@@ -290,53 +504,108 @@ const reconnect = async (req, res, next) => {
     const conn = await getOrCreateConnection(restaurantId);
     const name = conn.session_name;
 
-    if (isEvoConfigured()) {
-      // Criar instância caso não exista
-      try {
-        await evoApi.post('/instance/create', {
-          instanceName: name,
-          qrcode: true,
-          integration: 'EVOLUTION',
-        });
-      } catch (_) {}
+    if (getProvider() === 'zapi') {
+      // Modo Z-API
+      await query(
+        "UPDATE whatsapp_connections SET status = 'connecting', qr_code = NULL, updated_at = NOW() WHERE restaurant_id = ?",
+        [restaurantId]
+      );
+      // Aqui poderíamos chamar um disconnect/reconnect da Z-API se necessário, por ora resetamos status
+      const updated = await query('SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1', [restaurantId]);
+      return res.json({ success: true, message: 'Reconectando WhatsApp...', data: updated[0] });
+    }
 
-      // Conectar / Rebuscar QR
-      try {
-        const response = await evoApi.get(`/instance/connect/${name}`);
-        const qrBase64 = extractQrCode(response.data);
-        if (qrBase64) {
-          await query(
-            "UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW() WHERE restaurant_id = ?",
-            [qrBase64, restaurantId]
-          );
-        } else {
-          await query(
-            "UPDATE whatsapp_connections SET status = 'connecting', updated_at = NOW() WHERE restaurant_id = ?",
-            [restaurantId]
-          );
-        }
-      } catch (err) {
-        console.error("[WhatsApp] Error connecting in reconnect:", err.message);
-        await query(
-          "UPDATE whatsapp_connections SET status = 'connecting', updated_at = NOW() WHERE restaurant_id = ?",
-          [restaurantId]
-        );
-      }
-    } else {
+    if (!isEvoConfigured()) {
       // Modo demo
+      const demoQr = 'DEMO_QR_' + Date.now();
       await query(
         `UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW()
          WHERE restaurant_id = ?`,
-        ['DEMO_QR_' + Date.now(), restaurantId]
+        [demoQr, restaurantId]
       );
+      const updated = await query('SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1', [restaurantId]);
+      return res.json({
+        success: true,
+        instanceName: name,
+        qrcode: demoQr,
+        status: "connecting",
+        data: updated[0]
+      });
     }
+
+    // 1. chamar DELETE /instance/logout/restaurant_${restaurantId}
+    try {
+      console.log(`[WhatsApp reconnect] Logout instance: ${name}`);
+      await callEvoApi('delete', `/instance/logout/${name}`);
+    } catch (logoutErr) {
+      console.log(`[WhatsApp reconnect] Logout returned error (ignoring):`, logoutErr.message);
+    }
+
+    // 2. chamar DELETE /instance/delete/restaurant_${restaurantId}
+    try {
+      console.log(`[WhatsApp reconnect] Delete instance: ${name}`);
+      await callEvoApi('delete', `/instance/delete/${name}`);
+    } catch (deleteErr) {
+      console.log(`[WhatsApp reconnect] Delete returned error (ignoring):`, deleteErr.message);
+    }
+
+    // 3. criar novamente a instância
+    try {
+      console.log(`[WhatsApp reconnect] Recreating instance: ${name}`);
+      await callEvoApi('post', '/instance/create', {
+        instanceName: name,
+        qrcode: true,
+        integration: 'WHATSAPP-BAILEYS',
+      });
+    } catch (createErr) {
+      return res.status(500).json({
+        success: false,
+        message: 'Falha ao recriar a instância na Evolution API durante a reconexão.',
+        details: createErr.message
+      });
+    }
+
+    // 4. chamar connect novamente e obter QR Code
+    let qrRaw = null;
+    let errorDetail = null;
+    try {
+      const response = await callEvoApi('get', `/instance/connect/${name}`);
+      qrRaw = extractQrCode(response.data);
+      if (!qrRaw) {
+        errorDetail = 'A resposta de conexão da Evolution API não continha nenhum formato de QR Code válido (base64, code, pairingCode).';
+      }
+    } catch (err) {
+      console.error("[WhatsApp] Error connecting in reconnect:", err.message);
+      errorDetail = err.message;
+    }
+
+    const qrCode = await ensureQrDataUrl(qrRaw);
+
+    if (!qrCode) {
+      return res.status(422).json({
+        success: false,
+        message: `Não foi possível gerar um novo QR Code ao reconectar: ${errorDetail}`,
+        details: errorDetail
+      });
+    }
+
+    await query(
+      "UPDATE whatsapp_connections SET status = 'connecting', qr_code = ?, updated_at = NOW() WHERE restaurant_id = ?",
+      [qrCode, restaurantId]
+    );
 
     const updated = await query(
       'SELECT * FROM whatsapp_connections WHERE restaurant_id = ? LIMIT 1',
       [restaurantId]
     );
 
-    return res.json({ success: true, message: 'Reconectando WhatsApp...', data: updated[0] });
+    return res.json({
+      success: true,
+      instanceName: name,
+      qrcode: qrCode,
+      status: "connecting",
+      data: updated[0]
+    });
   } catch (error) {
     next(error);
   }
@@ -352,34 +621,31 @@ const getQrCode = async (req, res, next) => {
     const conn = await getOrCreateConnection(restaurantId);
 
     if (isEvoConfigured() && conn.status === 'connecting') {
-      let qrBase64 = null;
+      let qrRaw = null;
       let errorDetail = null;
       try {
-        const response = await evoApi.get(`/instance/connect/${conn.session_name}`);
-        console.log("Connect QR Response:", response.data);
-        qrBase64 = extractQrCode(response.data);
-        if (!qrBase64) {
+        const response = await callEvoApi('get', `/instance/connect/${conn.session_name}`);
+        qrRaw = extractQrCode(response.data);
+        if (!qrRaw) {
           errorDetail = 'Evolution API connect responded successfully but did not contain a valid QR Code format.';
         }
       } catch (qrErr) {
         console.error("[WhatsApp] Error fetching QR in getQrCode:", qrErr.message);
         errorDetail = qrErr.message;
-        if (qrErr.response) {
-          console.error("[WhatsApp] Error detail:", qrErr.response.data);
-          errorDetail += ' - ' + JSON.stringify(qrErr.response.data);
-        }
       }
 
-      if (qrBase64) {
+      const qrCode = await ensureQrDataUrl(qrRaw);
+
+      if (qrCode) {
         await query(
           'UPDATE whatsapp_connections SET qr_code = ?, updated_at = NOW() WHERE restaurant_id = ?',
-          [qrBase64, restaurantId]
+          [qrCode, restaurantId]
         );
-        return res.json({ success: true, data: { qr_code: qrBase64 } });
+        return res.json({ success: true, data: { qr_code: qrCode } });
       } else {
         return res.status(422).json({
           success: false,
-          message: 'A Evolution API não retornou o QR Code ao atualizar.',
+          message: `A Evolution API não retornou o QR Code ao atualizar: ${errorDetail}`,
           details: errorDetail
         });
       }
@@ -400,6 +666,8 @@ const webhook = async (req, res, next) => {
     const payload = req.body;
     const event   = payload?.event;
     const instanceName = payload?.instance || payload?.data?.instance?.instanceName;
+
+    console.log(`[WhatsApp Webhook LOG] Received event "${event}" for instance "${instanceName}":`, JSON.stringify(payload));
 
     if (!instanceName) return res.json({ success: true });
 
@@ -493,14 +761,10 @@ const webhook = async (req, res, next) => {
 
         if (!aiReply) continue;
 
-        // Enviar resposta via Evolution API
-        if (EVOLUTION_API_KEY) {
+        // Enviar resposta via Provedor Ativo
+        if (isEvoConfigured() || getProvider() === 'zapi') {
           try {
-            const jid = `${customerPhone}@s.whatsapp.net`;
-            await evoApi.post(`/message/sendText/${activeConn.session_name}`, {
-              number: jid,
-              text: aiReply,
-            });
+            await sendTextHelper(customerPhone, aiReply, restaurantId);
             await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'sent');
           } catch (sendErr) {
             console.error('[AI] Erro ao enviar resposta:', sendErr.message);
@@ -508,7 +772,7 @@ const webhook = async (req, res, next) => {
           }
         } else {
           // Modo demo: apenas loga sem enviar
-          await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'demo', 'Evolution API não configurada');
+          await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'demo', 'WhatsApp não configurado');
         }
       }
     }
@@ -526,36 +790,35 @@ const webhook = async (req, res, next) => {
 const sendMessage = async (req, res, next) => {
   try {
     const restaurantId = req.user.restaurant_id;
-    const { phone, message } = req.body;
+    const phone = req.body.phone || req.body.number;
+    const message = req.body.message || req.body.text;
 
     if (!phone || !message) {
-      return res.status(400).json({ success: false, message: 'Telefone e mensagem são obrigatórios.' });
+      return res.status(400).json({ success: false, message: 'Telefone/number e mensagem/text são obrigatórios.' });
     }
 
     const conn = await getOrCreateConnection(restaurantId);
 
-    if (!isEvoConfigured()) {
-      await saveLog(restaurantId, 'manual', phone, message, 'demo', 'Evolution API não configurada');
+    if (!isEvoConfigured() && getProvider() !== 'zapi') {
+      await saveLog(restaurantId, 'manual', phone, message, 'demo', 'WhatsApp não configurado');
       return res.json({ success: true, message: '[DEMO] Mensagem registrada (sem envio real).', demo: true });
     }
 
-    if (conn.status !== 'connected') {
+    if (getProvider() === 'evolution' && conn.status !== 'connected') {
       return res.status(400).json({ success: false, message: 'WhatsApp não está conectado.' });
     }
 
     const cleanPhone = phone.replace(/\D/g, '');
-    const jid = cleanPhone.includes('@') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
 
-    await evoApi.post(`/message/sendText/${conn.session_name}`, {
-      number: jid,
-      text: message,
-    });
+    await sendTextHelper(cleanPhone, message, restaurantId);
 
     await saveLog(restaurantId, 'manual', cleanPhone, message, 'sent');
 
     return res.json({ success: true, message: 'Mensagem enviada com sucesso!' });
   } catch (error) {
-    await saveLog(req.user.restaurant_id, 'manual', req.body?.phone, req.body?.message, 'error', error.message);
+    const phone = req.body?.phone || req.body?.number;
+    const message = req.body?.message || req.body?.text;
+    await saveLog(req.user.restaurant_id, 'manual', phone, message, 'error', error.message);
     next(error);
   }
 };
@@ -853,12 +1116,7 @@ async function autoSendOrderNotification(restaurantId, order, newStatus) {
     const phone = (order.customer_phone || '').replace(/\D/g, '');
     if (!phone) return;
 
-    const jid = `${phone}@s.whatsapp.net`;
-
-    await evoApi.post(`/message/sendText/${conn.session_name}`, {
-      number: jid,
-      text: template,
-    });
+    await sendTextHelper(phone, template, restaurantId);
 
     await saveLog(restaurantId, `order_${newStatus}`, phone, template, 'sent');
   } catch (e) {

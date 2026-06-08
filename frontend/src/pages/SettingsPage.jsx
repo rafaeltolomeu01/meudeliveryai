@@ -169,9 +169,6 @@ export default function SettingsPage() {
         default_print_format: form.default_print_format,
       }
 
-      await settingsApi.update(payload)
-      await restaurantApi.updateHours(hours)
-
       // Salva configurações de pagamento
       const paymentPayload = {
         accepts_cash: paymentForm.accepts_cash,
@@ -184,7 +181,12 @@ export default function SettingsPage() {
         pix_receiver_city: paymentForm.pix_receiver_city,
         pix_instructions: paymentForm.pix_instructions,
       }
-      await settingsApi.updatePayments(paymentPayload)
+
+      await Promise.all([
+        settingsApi.update(payload),
+        restaurantApi.updateHours(hours),
+        settingsApi.updatePayments(paymentPayload)
+      ])
 
       toast.success('Configurações salvas com sucesso! 🚀')
     } catch (err) {

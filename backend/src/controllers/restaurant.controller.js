@@ -13,12 +13,13 @@ const getMyRestaurant = async (req, res, next) => {
               r.logo, r.logo AS logo_url, r.cover_image, r.cover_image AS cover_url, r.status, r.created_at, r.updated_at,
               p.slug AS plan, s.status as subscription_status, s.trial_ends_at,
               rs.delivery_fee, rs.min_order_value, rs.estimated_delivery_time,
-              rs.is_open, rs.primary_color, rs.secondary_color, rs.whatsapp_number,
+              rs.is_open, rt.primary_color, rt.secondary_color, rs.whatsapp_number,
               rs.instagram_url, rs.facebook_url
        FROM restaurants r
        LEFT JOIN subscriptions s ON s.restaurant_id = r.id
        LEFT JOIN plans p ON p.id = s.plan_id
        LEFT JOIN restaurant_settings rs ON rs.restaurant_id = r.id
+       LEFT JOIN restaurant_theme rt ON rt.restaurant_id = r.id
        WHERE r.id = ? LIMIT 1`,
       [req.user.restaurant_id]
     );

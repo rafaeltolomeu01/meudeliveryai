@@ -204,7 +204,15 @@ export default function WhatsAppPage() {
       if (!silent) setLoading(true)
       setErrorMsg(null)
       const res = await whatsappApi.status()
-      if (res.success) setConn(res.data)
+      if (res.success) {
+        const connData = res.data || {
+          status: res.state === 'open' ? 'connected' : (res.state === 'connecting' ? 'connecting' : 'disconnected'),
+          phone_number: null,
+          profile_name: null,
+          qr_code: null
+        }
+        setConn(connData)
+      }
     } catch (e) {
       setErrorMsg(e.message || 'Erro ao carregar status do WhatsApp')
       if (!silent) toast.error('Erro ao carregar status do WhatsApp')
@@ -299,10 +307,19 @@ export default function WhatsAppPage() {
       setQrLoading(true)
       setErrorMsg(null)
       const res = await whatsappApi.connect()
-      if (res.success) { setConn(res.data); toast.success(res.message || 'Iniciando conexão...') }
+      if (res.success) {
+        const connData = res.data || {
+          session_name: res.instanceName,
+          status: res.status,
+          qr_code: res.qrcode
+        }
+        setConn(connData)
+        toast.success('Iniciando conexão...')
+      }
     } catch (e) {
-      setErrorMsg(e.message || 'Erro ao conectar')
-      toast.error(e.message || 'Erro ao conectar')
+      const fullError = e.details ? `${e.message} (Detalhes: ${e.details})` : (e.message || 'Erro ao conectar')
+      setErrorMsg(fullError)
+      toast.error(fullError)
     } finally {
       setActionLoading(false)
       setQrLoading(false)
@@ -322,10 +339,22 @@ export default function WhatsAppPage() {
   const handleReconnect = async () => {
     try {
       setActionLoading(true)
-      await whatsappApi.reconnect()
-      toast.success('Reconectando...')
-      await loadStatus()
-    } catch (e) { toast.error(e.message || 'Erro ao reconectar') } finally { setActionLoading(false) }
+      setErrorMsg(null)
+      const res = await whatsappApi.reconnect()
+      if (res.success) {
+        const connData = res.data || {
+          session_name: res.instanceName,
+          status: res.status,
+          qr_code: res.qrcode
+        }
+        setConn(connData)
+        toast.success('Recriando conexão...')
+      }
+    } catch (e) {
+      const fullError = e.details ? `${e.message} (Detalhes: ${e.details})` : (e.message || 'Erro ao recriar conexão')
+      setErrorMsg(fullError)
+      toast.error(fullError)
+    } finally { setActionLoading(false) }
   }
 
   const handleRefreshQr = async () => {
@@ -335,7 +364,8 @@ export default function WhatsAppPage() {
       const res = await whatsappApi.qrcode()
       if (res.success && res.data?.qr_code) setConn(prev => ({ ...prev, qr_code: res.data.qr_code }))
     } catch (e) {
-      setErrorMsg(e.message || 'Erro ao atualizar QR Code')
+      const fullError = e.details ? `${e.message} (Detalhes: ${e.details})` : (e.message || 'Erro ao atualizar QR Code')
+      setErrorMsg(fullError)
     } finally { setQrLoading(false) }
   }
 
@@ -533,9 +563,21 @@ export default function WhatsAppPage() {
                 </div>
               )}
               <div className="flex flex-col gap-3">
-                {isDisconnected && <Button variant="primary" leftIcon={QrCode} loading={actionLoading} onClick={handleConnect} className="w-full">Conectar WhatsApp</Button>}
-                {isConnecting && (<><Button variant="ghost" leftIcon={RefreshCw} loading={actionLoading} onClick={handleReconnect} className="w-full">Forçar Reconexão</Button><Button variant="danger" leftIcon={Power} loading={actionLoading} onClick={handleDisconnect} className="w-full">Cancelar</Button></>)}
-                {isConnected && (<><Button variant="ghost" leftIcon={RefreshCw} loading={actionLoading} onClick={handleReconnect} className="w-full">Reconectar Sessão</Button><Button variant="danger" leftIcon={Power} loading={actionLoading} onClick={handleDisconnect} className="w-full">Desconectar</Button></>)}
+                {isDisconnected && (
+                  <Button variant="primary" leftIcon={QrCode} loading={actionLoading} onClick={handleConnect} className="w-full">
+                    Conectar WhatsApp
+                  </Button>
+                )}
+                {(isConnecting || isConnected) && (
+                  <>
+                    <Button variant="ghost" leftIcon={RefreshCw} loading={actionLoading} onClick={handleReconnect} className="w-full">
+                      Recriar Conexão
+                    </Button>
+                    <Button variant="danger" leftIcon={Power} loading={actionLoading} onClick={handleDisconnect} className="w-full">
+                      Desconectar
+                    </Button>
+                  </>
+                )}
               </div>
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
                 <div className="flex items-center gap-2"><Globe size={14} className="text-[#a991c7]" /><span className="text-xs font-bold text-white">Tecnologia</span></div>
