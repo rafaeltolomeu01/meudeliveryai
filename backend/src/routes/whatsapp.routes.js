@@ -19,6 +19,7 @@ const {
   updateAISettings,
   testAIEndpoint,
   getConfigStatus,
+  diagnose,
 } = require('../controllers/whatsapp.controller');
 
 // ─── Webhook público (sem JWT — chamado pela Evolution API) ────────────────────
@@ -26,6 +27,7 @@ router.post('/webhook', webhook);
 
 // Configuração e status público da Evolution API (sem JWT)
 router.get('/config-status', getConfigStatus);
+router.get('/diagnose', diagnose);
 
 // ─── Todas as rotas abaixo exigem autenticação ────────────────────────────────
 router.use(authMiddleware);

@@ -1097,6 +1097,57 @@ const getConfigStatus = async (req, res, next) => {
   }
 };
 
+const diagnose = async (req, res, next) => {
+  try {
+    const rawKey = getEvoKey();
+    const rawUrl = getEvoUrl();
+    const provider = getProvider();
+    
+    const maskedKey = rawKey 
+      ? `${rawKey.substring(0, Math.min(3, rawKey.length))}...${rawKey.substring(Math.max(0, rawKey.length - 3))} (len: ${rawKey.length})` 
+      : 'NOT_DEFINED';
+
+    let apiStatus = null;
+    let apiResponse = null;
+    let apiError = null;
+
+    try {
+      const resp = await axios({
+        method: 'get',
+        url: `${rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl}/instance/fetchInstances`,
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': rawKey
+        },
+        timeout: 10000
+      });
+      apiStatus = resp.status;
+      apiResponse = resp.data;
+    } catch (err) {
+      apiStatus = err.response?.status || 'NO_RESPONSE';
+      apiResponse = err.response?.data || null;
+      apiError = err.message;
+    }
+
+    return res.json({
+      success: true,
+      diagnostics: {
+        provider,
+        url: rawUrl,
+        key_masked: maskedKey,
+        test_request: {
+          endpoint: '/instance/fetchInstances',
+          status: apiStatus,
+          response: apiResponse,
+          error: apiError
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ─── Auto-send on order status change (called internally) ─────────────────────
 async function autoSendOrderNotification(restaurantId, order, newStatus) {
   try {
@@ -1162,5 +1213,6 @@ module.exports = {
   updateAISettings,
   testAIEndpoint,
   getConfigStatus,
+  diagnose,
   autoSendOrderNotification,
 };
