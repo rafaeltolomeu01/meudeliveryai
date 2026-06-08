@@ -418,8 +418,31 @@ const connect = async (req, res, next) => {
         errorDetail = 'A resposta de conexão da Evolution API não continha nenhum formato de QR Code válido (base64, code, pairingCode).';
       }
     } catch (qrErr) {
-      console.error("[WhatsApp] Error fetching QR in connect:", qrErr.message);
-      errorDetail = qrErr.message;
+      console.error("[WhatsApp] First connect attempt failed:", qrErr.message);
+      console.log(`[WhatsApp] Instance ${name} might be stuck or in a bad state. Attempting auto delete and recreate...`);
+      try {
+        try {
+          await callEvoApi('delete', `/instance/delete/${name}`);
+        } catch (delErr) {
+          console.log(`[WhatsApp] Auto delete failed (ignoring):`, delErr.message);
+        }
+        
+        await callEvoApi('post', '/instance/create', {
+          instanceName: name,
+          qrcode: true,
+          integration: 'WHATSAPP-BAILEYS',
+        });
+        
+        console.log(`[WhatsApp] Instance ${name} recreated successfully. Retrying connection...`);
+        const responseRetry = await callEvoApi('get', `/instance/connect/${name}`);
+        qrRaw = extractQrCode(responseRetry.data);
+        if (!qrRaw) {
+          errorDetail = 'A resposta de conexão após recriar a instância não continha nenhum formato de QR Code válido.';
+        }
+      } catch (retryErr) {
+        console.error("[WhatsApp] Connect retry failed:", retryErr.message);
+        errorDetail = retryErr.message;
+      }
     }
 
     // 3. Gerar imagem se for code/texto
