@@ -10,9 +10,9 @@ import App from './App'
 import './index.css';
 import './meudeliveryai-light-overrides.css';
 import './utils/forceIfoodTheme';
-import './styles/ifood-real-admin.css'
-import './styles/mda-final-public-fixes.css'
-import './styles/mda-fix-public-text-chat.css'
+import './styles/ifood-real-admin.css';
+import './styles/mda-final-public-fixes.css';
+import './styles/mda-fix-public-text-chat.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
