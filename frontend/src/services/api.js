@@ -8,9 +8,11 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('mda_token')
-    if (token && !config.headers?.Authorization) {
+    if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    config.headers['Cache-Control'] = 'no-cache'
+    config.headers.Pragma = 'no-cache'
     return config
   },
   (error) => Promise.reject(error)
@@ -19,38 +21,25 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const url = error.config?.url || ''
-    const isPublicCustomerRoute = url.includes('/public/')
-
-    // Não derruba o login do painel quando um token do cliente público expira.
-    if (error.response?.status === 401 && !isPublicCustomerRoute) {
+    const isPublicRequest = error.config?.url?.includes('/public/')
+    if (error.response?.status === 401 && !isPublicRequest) {
       localStorage.removeItem('mda_token')
       localStorage.removeItem('mda_user')
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
     }
-
     const message = error.response?.data?.message || 'Erro inesperado. Tente novamente.'
     const details = error.response?.data?.details || null
     return Promise.reject({ message, details, status: error.response?.status, original: error })
   }
 )
 
-const normalizeCustomerAuthResponse = (res) => {
-  const payload = res?.data || {}
-  return {
-    ...res,
-    token: res?.token || payload?.token || null,
-    customer: res?.customer || payload?.customer || null,
-    data: payload?.customer || payload || null,
-  }
+const customerTokenHeader = (slug) => {
+  const token = localStorage.getItem(`mda_customer_token_${slug}`)
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-const cleanPhone = (value = '') => String(value).replace(/\D/g, '')
-const cleanEmail = (value = '') => String(value).trim().toLowerCase()
-
-// ===== AUTH =====
 export const auth = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   register: (data) => api.post('/auth/register', data),
@@ -91,7 +80,7 @@ export const categories = {
 export const orders = {
   list: (params) => api.get('/orders', { params }),
   get: (id) => api.get(`/orders/${id}`),
-  create: (data, config = {}) => api.post('/orders', data, config),
+  create: (data) => api.post('/orders', data),
   updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   markAsPaid: (id) => api.patch(`/orders/${id}/mark-as-paid`),
   cancel: (id, reason) => api.patch(`/orders/${id}/cancel`, { reason }),
@@ -153,53 +142,20 @@ export const subscription = {
   upgrade: (planId) => api.post('/subscription/upgrade', { plan_id: planId }),
 }
 
-// ===== PUBLIC (CARDAPIO) =====
 export const publicApi = {
-  getRestaurant: (slug) => api.get(`/public/restaurant/${slug}`),
-  getMenu: (slug) => api.get(`/public/restaurant/${slug}/menu`),
-  createOrder: (slug, data) => {
-    const token = localStorage.getItem(`mda_customer_token_${slug}`)
-    return api.post(`/public/restaurant/${slug}/orders`, data, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  },
-  getOrder: (slug, orderId) => api.get(`/public/restaurant/${slug}/orders/${orderId}`),
-  getMessages: (slug, orderId) => api.get(`/public/restaurant/${slug}/orders/${orderId}/messages`),
+  getRestaurant: (slug) => api.get(`/public/restaurant/${slug}`, { params: { t: Date.now() } }),
+  getMenu: (slug) => api.get(`/public/restaurant/${slug}/menu`, { params: { t: Date.now() } }),
+  createOrder: (slug, data) => api.post(`/public/restaurant/${slug}/orders`, data, { headers: customerTokenHeader(slug) }),
+  getOrder: (slug, orderId) => api.get(`/public/restaurant/${slug}/orders/${orderId}`, { params: { t: Date.now() } }),
+  getMessages: (slug, orderId) => api.get(`/public/restaurant/${slug}/orders/${orderId}/messages`, { params: { t: Date.now() } }),
   sendMessage: (slug, orderId, message) => api.post(`/public/restaurant/${slug}/orders/${orderId}/messages`, { message }),
-  customerRegister: (slug, data) => api.post(`/public/restaurant/${slug}/auth/register`, {
-    ...data,
-    email: cleanEmail(data.email || ''),
-    phone: cleanPhone(data.phone || ''),
-    document: cleanPhone(data.document || ''),
-  }).then(normalizeCustomerAuthResponse),
-  customerLogin: (slug, data) => {
-    const phone = cleanPhone(data.phone || '')
-    const emailOrPhone = phone || cleanEmail(data.email || '')
-    return api.post(`/public/restaurant/${slug}/auth/login`, {
-      identifier: emailOrPhone,
-      email: emailOrPhone,
-      phone,
-      password: data.password,
-    }).then(normalizeCustomerAuthResponse)
-  },
-  customerMe: (slug) => {
-    const token = localStorage.getItem(`mda_customer_token_${slug}`)
-    return api.get(`/public/restaurant/${slug}/auth/me`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  },
-  getCustomerOrders: (slug) => {
-    const token = localStorage.getItem(`mda_customer_token_${slug}`)
-    return api.get(`/public/restaurant/${slug}/customer/orders`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  },
-  getAddresses: (slug) => {
-    const token = localStorage.getItem(`mda_customer_token_${slug}`)
-    return api.get(`/public/restaurant/${slug}/customer/addresses`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  },
-  addAddress: (slug, data) => {
-    const token = localStorage.getItem(`mda_customer_token_${slug}`)
-    return api.post(`/public/restaurant/${slug}/customer/addresses`, data, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  },
-  deleteAddress: (slug, id) => {
-    const token = localStorage.getItem(`mda_customer_token_${slug}`)
-    return api.delete(`/public/restaurant/${slug}/customer/addresses/${id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  },
+  customerRegister: (slug, data) => api.post(`/public/restaurant/${slug}/auth/register`, data),
+  customerLogin: (slug, data) => api.post(`/public/restaurant/${slug}/auth/login`, data),
+  customerMe: (slug) => api.get(`/public/restaurant/${slug}/auth/me`, { headers: customerTokenHeader(slug), params: { t: Date.now() } }),
+  getCustomerOrders: (slug) => api.get(`/public/restaurant/${slug}/customer/orders`, { headers: customerTokenHeader(slug), params: { t: Date.now() } }),
+  getAddresses: (slug) => api.get(`/public/restaurant/${slug}/customer/addresses`, { headers: customerTokenHeader(slug), params: { t: Date.now() } }),
+  addAddress: (slug, data) => api.post(`/public/restaurant/${slug}/customer/addresses`, data, { headers: customerTokenHeader(slug) }),
+  deleteAddress: (slug, id) => api.delete(`/public/restaurant/${slug}/customer/addresses/${id}`, { headers: customerTokenHeader(slug) }),
 }
 
 export const admin = {

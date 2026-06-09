@@ -1,0 +1,59 @@
+:root {
+  --mda-page: #f6f7fb;
+  --mda-card: #ffffff;
+  --mda-card-soft: #f9fafb;
+  --mda-text: #111827;
+  --mda-muted: #667085;
+  --mda-border: #e5e7eb;
+  --mda-sidebar: #161a22;
+  --mda-orange: #ff6b35;
+}
+
+body {
+  background: var(--mda-page) !important;
+  color: var(--mda-text) !important;
+}
+
+/* Reforma visual leve: deixa áreas principais claras, mantendo menu/barra escura. */
+main, .mda-light-page {
+  background: var(--mda-page) !important;
+}
+
+.mda-public-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #fff 0%, #f6f7fb 100%) !important;
+  color: var(--mda-text) !important;
+}
+
+.mda-card {
+  background: var(--mda-card) !important;
+  border: 1px solid var(--mda-border) !important;
+  color: var(--mda-text) !important;
+  box-shadow: 0 18px 50px rgba(16, 24, 40, 0.08) !important;
+}
+
+.mda-soft-card {
+  background: var(--mda-card-soft) !important;
+  border: 1px solid var(--mda-border) !important;
+  color: var(--mda-text) !important;
+}
+
+.mda-input, .mda-public-page input, .mda-public-page select, .mda-public-page textarea {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #d0d5dd !important;
+}
+
+.mda-public-page input::placeholder, .mda-public-page textarea::placeholder {
+  color: #98a2b3 !important;
+}
+
+.mda-public-page .text-white { color: #111827 !important; }
+.mda-public-page .text-gray-300, .mda-public-page .text-gray-400, .mda-public-page .text-gray-500 { color: #667085 !important; }
+.mda-public-page .border-white\/5, .mda-public-page .border-white\/10 { border-color: #e5e7eb !important; }
+.mda-public-page .bg-white\/\[0\.02\], .mda-public-page .bg-white\/5 { background: #ffffff !important; }
+
+.mda-dark-bar {
+  background: var(--mda-sidebar) !important;
+  color: #fff !important;
+}

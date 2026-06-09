@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, MapPin, Plus, Trash2, LogOut, Loader2, Clipboard,
@@ -146,16 +146,16 @@ export default function PublicCustomerProfilePage() {
           password: authForm.password
         })
         if (res.success) {
-          localStorage.setItem(`mda_customer_token_${slug}`, res?.data?.token || res?.token)
-          setCustomerToken(res?.data?.token || res?.token)
-          toast.success('Login efetuado com sucesso! ðŸ‘‹')
+          localStorage.setItem(`mda_customer_token_${slug}`, res.token)
+          setCustomerToken(res.token)
+          toast.success('Login efetuado com sucesso! 👋')
           if (redirect === 'checkout') {
             navigate(`/cardapio/${slug}/checkout`)
           }
         }
       } else {
         if (!authForm.name || !authForm.password || !authForm.phone) {
-          toast.error('Nome, Senha e WhatsApp sÃ£o obrigatÃ³rios.')
+          toast.error('Nome, Senha e WhatsApp são obrigatórios.')
           setAuthLoading(false)
           return
         }
@@ -167,9 +167,9 @@ export default function PublicCustomerProfilePage() {
           document: authForm.document
         })
         if (res.success) {
-          localStorage.setItem(`mda_customer_token_${slug}`, res?.data?.token || res?.token)
-          setCustomerToken(res?.data?.token || res?.token)
-          toast.success('Cadastro realizado com sucesso! ðŸŽ‰')
+          localStorage.setItem(`mda_customer_token_${slug}`, res.token)
+          setCustomerToken(res.token)
+          toast.success('Cadastro realizado com sucesso! 🎉')
           if (redirect === 'checkout') {
             navigate(`/cardapio/${slug}/checkout`)
           }
@@ -177,7 +177,7 @@ export default function PublicCustomerProfilePage() {
       }
     } catch (err) {
       console.error(err)
-      toast.error(err.message || 'Erro na autenticaÃ§Ã£o. Verifique os dados.')
+      toast.error(err.message || 'Erro na autenticação. Verifique os dados.')
     } finally {
       setAuthLoading(false)
     }
@@ -186,11 +186,11 @@ export default function PublicCustomerProfilePage() {
   // Handle Add Address Submission
   const validateAddressForm = () => {
     const errs = {}
-    if (!addressForm.street.trim()) errs.street = 'Rua Ã© obrigatÃ³ria'
-    if (!addressForm.number.trim()) errs.number = 'NÃºmero Ã© obrigatÃ³rio'
-    if (!addressForm.neighborhood.trim()) errs.neighborhood = 'Bairro Ã© obrigatÃ³rio'
-    if (!addressForm.city.trim()) errs.city = 'Cidade Ã© obrigatÃ³ria'
-    if (!addressForm.state.trim()) errs.state = 'UF Ã© obrigatÃ³ria'
+    if (!addressForm.street.trim()) errs.street = 'Rua é obrigatória'
+    if (!addressForm.number.trim()) errs.number = 'Número é obrigatório'
+    if (!addressForm.neighborhood.trim()) errs.neighborhood = 'Bairro é obrigatório'
+    if (!addressForm.city.trim()) errs.city = 'Cidade é obrigatória'
+    if (!addressForm.state.trim()) errs.state = 'UF é obrigatória'
     return errs
   }
 
@@ -217,7 +217,7 @@ export default function PublicCustomerProfilePage() {
       })
 
       if (res.success) {
-        toast.success('EndereÃ§o salvo com sucesso!')
+        toast.success('Endereço salvo com sucesso!')
         setShowAddAddress(false)
         setAddressForm({
           zipCode: '',
@@ -237,7 +237,7 @@ export default function PublicCustomerProfilePage() {
         }
       }
     } catch (err) {
-      toast.error(err.message || 'Erro ao adicionar endereÃ§o.')
+      toast.error(err.message || 'Erro ao adicionar endereço.')
     } finally {
       setAddressLoading(false)
     }
@@ -245,16 +245,16 @@ export default function PublicCustomerProfilePage() {
 
   // Handle Delete Address
   const handleDeleteAddress = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir este endereÃ§o?')) return
+    if (!confirm('Tem certeza que deseja excluir este endereço?')) return
     setAddressLoading(true)
     try {
       const res = await publicApi.deleteAddress(slug, id)
       if (res.success) {
-        toast.success('EndereÃ§o excluÃ­do.')
+        toast.success('Endereço excluído.')
         setAddresses(prev => prev.filter(a => a.id !== id))
       }
     } catch (err) {
-      toast.error(err.message || 'Erro ao excluir endereÃ§o.')
+      toast.error(err.message || 'Erro ao excluir endereço.')
     } finally {
       setAddressLoading(false)
     }
@@ -267,7 +267,7 @@ export default function PublicCustomerProfilePage() {
     setCustomerToken(null)
     setAddresses([])
     setOrders([])
-    toast.success('VocÃª saiu da sua conta.')
+    toast.success('Você saiu da sua conta.')
     navigate(`/cardapio/${slug}`)
   }
 
@@ -309,7 +309,7 @@ export default function PublicCustomerProfilePage() {
             className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
           >
             <ArrowLeft size={16} />
-            <span>CardÃ¡pio Principal</span>
+            <span>Cardápio Principal</span>
           </button>
           <span className="text-white font-extrabold text-base">Minha Conta</span>
           <div className="w-6" /> {/* spacer */}
@@ -324,7 +324,7 @@ export default function PublicCustomerProfilePage() {
               <div className="flex items-start gap-2.5 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/20 mb-6 animate-pulse">
                 <ShieldAlert className="text-amber-500 shrink-0 mt-0.5" size={18} />
                 <p className="text-xs text-amber-200 leading-normal font-semibold">
-                  AtenÃ§Ã£o: VocÃª precisa se identificar ou cadastrar para prosseguir com a finalizaÃ§Ã£o do seu pedido.
+                  Atenção: Você precisa se identificar ou cadastrar para prosseguir com a finalização do seu pedido.
                 </p>
               </div>
             )}
@@ -361,7 +361,7 @@ export default function PublicCustomerProfilePage() {
                 {authMode === 'register' && (
                   <Input
                     label="Nome Completo *"
-                    placeholder="Ex: JoÃ£o da Silva"
+                    placeholder="Ex: João da Silva"
                     value={authForm.name}
                     onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
                     required
@@ -435,7 +435,7 @@ export default function PublicCustomerProfilePage() {
 
               <div className="glass rounded-3xl p-2 border border-white/[0.04] flex flex-col gap-1">
                 {[
-                  { key: 'addresses', label: 'Meus EndereÃ§os', icon: MapPin },
+                  { key: 'addresses', label: 'Meus Endereços', icon: MapPin },
                   { key: 'orders', label: 'Meus Pedidos', icon: ShoppingBag },
                   { key: 'profile', label: 'Meus Dados', icon: User }
                 ].map(tab => (
@@ -475,8 +475,8 @@ export default function PublicCustomerProfilePage() {
                 <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-6">
                   <div className="flex items-center justify-between border-b border-white/5 pb-4">
                     <div>
-                      <h2 className="text-lg font-extrabold text-white">EndereÃ§os Salvos</h2>
-                      <p className="text-xs text-gray-400 mt-0.5">Cadastre seus endereÃ§os de entrega para checkouts mais rÃ¡pidos.</p>
+                      <h2 className="text-lg font-extrabold text-white">Endereços Salvos</h2>
+                      <p className="text-xs text-gray-400 mt-0.5">Cadastre seus endereços de entrega para checkouts mais rápidos.</p>
                     </div>
                     {!showAddAddress && (
                       <Button
@@ -486,7 +486,7 @@ export default function PublicCustomerProfilePage() {
                         onClick={() => setShowAddAddress(true)}
                         className="rounded-xl border border-white/10 hover:bg-white/5"
                       >
-                        Novo EndereÃ§o
+                        Novo Endereço
                       </Button>
                     )}
                   </div>
@@ -497,7 +497,7 @@ export default function PublicCustomerProfilePage() {
                       <div className="flex items-center justify-between mb-2 border-b border-white/5 pb-2">
                         <span className="text-sm font-bold text-white flex items-center gap-2">
                           <MapPin size={16} style={{ color: primaryColor }} />
-                          Cadastrar Novo EndereÃ§o
+                          Cadastrar Novo Endereço
                         </span>
                         <button
                           type="button"
@@ -536,7 +536,7 @@ export default function PublicCustomerProfilePage() {
                       <div className="grid grid-cols-3 gap-4">
                         <div className="col-span-1">
                           <Input
-                            label="NÃºmero *"
+                            label="Número *"
                             placeholder="Ex: 100"
                             value={addressForm.number}
                             onChange={(e) => setAddressForm({ ...addressForm, number: e.target.value })}
@@ -554,8 +554,8 @@ export default function PublicCustomerProfilePage() {
                         </div>
                         <div className="col-span-1">
                           <Input
-                            label="ReferÃªncia"
-                            placeholder="Ex: PrÃ³ximo ao metrÃ´"
+                            label="Referência"
+                            placeholder="Ex: Próximo ao metrô"
                             value={addressForm.reference}
                             onChange={(e) => setAddressForm({ ...addressForm, reference: e.target.value })}
                           />
@@ -576,7 +576,7 @@ export default function PublicCustomerProfilePage() {
                         <div className="col-span-1">
                           <Input
                             label="Cidade *"
-                            placeholder="SÃ£o Paulo"
+                            placeholder="São Paulo"
                             value={addressForm.city}
                             onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
                             error={addressFormErrors.city}
@@ -604,7 +604,7 @@ export default function PublicCustomerProfilePage() {
                           className="w-4 h-4 accent-[#FF6B35] bg-transparent border-white/10 rounded focus:ring-0"
                         />
                         <label htmlFor="isDefault" className="text-xs text-gray-300 font-semibold cursor-pointer">
-                          Definir como endereÃ§o padrÃ£o de entrega
+                          Definir como endereço padrão de entrega
                         </label>
                       </div>
 
@@ -615,7 +615,7 @@ export default function PublicCustomerProfilePage() {
                         className="px-6 py-2.5 rounded-xl font-bold shadow-md text-xs uppercase"
                         style={{ backgroundColor: buttonColor }}
                       >
-                        Salvar EndereÃ§o
+                        Salvar Endereço
                       </Button>
                     </form>
                   )}
@@ -628,14 +628,14 @@ export default function PublicCustomerProfilePage() {
                   ) : addresses.length === 0 ? (
                     <div className="text-center py-12 space-y-3 bg-white/[0.01] border border-white/5 rounded-2xl">
                       <MapPin size={32} className="mx-auto text-gray-600" />
-                      <p className="text-xs text-gray-400">Nenhum endereÃ§o cadastrado ainda.</p>
+                      <p className="text-xs text-gray-400">Nenhum endereço cadastrado ainda.</p>
                       <button
                         type="button"
                         onClick={() => setShowAddAddress(true)}
                         className="text-xs font-bold hover:underline"
                         style={{ color: primaryColor }}
                       >
-                        Cadastrar primeiro endereÃ§o
+                        Cadastrar primeiro endereço
                       </button>
                     </div>
                   ) : (
@@ -649,15 +649,15 @@ export default function PublicCustomerProfilePage() {
                               </span>
                               {addr.is_default === 1 && (
                                 <span className="text-[8px] bg-green-500/10 text-green-400 border border-green-500/20 font-bold px-2 py-0.5 rounded-full uppercase">
-                                  PadrÃ£o
+                                  Padrão
                                 </span>
                               )}
                             </div>
                             <p className="text-xs text-gray-400">
-                              {addr.complement ? `${addr.complement} â€¢ ` : ''} {addr.neighborhood}
+                              {addr.complement ? `${addr.complement} • ` : ''} {addr.neighborhood}
                             </p>
                             <p className="text-xs text-gray-400">
-                              {addr.city} - {addr.state} â€¢ CEP {addr.zip_code}
+                              {addr.city} - {addr.state} • CEP {addr.zip_code}
                             </p>
                             {addr.reference && (
                               <p className="text-[10px] text-gray-500 italic mt-1.5">
@@ -669,7 +669,7 @@ export default function PublicCustomerProfilePage() {
                             type="button"
                             onClick={() => handleDeleteAddress(addr.id)}
                             className="p-2 text-gray-500 hover:text-red-400 transition-colors self-start hover:bg-white/5 rounded-lg"
-                            title="Excluir EndereÃ§o"
+                            title="Excluir Endereço"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -684,7 +684,7 @@ export default function PublicCustomerProfilePage() {
               {activeTab === 'orders' && (
                 <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-6">
                   <div>
-                    <h2 className="text-lg font-extrabold text-white">HistÃ³rico de Pedidos</h2>
+                    <h2 className="text-lg font-extrabold text-white">Histórico de Pedidos</h2>
                     <p className="text-xs text-gray-400 mt-0.5">Veja e acompanhe os seus pedidos realizados neste restaurante.</p>
                   </div>
 
@@ -695,13 +695,13 @@ export default function PublicCustomerProfilePage() {
                   ) : orders.length === 0 ? (
                     <div className="text-center py-12 space-y-3 bg-white/[0.01] border border-white/5 rounded-2xl">
                       <ShoppingBag size={32} className="mx-auto text-gray-600" />
-                      <p className="text-xs text-gray-400">VocÃª ainda nÃ£o fez nenhum pedido.</p>
+                      <p className="text-xs text-gray-400">Você ainda não fez nenhum pedido.</p>
                       <Link
                         to={`/cardapio/${slug}`}
                         className="inline-block text-xs font-bold hover:underline"
                         style={{ color: primaryColor }}
                       >
-                        Navegar pelo cardÃ¡pio
+                        Navegar pelo cardápio
                       </Link>
                     </div>
                   ) : (
@@ -752,7 +752,7 @@ export default function PublicCustomerProfilePage() {
                 <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-6">
                   <div>
                     <h2 className="text-lg font-extrabold text-white">Meus Dados Cadastrais</h2>
-                    <p className="text-xs text-gray-400 mt-0.5 font-medium">InformaÃ§Ãµes de identificaÃ§Ã£o da sua conta.</p>
+                    <p className="text-xs text-gray-400 mt-0.5 font-medium">Informações de identificação da sua conta.</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-white/[0.01] border border-white/5 p-6 rounded-2xl text-left">
@@ -776,7 +776,7 @@ export default function PublicCustomerProfilePage() {
                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">E-mail</span>
                       <p className="text-sm font-bold text-white flex items-center gap-2">
                         <Mail size={14} style={{ color: primaryColor }} />
-                        {customer.email || <span className="text-gray-500 font-normal italic">NÃ£o informado</span>}
+                        {customer.email || <span className="text-gray-500 font-normal italic">Não informado</span>}
                       </p>
                     </div>
 
@@ -784,7 +784,7 @@ export default function PublicCustomerProfilePage() {
                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">CPF</span>
                       <p className="text-sm font-bold text-white flex items-center gap-2">
                         <FileText size={14} style={{ color: primaryColor }} />
-                        {customer.document || <span className="text-gray-500 font-normal italic">NÃ£o informado</span>}
+                        {customer.document || <span className="text-gray-500 font-normal italic">Não informado</span>}
                       </p>
                     </div>
                   </div>
@@ -792,7 +792,7 @@ export default function PublicCustomerProfilePage() {
                   <div className="p-4 rounded-xl bg-white/[0.01] border border-white/5 text-xs text-gray-400 flex items-start gap-2.5">
                     <AlertCircle size={16} className="text-gray-500 shrink-0 mt-0.5" />
                     <p className="leading-normal">
-                      Seus dados de cadastro sÃ£o confidenciais e armazenados de forma segura, sendo compartilhados apenas com o estabelecimento para a emissÃ£o e entrega dos seus pedidos.
+                      Seus dados de cadastro são confidenciais e armazenados de forma segura, sendo compartilhados apenas com o estabelecimento para a emissão e entrega dos seus pedidos.
                     </p>
                   </div>
                 </div>
@@ -807,4 +807,3 @@ export default function PublicCustomerProfilePage() {
     </div>
   )
 }
-
