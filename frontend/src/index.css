@@ -3,3 +3,21 @@
 @tailwind utilities;
 
 @import './styles/ifood-theme.css';
+
+
+/* FIX REAL TEMA IFOOD - NAO REMOVER */
+:root{color-scheme:light!important;--theme-bg:#f7f7f7!important;--theme-text:#1f2937!important;--theme-primary:#ea1d2c!important;--theme-button:#ea1d2c!important;}
+html,body,#root{background:#f7f7f7!important;color:#1f2937!important;}
+.glass,.glass-light,.card-hover{background:#fff!important;background-image:none!important;border-color:#e5e7eb!important;box-shadow:0 8px 24px rgba(15,23,42,.06)!important;color:#1f2937!important;}
+main{background:#f7f7f7!important;color:#1f2937!important;}
+main .text-white,main [class*="text-white"]{color:#1f2937!important;}
+main [class*="text-[#a991c7]"],main [class*="text-[#6b5880]"]{color:#6b7280!important;}
+main [class*="bg-white/["]{background:#fff!important;}
+main [class*="bg-[#1A0533]"],main [class*="bg-[#230"],main [class*="bg-[#2"],main [class*="bg-[#3"],main [class*="bg-[#4"],main [class*="bg-[#5"],main [class*="bg-[#6"],main [class*="from-[#1A0533]"],main [class*="from-purple"],main [class*="to-purple"]{background:#fff!important;background-image:none!important;}
+main [class*="border-white"]{border-color:#e5e7eb!important;}
+main h1,main h2,main h3,main h4{color:#111827!important;}
+main p,main span{border-color:#e5e7eb;}
+button[class*="bg-[#FF6B35]"],a[class*="bg-[#FF6B35]"]{background:#ea1d2c!important;color:#fff!important;}
+aside{background:linear-gradient(180deg,#160023,#25003b)!important;}
+aside *{color:inherit;}
+a[href*="aparencia"],a[href*="appearance"],a[href*="tema"],a[href*="theme"]{display:none!important;}

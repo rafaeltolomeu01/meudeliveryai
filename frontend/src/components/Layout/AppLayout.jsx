@@ -52,7 +52,7 @@ export default function AppLayout() {
   }, [isExpired, location.pathname, navigate])
 
   return (
-    <div className="min-h-screen bg-[#1A0533] flex" style={{ backgroundColor: 'var(--theme-bg, #1A0533)', color: 'var(--theme-text, #FFFFFF)' }}>
+    <div className="min-h-screen bg-[#f7f7f7] text-slate-900 flex">
       {/* Desktop Sidebar */}
       <Sidebar />
 
@@ -108,7 +108,7 @@ export default function AppLayout() {
           </div>
         )}
 
-        <main className="mda-content-area flex-1 p-4 lg:p-6 pb-24 lg:pb-6 overflow-auto bg-[#f7f7f7]">
+        <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6 overflow-auto bg-[#f7f7f7] text-slate-900">
           <div className={`${location.pathname === '/dashboard/pedidos' ? 'max-w-none w-full' : 'max-w-7xl mx-auto'} animate-fade-in`}>
             <Outlet context={{ subscriptionData, refreshSubscription: fetchSubscription, isExpired }} />
           </div>

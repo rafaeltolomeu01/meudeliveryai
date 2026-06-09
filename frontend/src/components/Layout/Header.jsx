@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight, Download } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePWA } from '../../contexts/PWAContext'
-import { restaurants as restaurantApi, orders as ordersApi, settings as settingsApi } from '../../services/api'
+import { restaurants as restaurantApi, orders as ordersApi } from '../../services/api'
 import toast from 'react-hot-toast'
 
 const pageNames = {
@@ -27,16 +27,13 @@ export default function Header() {
   const [notifications, setNotifications] = useState([])
 
   const pageName = pageNames[location.pathname] || 'Painel'
-  const [remoteOpen, setRemoteOpen] = useState(user?.restaurant?.isOpen)
-  const isOpen = remoteOpen ?? user?.restaurant?.isOpen
+  const isOpen = user?.restaurant?.isOpen
 
   const toggleRestaurant = async () => {
     const next = !isOpen
     try {
-      const res = await restaurantApi.toggleOpen()
-      const realNext = res?.data?.is_open ?? next
-      setRemoteOpen(realNext)
-      updateUser({ restaurant: { ...user.restaurant, isOpen: realNext } })
+      await restaurantApi.toggleOpen()
+      updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
       toast.success(next ? 'Restaurante aberto! 🟢' : 'Restaurante fechado! 🔴')
     } catch (err) {
       console.error(err)
@@ -98,20 +95,18 @@ export default function Header() {
   }
 
   useEffect(() => {
-    async function syncOpenStatus(){ try { const r = await settingsApi.get(); if(r.success && r.data){ const open = r.data.is_open === 1 || r.data.is_open === true; setRemoteOpen(open); updateUser({ restaurant: { ...user.restaurant, isOpen: open } }) } } catch(e){} }
-    syncOpenStatus()
     fetchRecentOrders()
     const interval = setInterval(fetchRecentOrders, 15000)
     return () => clearInterval(interval)
   }, [user])
 
   return (
-    <header className="mda-admin-header sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between"
+    <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur"
     >
       {/* Page Title */}
       <div>
-        <h1 className="text-[#1f1f1f] font-bold text-lg lg:text-xl">{pageName}</h1>
-        <p className="text-[#717171] text-xs hidden sm:block">
+        <h1 className="text-slate-900 font-bold text-lg lg:text-xl">{pageName}</h1>
+        <p className="text-slate-500 text-xs hidden sm:block">
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
       </div>
@@ -147,7 +142,7 @@ export default function Header() {
         <div className="relative">
           <button
             onClick={() => { setNotifOpen(!notifOpen); setDropdownOpen(false) }}
-            className="relative w-9 h-9 rounded-xl glass flex items-center justify-center text-[#a991c7] hover:text-white transition-colors"
+            className="relative w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
           >
             <Bell size={18} />
             {notifications.some(n => n.unread) && (
@@ -155,13 +150,13 @@ export default function Header() {
             )}
           </button>
           {notifOpen && (
-            <div className="absolute right-0 top-12 w-72 glass rounded-2xl border border-white/[0.08] shadow-2xl animate-slide-down z-50">
-              <div className="px-4 py-3 border-b border-white/[0.06]">
-                <p className="text-white font-semibold text-sm">Notificações</p>
+            <div className="absolute right-0 top-12 w-72 glass rounded-2xl border border-slate-200 shadow-2xl animate-slide-down z-50">
+              <div className="px-4 py-3 border-b border-slate-200">
+                <p className="text-slate-900 font-semibold text-sm">Notificações</p>
               </div>
               <div className="max-h-64 overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-[#717171] text-xs italic">
+                  <div className="px-4 py-8 text-center text-[#a991c7] text-xs italic">
                     Nenhum pedido encontrado
                   </div>
                 ) : (
@@ -197,18 +192,18 @@ export default function Header() {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-12 w-52 glass rounded-2xl border border-white/[0.08] shadow-2xl animate-slide-down z-50">
-              <div className="px-4 py-3 border-b border-white/[0.06]">
+            <div className="absolute right-0 top-12 w-52 glass rounded-2xl border border-slate-200 shadow-2xl animate-slide-down z-50">
+              <div className="px-4 py-3 border-b border-slate-200">
                 <p className="text-white font-medium text-sm">{user?.name}</p>
-                <p className="text-[#717171] text-xs">{user?.email}</p>
+                <p className="text-[#a991c7] text-xs">{user?.email}</p>
               </div>
               <div className="py-1">
                 <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#a991c7] hover:text-white hover:bg-white/5 transition-colors">
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-500 hover:text-slate-900 hover:bg-white/5 transition-colors">
                   <User size={15} /> Meu Perfil
                 </button>
                 <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#a991c7] hover:text-white hover:bg-white/5 transition-colors">
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-500 hover:text-slate-900 hover:bg-white/5 transition-colors">
                   <Settings size={15} /> Configurações
                 </button>
               </div>

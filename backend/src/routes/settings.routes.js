@@ -30,6 +30,8 @@ const updateValidation = [
   body('support_phone').optional().isString(),
   body('is_open').optional().isBoolean(),
   body('default_print_format').optional().isIn(['58mm', '80mm', 'ask']).withMessage('Formato de impressão inválido.'),
+  body('auto_print_enabled').optional().isBoolean(),
+  body('kitchen_print_enabled').optional().isBoolean(),
 ];
 
 // ─── Rotas ────────────────────────────────────────────────────────────────────
