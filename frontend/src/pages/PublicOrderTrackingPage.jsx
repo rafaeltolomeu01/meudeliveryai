@@ -280,10 +280,10 @@ export default function PublicOrderTrackingPage() {
   const isCancelled = order.status === 'cancelled'
 
   // WhatsApp click text
-  const supportContact = restaurant.whatsapp_number || restaurant.support_phone || restaurant.whatsapp || ''
+  const supportContact = restaurant.whatsapp_number || restaurant.support_phone || restaurant.whatsapp || restaurant.phone || ''
   const cleanPhone = supportContact.replace(/\D/g, '')
   const formattedPhone = cleanPhone.length === 11 || cleanPhone.length === 10 ? `55${cleanPhone}` : cleanPhone
-  const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(`Olá! Gostaria de informações sobre o meu pedido ${order.order_number}.`)}` : '#' 
+  const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(`Olá! Gostaria de informações sobre o meu pedido ${order.order_number}.`)}` : `tel:${supportContact}`
 
   return (
     <div className="min-h-screen font-inter pb-12 text-left" style={{ backgroundColor: bgColor, color: restaurant.text_color || '#FFFFFF' }}>

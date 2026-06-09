@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import OrdersPage from './pages/OrdersPage'
+import OrdersGeneralPage from './pages/OrdersGeneralPage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import ProductsPage from './pages/ProductsPage'
 import ProductFormPage from './pages/ProductFormPage'
@@ -30,8 +31,6 @@ import UsersPage from './pages/UsersPage'
 import SubscriptionPage from './pages/SubscriptionPage'
 import AppearancePage from './pages/AppearancePage'
 import WhatsAppPage from './pages/WhatsAppPage'
-import TablesPage from './pages/TablesPage'
-import AIAttendantPage from './pages/AIAttendantPage'
 
 
 
@@ -153,8 +152,6 @@ export default function App() {
         <Route path="dashboard/usuarios" element={<UsersPage />} />
         <Route path="dashboard/assinatura" element={<SubscriptionPage />} />
         <Route path="dashboard/whatsapp" element={<WhatsAppPage />} />
-        <Route path="dashboard/mesas" element={<TablesPage />} />
-        <Route path="dashboard/atendente-ia" element={<AIAttendantPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

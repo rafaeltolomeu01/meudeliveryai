@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight, Download } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePWA } from '../../contexts/PWAContext'
 import { restaurants as restaurantApi, orders as ordersApi, settings as settingsApi } from '../../services/api'
-import { playNewOrderBell } from '../../utils/orderSound'
 import toast from 'react-hot-toast'
 
 const pageNames = {
@@ -26,19 +25,40 @@ export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
-  const seenPendingOrders = useRef(new Set())
-  const firstOrdersLoad = useRef(true)
+  const [restaurantOpenState, setRestaurantOpenState] = useState(null)
 
   const pageName = pageNames[location.pathname] || 'Painel'
-  const isOpen = user?.restaurant?.isOpen
+  const isOpen = restaurantOpenState ?? user?.restaurant?.isOpen
+
+
+
+  useEffect(() => {
+    let alive = true
+    async function loadOpenState() {
+      try {
+        const res = await settingsApi.get()
+        if (alive && res.success && res.data) {
+          setRestaurantOpenState(res.data.is_open === 1 || res.data.is_open === true || res.data.is_open === '1')
+        }
+      } catch {}
+    }
+    loadOpenState()
+    const handler = (ev) => {
+      if (typeof ev.detail?.is_open !== 'undefined') setRestaurantOpenState(!!ev.detail.is_open)
+    }
+    window.addEventListener('mda:restaurant-status-changed', handler)
+    return () => { alive = false; window.removeEventListener('mda:restaurant-status-changed', handler) }
+  }, [])
 
   const toggleRestaurant = async () => {
     const next = !isOpen
     try {
-      await restaurantApi.toggleOpen()
-      updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
-      window.dispatchEvent(new CustomEvent('mda:restaurant-status-changed', { detail: { isOpen: next } }))
-      toast.success(next ? 'Restaurante aberto! 🟢' : 'Restaurante fechado! 🔴')
+      const res = await restaurantApi.toggleOpen()
+      const real = res?.data?.is_open ?? next
+      setRestaurantOpenState(!!real)
+      updateUser({ restaurant: { ...user.restaurant, isOpen: !!real } })
+      window.dispatchEvent(new CustomEvent('mda:restaurant-status-changed', { detail: { is_open: !!real } }))
+      toast.success(real ? 'Restaurante aberto! 🟢' : 'Restaurante fechado! 🔴')
     } catch (err) {
       console.error(err)
       toast.error('Erro ao alterar status da loja.')
@@ -55,15 +75,6 @@ export default function Header() {
     try {
       const res = await ordersApi.list({ limit: 5 })
       if (res.success && res.data) {
-        const pendingNow = res.data.filter(order => order.status === 'pending')
-        const hasNewPending = pendingNow.some(order => !seenPendingOrders.current.has(order.id))
-        if (hasNewPending && !firstOrdersLoad.current) {
-          playNewOrderBell(5000)
-          toast('Novo pedido recebido! 🔔', { icon: '🔔' })
-        }
-        pendingNow.forEach(order => seenPendingOrders.current.add(order.id))
-        firstOrdersLoad.current = false
-
         const notifs = res.data.map(order => {
           const createdTime = new Date(order.created_at)
           const diffMs = new Date() - createdTime
@@ -112,27 +123,6 @@ export default function Header() {
     const interval = setInterval(fetchRecentOrders, 15000)
     return () => clearInterval(interval)
   }, [user])
-
-
-  useEffect(() => {
-    const refreshStatus = async () => {
-      try {
-        const res = await settingsApi.get()
-        if (res.success && res.data && user?.restaurant) {
-          const isOpenFresh = res.data.is_open === 1 || res.data.is_open === true || res.data.is_open === '1'
-          updateUser({ restaurant: { ...user.restaurant, isOpen: isOpenFresh } })
-        }
-      } catch (_) {}
-    }
-    refreshStatus()
-    const onChanged = (event) => {
-      if (user?.restaurant && typeof event.detail?.isOpen === 'boolean') {
-        updateUser({ restaurant: { ...user.restaurant, isOpen: event.detail.isOpen } })
-      }
-    }
-    window.addEventListener('mda:restaurant-status-changed', onChanged)
-    return () => window.removeEventListener('mda:restaurant-status-changed', onChanged)
-  }, [])
 
   return (
     <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-white/[0.06]"

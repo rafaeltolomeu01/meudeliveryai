@@ -23,7 +23,7 @@ export default function AppLayout() {
   }
 
   useEffect(() => {
-fetchSubscription()
+    fetchSubscription()
 }, [])
 
   const isExpired = subscriptionData && (

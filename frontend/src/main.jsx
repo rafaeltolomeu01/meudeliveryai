@@ -7,15 +7,15 @@ import { AuthProvider } from './contexts/AuthContext'
 import { PWAProvider } from './contexts/PWAContext'
 import ErrorBoundary from './components/ui/ErrorBoundary'
 import App from './App'
-import './index.css'
+import './index.css';
 import './styles/ifood-theme.css';
 import './styles/ifood-theme-forced.css';
-import './meudeliveryai-light-overrides.css'
+import './meudeliveryai-light-overrides.css';
 import './styles/ifood-admin-hard.css';
 import './utils/forceIfoodTheme';
-import './styles/mda-fix-public-text-chat.css';
-import './styles/ifood-real-admin.css'
-
+import './styles/mda-final-public-fixes';
+import './styles/mda-fix-public-text-chat';
+import './styles/ifood-real-admin';
 
 const queryClient = new QueryClient({
   defaultOptions: {

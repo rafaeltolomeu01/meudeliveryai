@@ -1,0 +1,31 @@
+
+/* Correção final: telas públicas claras + textos legíveis */
+:root{--mda-red:#ea1d2c;--mda-orange:#ff6b35;--mda-dark:#111827;--mda-muted:#64748b;--mda-line:#e5e7eb;--mda-bg:#f7f7f7;}
+/* Não mexe na landing/login SaaS; corrige cardápio/carrinho/rastreamento */
+body:has([href*="/cardapio"]), body:has(input[placeholder*="Digite sua mensagem para o restaurante"]){background:#fff!important;color:#111827!important;}
+/* páginas públicas de cardápio, carrinho e rastreamento */
+.public-ifood, .public-menu-page, .public-cart-page, .public-order-page,
+[class*="PublicMenu"], [class*="PublicCart"], [class*="PublicOrder"]{background:#fff!important;color:#111827!important;}
+/* força texto legível dentro de áreas roxas antigas */
+body [class*="bg-[#1A0533]"], body [class*="bg-[#0F0F0F]"], body [class*="from-[#1A0533]"], body [class*="to-[#0F0F0F]"]{color:#111827!important;}
+/* rotas públicas detectadas por estrutura */
+a[href*="/cardapio/"], a[href*="wa.me"], a[href^="tel:"]{color:inherit;}
+/* Corrige especificamente rastreamento/chat que estava roxo com textos brancos */
+#chat-messages-container, #chat-messages-container *{color:#111827!important;}
+#chat-messages-container{background:#fff!important;border:1px solid var(--mda-line)!important;}
+#chat-messages-container + form, form:has(input[placeholder*="Digite sua mensagem"]){background:#fff!important;border-color:var(--mda-line)!important;}
+input, textarea, select{color:#111827!important;background:#fff!important;border-color:#d1d5db!important;}
+input::placeholder, textarea::placeholder{color:#94a3b8!important;}
+/* deixa seções públicas claras */
+main:has(#chat-messages-container), main:has(input[placeholder*="CEP"]), main:has(button){background:#fff!important;}
+/* títulos e descrições */
+body h1,body h2,body h3,body h4,body h5,body p,body span,body label,body strong{ }
+/* Evita texto lilás quase invisível nas telas claras */
+.text-\[\#a991c7\], .text-\[\#6b5880\], .text-purple-300, .text-purple-400{color:#64748b!important;}
+/* páginas públicas ainda roxas recebem fundo claro */
+.min-h-screen.bg-\[\#1A0533\], .min-h-screen.bg-\[\#0F0F0F\], .min-h-screen.bg-gradient-to-b{background:#fff!important;color:#111827!important;}
+/* Botões principais estilo iFood */
+button, .btn{border-radius:12px;}
+button[class*="bg-[#FF6B35]"], button[class*="bg-red"], a[class*="bg-[#FF6B35]"], a[class*="bg-red"]{background:#ea1d2c!important;color:#fff!important;}
+/* Cards */
+.glass, .card, [class*="bg-white/"]{ }

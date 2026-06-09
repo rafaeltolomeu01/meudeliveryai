@@ -5,7 +5,6 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
 import toast from 'react-hot-toast'
-import { useAuth } from '../contexts/AuthContext'
 import { settings as settingsApi, restaurants as restaurantApi } from '../services/api'
 
 const tabs = [
@@ -27,7 +26,6 @@ const DAYS_MAPPING = {
 }
 
 export default function SettingsPage() {
-  const { user, updateUser } = useAuth()
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'general')
   const [loading, setLoading] = useState(true)
@@ -190,10 +188,6 @@ export default function SettingsPage() {
         settingsApi.updatePayments(paymentPayload)
       ])
 
-      if (user?.restaurant) {
-        updateUser({ restaurant: { ...user.restaurant, isOpen: !!form.is_open } })
-        window.dispatchEvent(new CustomEvent('mda:restaurant-status-changed', { detail: { isOpen: !!form.is_open } }))
-      }
       toast.success('Configurações salvas com sucesso! 🚀')
     } catch (err) {
       console.error(err)

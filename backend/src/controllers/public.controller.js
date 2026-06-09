@@ -74,7 +74,7 @@ const getRestaurantBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
     const restaurants = await query(
-      `SELECT r.id, r.name, r.slug, COALESCE(rt.logo, r.logo) AS logo,
+      `SELECT r.id, r.name, r.slug, r.whatsapp, r.phone, COALESCE(rt.logo, r.logo) AS logo,
               COALESCE(rt.cover_image, r.cover_image) AS cover_image,
               r.status, rt.primary_color, rt.secondary_color, rt.accent_color,
               rt.background_color, rt.button_color, rt.text_color, rt.font_family,

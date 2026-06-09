@@ -1,87 +1,107 @@
+
 let bellTimeout = null;
 let bellInterval = null;
-let activeAudio = null;
+let activeAudioContext = null;
 let unlocked = false;
+let audioElement = null;
 
-function getSoundUrl() {
-  return '/sounds/notification.mp3';
+const SOUND_PATHS = [
+  '/sounds/notification.mp3',
+  '/notification.mp3',
+  '/sounds/campainha.mp3',
+  '/campainha.mp3'
+];
+
+function getAudio() {
+  if (typeof window === 'undefined') return null;
+  if (!audioElement) {
+    audioElement = new Audio(SOUND_PATHS[0]);
+    audioElement.volume = 1;
+    audioElement.preload = 'auto';
+  }
+  return audioElement;
 }
 
-function unlockAudio() {
-  if (unlocked) return;
-  unlocked = true;
+export async function unlockOrderBell() {
   try {
-    const a = new Audio(getSoundUrl());
-    a.volume = 0;
-    a.play().then(() => {
-      a.pause();
-      a.currentTime = 0;
-    }).catch(() => {});
-  } catch (_) {}
-}
-
-if (typeof window !== 'undefined') {
-  ['click', 'keydown', 'touchstart'].forEach(evt => {
-    window.addEventListener(evt, unlockAudio, { once: true, passive: true });
-  });
-}
-
-function playMp3Once() {
-  try {
-    const audio = new Audio(getSoundUrl());
-    activeAudio = audio;
-    audio.volume = 1;
-    audio.currentTime = 0;
-    const promise = audio.play();
-    if (promise && typeof promise.catch === 'function') {
-      promise.catch(() => playToneOnce());
+    const audio = getAudio();
+    if (audio) {
+      audio.muted = true;
+      await audio.play().catch(() => null);
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
     }
-    setTimeout(() => {
-      try { audio.pause(); audio.currentTime = 0; } catch (_) {}
-    }, 1100);
-  } catch (_) {
-    playToneOnce();
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext && (!activeAudioContext || activeAudioContext.state === 'closed')) activeAudioContext = new AudioContext();
+    if (activeAudioContext?.state === 'suspended') await activeAudioContext.resume();
+    unlocked = true;
+    localStorage.setItem('mda_bell_unlocked', '1');
+    return true;
+  } catch (e) {
+    console.warn('Não foi possível liberar a campainha:', e);
+    return false;
   }
 }
 
-function playToneOnce() {
+function ringFallback() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+  if (!activeAudioContext || activeAudioContext.state === 'closed') activeAudioContext = new AudioContext();
+  const ctx = activeAudioContext;
+  if (ctx.state === 'suspended') ctx.resume().catch(() => null);
+  const now = ctx.currentTime;
+  const playTone = (frequency, startAt, duration, volume = 0.2) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(frequency, startAt);
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(startAt); osc.stop(startAt + duration + 0.05);
+  };
+  playTone(880, now, 0.38);
+  playTone(660, now + 0.28, 0.55);
+}
+
+async function ringOnce() {
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const now = ctx.currentTime;
-    const tone = (freq, start, duration, volume = 0.18) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(volume, start + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(start); osc.stop(start + duration + 0.05);
-    };
-    tone(784, now, 0.45);
-    tone(587.33, now + 0.35, 0.65);
-    setTimeout(() => ctx.close().catch(() => {}), 1800);
-  } catch (err) {
-    console.warn('Erro ao tocar campainha:', err);
+    const audio = getAudio();
+    if (audio) {
+      audio.currentTime = 0;
+      await audio.play();
+      return;
+    }
+  } catch (e) {
+    // Se o navegador bloquear MP3, usa beep interno.
   }
+  ringFallback();
 }
 
 export function stopNewOrderBell() {
   if (bellInterval) clearInterval(bellInterval);
   if (bellTimeout) clearTimeout(bellTimeout);
-  bellInterval = null;
-  bellTimeout = null;
-  if (activeAudio) {
-    try { activeAudio.pause(); activeAudio.currentTime = 0; } catch (_) {}
-  }
+  bellInterval = null; bellTimeout = null;
+  try { if (audioElement) { audioElement.pause(); audioElement.currentTime = 0; } } catch {}
 }
 
 export function playNewOrderBell(durationMs = 5000) {
-  stopNewOrderBell();
-  playMp3Once();
-  bellInterval = setInterval(playMp3Once, 1200);
-  bellTimeout = setTimeout(stopNewOrderBell, durationMs);
+  try {
+    stopNewOrderBell();
+    ringOnce();
+    bellInterval = setInterval(ringOnce, 1200);
+    bellTimeout = setTimeout(stopNewOrderBell, durationMs);
+  } catch (error) {
+    console.warn('Erro ao tocar campainha de novo pedido:', error);
+    ringFallback();
+  }
+}
+
+// Libera áudio após qualquer clique/toque no painel.
+if (typeof window !== 'undefined') {
+  ['click','touchstart','keydown'].forEach(evt => {
+    window.addEventListener(evt, () => { if (!unlocked) unlockOrderBell(); }, { once: false, passive: true });
+  });
 }
