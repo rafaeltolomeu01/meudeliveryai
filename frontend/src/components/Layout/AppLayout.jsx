@@ -3,8 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import MobileNav from './MobileNav'
-import { settings as settingsApi, subscription as subscriptionApi } from '../../services/api'
-import { applyTheme, removeTheme } from '../../utils/theme'
+import { subscription as subscriptionApi } from '../../services/api'
 import { AlertTriangle, ShieldAlert } from 'lucide-react'
 
 export default function AppLayout() {
@@ -24,22 +23,7 @@ export default function AppLayout() {
   }
 
   useEffect(() => {
-    async function loadTheme() {
-      try {
-        const res = await settingsApi.getAppearance()
-        if (res.success && res.data) {
-          applyTheme(res.data)
-        }
-      } catch (err) {
-        console.warn('Erro ao carregar tema do restaurante no painel:', err)
-      }
-    }
-    loadTheme()
     fetchSubscription()
-
-    return () => {
-      removeTheme()
-    }
   }, [])
 
   const isExpired = subscriptionData && (
@@ -124,7 +108,7 @@ export default function AppLayout() {
           </div>
         )}
 
-        <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6 overflow-auto">
+        <main className="mda-content-area flex-1 p-4 lg:p-6 pb-24 lg:pb-6 overflow-auto bg-[#f7f7f7]">
           <div className={`${location.pathname === '/dashboard/pedidos' ? 'max-w-none w-full' : 'max-w-7xl mx-auto'} animate-fade-in`}>
             <Outlet context={{ subscriptionData, refreshSubscription: fetchSubscription, isExpired }} />
           </div>

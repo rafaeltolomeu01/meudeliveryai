@@ -1,4 +1,5 @@
 import { playNewOrderBell } from '../utils/orderSound'
+import { printOrderTicket } from '../utils/printOrder'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -89,6 +90,8 @@ export default function OrdersPage() {
     return saved !== 'false'
   })
   const [printFormat, setPrintFormat] = useState('ask')
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false)
+  const [kitchenPrintEnabled, setKitchenPrintEnabled] = useState(true)
 
   const playDoorbellSound = () => {
     try {
@@ -200,6 +203,8 @@ export default function OrdersPage() {
         const res = await settingsApi.get()
         if (res.success && res.data) {
           setPrintFormat(res.data.default_print_format || 'ask')
+          setAutoPrintEnabled(res.data.auto_print_enabled === 1 || res.data.auto_print_enabled === true)
+          setKitchenPrintEnabled(res.data.kitchen_print_enabled !== 0 && res.data.kitchen_print_enabled !== false)
         }
       } catch (err) {
         console.warn('Erro ao carregar configurações de impressão:', err)
@@ -211,10 +216,20 @@ export default function OrdersPage() {
   }, [soundEnabled])
 
   const handleUpdateStatus = async (orderId, newStatus) => {
+    const orderBeforeUpdate = orders.find(o => o.id === orderId) || selectedOrder
     try {
       const res = await ordersApi.updateStatus(orderId, newStatus)
       if (res.success) {
         toast.success(`Pedido status alterado para "${newStatus}"! 🎉`)
+        if (autoPrintEnabled && ['confirmed','preparing'].includes(newStatus)) {
+          const printable = res.data || orderBeforeUpdate
+          setTimeout(() => {
+            printOrderTicket(printable, { restaurantName: user?.restaurant?.name || 'Restaurante', type: 'normal', size: printFormat === 'ask' ? '80mm' : printFormat })
+            if (kitchenPrintEnabled) {
+              setTimeout(() => printOrderTicket(printable, { restaurantName: user?.restaurant?.name || 'Restaurante', type: 'kitchen', size: printFormat === 'ask' ? '80mm' : printFormat }), 700)
+            }
+          }, 300)
+        }
         loadOrders(true)
         setSelectedOrder(null)
       }
@@ -250,6 +265,15 @@ export default function OrdersPage() {
         toast.success('Pedido cancelado com sucesso! 🔴')
         setShowCancelModal(false)
         setCancelReason('')
+        if (autoPrintEnabled && ['confirmed','preparing'].includes(newStatus)) {
+          const printable = res.data || orderBeforeUpdate
+          setTimeout(() => {
+            printOrderTicket(printable, { restaurantName: user?.restaurant?.name || 'Restaurante', type: 'normal', size: printFormat === 'ask' ? '80mm' : printFormat })
+            if (kitchenPrintEnabled) {
+              setTimeout(() => printOrderTicket(printable, { restaurantName: user?.restaurant?.name || 'Restaurante', type: 'kitchen', size: printFormat === 'ask' ? '80mm' : printFormat }), 700)
+            }
+          }, 300)
+        }
         loadOrders(true)
         setSelectedOrder(null)
       }
@@ -747,6 +771,15 @@ export default function OrdersPage() {
                       className="w-full text-left px-4 py-2.5 text-xs text-white hover:bg-[#FF6B35]/20 font-bold transition-colors"
                     >
                       Bobina 80mm
+                    </button>
+                    <button
+                      onClick={() => {
+                        printOrderTicket(selectedOrder, { restaurantName: user?.restaurant?.name || 'Restaurante', type: 'kitchen', size: '80mm' })
+                        setShowPrintMenu(false)
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-xs text-white hover:bg-[#FF6B35]/20 font-bold transition-colors border-t border-white/5"
+                    >
+                      Cozinha
                     </button>
                   </div>
                 )}

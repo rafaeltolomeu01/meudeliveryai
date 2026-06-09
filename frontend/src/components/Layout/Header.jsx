@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight, Download } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePWA } from '../../contexts/PWAContext'
-import { restaurants as restaurantApi, orders as ordersApi } from '../../services/api'
+import { restaurants as restaurantApi, orders as ordersApi, settings as settingsApi } from '../../services/api'
 import toast from 'react-hot-toast'
 
 const pageNames = {
@@ -27,13 +27,16 @@ export default function Header() {
   const [notifications, setNotifications] = useState([])
 
   const pageName = pageNames[location.pathname] || 'Painel'
-  const isOpen = user?.restaurant?.isOpen
+  const [remoteOpen, setRemoteOpen] = useState(user?.restaurant?.isOpen)
+  const isOpen = remoteOpen ?? user?.restaurant?.isOpen
 
   const toggleRestaurant = async () => {
     const next = !isOpen
     try {
-      await restaurantApi.toggleOpen()
-      updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
+      const res = await restaurantApi.toggleOpen()
+      const realNext = res?.data?.is_open ?? next
+      setRemoteOpen(realNext)
+      updateUser({ restaurant: { ...user.restaurant, isOpen: realNext } })
       toast.success(next ? 'Restaurante aberto! 🟢' : 'Restaurante fechado! 🔴')
     } catch (err) {
       console.error(err)
@@ -95,19 +98,20 @@ export default function Header() {
   }
 
   useEffect(() => {
+    async function syncOpenStatus(){ try { const r = await settingsApi.get(); if(r.success && r.data){ const open = r.data.is_open === 1 || r.data.is_open === true; setRemoteOpen(open); updateUser({ restaurant: { ...user.restaurant, isOpen: open } }) } } catch(e){} }
+    syncOpenStatus()
     fetchRecentOrders()
     const interval = setInterval(fetchRecentOrders, 15000)
     return () => clearInterval(interval)
   }, [user])
 
   return (
-    <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-white/[0.06]"
-      style={{ background: 'rgba(26, 5, 51, 0.8)', backdropFilter: 'blur(16px)' }}
+    <header className="mda-admin-header sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between"
     >
       {/* Page Title */}
       <div>
-        <h1 className="text-white font-bold text-lg lg:text-xl">{pageName}</h1>
-        <p className="text-[#a991c7] text-xs hidden sm:block">
+        <h1 className="text-[#1f1f1f] font-bold text-lg lg:text-xl">{pageName}</h1>
+        <p className="text-[#717171] text-xs hidden sm:block">
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
       </div>
@@ -157,7 +161,7 @@ export default function Header() {
               </div>
               <div className="max-h-64 overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-[#a991c7] text-xs italic">
+                  <div className="px-4 py-8 text-center text-[#717171] text-xs italic">
                     Nenhum pedido encontrado
                   </div>
                 ) : (
@@ -196,7 +200,7 @@ export default function Header() {
             <div className="absolute right-0 top-12 w-52 glass rounded-2xl border border-white/[0.08] shadow-2xl animate-slide-down z-50">
               <div className="px-4 py-3 border-b border-white/[0.06]">
                 <p className="text-white font-medium text-sm">{user?.name}</p>
-                <p className="text-[#a991c7] text-xs">{user?.email}</p>
+                <p className="text-[#717171] text-xs">{user?.email}</p>
               </div>
               <div className="py-1">
                 <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}

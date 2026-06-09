@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Bike, CheckCircle, Clipboard, CreditCard, DollarSign, Home, LogOut, MapPin, QrCode, ShieldCheck, ShoppingBag, Store, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { publicApi } from '../services/api'
@@ -20,6 +20,8 @@ const emptyForm = {
 export default function PublicCheckoutPage() {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const tableNumber = searchParams.get('mesa') || searchParams.get('table')
   const [restaurant, setRestaurant] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
@@ -233,6 +235,7 @@ export default function PublicCheckoutPage() {
         items: cart.map((item) => ({ product_id: item.product_id, quantity: item.quantity, notes: item.notes, complements: item.complements, options: item.options })),
         notes: form.notes,
         change_for: paymentMethod === 'cash' ? form.changeFor : null,
+        table_number: tableNumber || null,
       }
       const res = await publicApi.createOrder(slug, orderData)
       if (res?.success) {
@@ -252,7 +255,8 @@ export default function PublicCheckoutPage() {
   }
 
   return (
-    <div className="mda-public-page">
+    <div className="mda-public-page public-ifood">
+      {tableNumber && <div className="max-w-6xl mx-auto px-4 pt-4"><div className="public-ifood-card p-4 flex items-center gap-3 font-black text-[#ea1d2c]"><QrCode size={20}/> Pedido da Mesa {tableNumber}</div></div>}
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <button onClick={() => navigate(`/cardapio/${slug}/carrinho`)} className="flex items-center gap-2 text-slate-600 hover:text-slate-950 font-semibold">

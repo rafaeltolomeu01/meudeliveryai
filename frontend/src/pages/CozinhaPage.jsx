@@ -1,7 +1,8 @@
 import { playNewOrderBell } from '../utils/orderSound'
+import { printOrderTicket } from '../utils/printOrder'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChefHat, Clock, Check, Play, Bell, LogOut, Loader2, Volume2, VolumeX, RefreshCw, LayoutDashboard } from 'lucide-react'
+import { ChefHat, Clock, Check, Play, Bell, LogOut, Loader2, Volume2, VolumeX, RefreshCw, LayoutDashboard, Printer } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import toast from 'react-hot-toast'
@@ -162,18 +163,33 @@ export default function CozinhaPage() {
     return new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
+  const itemOptions = (value) => {
+    if (!value) return []
+    try { return typeof value === 'string' ? JSON.parse(value) : value } catch { return [] }
+  }
+
+  const isDrinkItem = (name = '') => /bebida|refrigerante|coca|guaran|suco|água|agua|lat(a|ão)|refri|drink|vitamina/i.test(name)
+
+  const hasImportantDetails = (order) => {
+    return !!order.notes || order.items?.some(i => i.notes || isDrinkItem(i.product_name || i.name || ''))
+  }
+
+  const printKitchen = (order) => {
+    printOrderTicket(order, { restaurantName: user?.restaurant?.name || 'Restaurante', type: 'kitchen', size: '80mm' })
+  }
+
   return (
-    <div className="min-h-screen bg-[#1A0533] text-white p-4 sm:p-6 font-inter text-left">
+    <div className="min-h-screen bg-[#f7f7f7] text-[#1f1f1f] p-4 sm:p-6 font-inter text-left">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-white/[0.06] pb-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-[#e8e8e8] pb-5">
         <div className="flex items-center gap-3">
           <div style={{ background: 'linear-gradient(135deg, #FF6B35, #e84e15)' }} className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(255,107,53,0.4)]">
             <ChefHat size={26} color="white" />
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight">Monitor da Cozinha</h1>
-            <p className="text-[#a991c7] text-sm mt-0.5">
+            <p className="text-[#717171] text-sm mt-0.5">
               {user?.restaurant?.name || 'Painel de Produção'} — {orders.length} pedidos ativos
             </p>
           </div>
@@ -187,7 +203,7 @@ export default function CozinhaPage() {
             <button
               onClick={() => loadKitchenOrders(false)}
               disabled={refreshing}
-              className="p-3 bg-white/5 hover:bg-white/10 text-[#a991c7] hover:text-white rounded-xl transition-all disabled:opacity-50"
+              className="p-3 bg-white/5 hover:bg-white/10 text-[#717171] hover:text-white rounded-xl transition-all disabled:opacity-50"
               title="Atualizar Pedidos"
             >
               <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
@@ -199,7 +215,7 @@ export default function CozinhaPage() {
               className={`p-3 rounded-xl transition-all ${
                 soundEnabled 
                   ? 'bg-green-600/10 text-green-400 border border-green-500/20 hover:bg-green-600/20' 
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                  : 'bg-white/5 text-[#717171] hover:bg-white/10'
               }`}
               title={soundEnabled ? 'Desativar bip de novos pedidos' : 'Ativar bip de novos pedidos'}
             >
@@ -222,14 +238,14 @@ export default function CozinhaPage() {
         <div className="min-h-[400px] flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="animate-spin text-[#FF6B35]" size={36} />
-            <p className="text-[#a991c7] text-lg font-medium">Carregando painel de produção...</p>
+            <p className="text-[#717171] text-lg font-medium">Carregando painel de produção...</p>
           </div>
         </div>
       ) : orders.length === 0 ? (
         <div className="glass rounded-3xl p-12 border border-white/[0.06] text-center max-w-md mx-auto mt-16 shadow-2xl">
           <p className="text-6xl mb-5">🎉</p>
           <h3 className="text-xl font-bold text-white mb-2">Cozinha sem pendências!</h3>
-          <p className="text-[#a991c7] text-sm leading-relaxed">Nenhum pedido aguardando preparo ou em produção no momento.</p>
+          <p className="text-[#717171] text-sm leading-relaxed">Nenhum pedido aguardando preparo ou em produção no momento.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -239,16 +255,16 @@ export default function CozinhaPage() {
             return (
               <div
                 key={order.id}
-                className="glass rounded-[32px] border border-white/[0.06] flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:border-[#FF6B35]/30 bg-gradient-to-b from-[#250e3d]/60 to-[#1a0533]/80"
+                className={`mda-card rounded-[26px] border flex flex-col justify-between overflow-hidden transition-all duration-300 bg-white ${order.status === 'pending' || hasImportantDetails(order) ? 'kitchen-blink' : ''}`}
               >
                 {/* Header do Card */}
-                <div className="p-6 border-b border-white/[0.05] flex items-center justify-between bg-black/20">
+                <div className="p-6 border-b border-[#e8e8e8] flex items-center justify-between bg-white">
                   <div>
-                    <span className="text-white font-black text-2xl tracking-tight">{order.order_number}</span>
-                    <div className="flex items-center gap-2 text-gray-400 text-xs font-semibold mt-1">
+                    <span className="text-[#1f1f1f] font-black text-2xl tracking-tight">{order.order_number}</span>
+                    <div className="flex items-center gap-2 text-[#717171] text-xs font-semibold mt-1">
                       <Clock size={13} className="text-[#FF6B35]" />
                       <span>{getFormattedTime(order.created_at)}</span>
-                      <span className="text-[#a991c7]">({getMinutesElapsed(order.created_at)})</span>
+                      <span className="text-[#717171]">({getMinutesElapsed(order.created_at)})</span>
                     </div>
                   </div>
                   <Badge color={isPending ? 'yellow' : 'orange'} size="md">
@@ -260,12 +276,12 @@ export default function CozinhaPage() {
                 <div className="p-6 flex-1 space-y-5">
                   <div className="space-y-4">
                     {order.items?.map((item, idx) => {
-                      const opts = item.options ? (typeof item.options === 'string' ? JSON.parse(item.options) : item.options) : []
+                      const opts = itemOptions(item.options)
                       
                       return (
-                        <div key={idx} className="border-b border-white/[0.03] pb-3.5 last:border-0 last:pb-0 text-left">
+                        <div key={idx} className="border-b border-[#e8e8e8] pb-3.5 last:border-0 last:pb-0 text-left">
                           <div className="flex items-start justify-between gap-3">
-                            <p className="text-lg font-bold text-white leading-snug">
+                            <p className="text-lg font-bold text-[#1f1f1f] leading-snug">
                               <span className="text-[#FF6B35] font-black text-2xl mr-2.5">{item.quantity}x</span>
                               {item.product_name || item.name}
                             </p>
@@ -275,18 +291,17 @@ export default function CozinhaPage() {
                           {opts.length > 0 && (
                             <div className="mt-1.5 pl-8 space-y-0.5">
                               {opts.map((o, oIdx) => (
-                                <p key={oIdx} className="text-xs text-gray-400 font-medium">+ {o.name}</p>
+                                <p key={oIdx} className="text-xs text-[#717171] font-medium">+ {o.name}</p>
                               ))}
                             </div>
                           )}
 
-                          {/* Observação do item */}
+                          {isDrinkItem(item.product_name || item.name || '') && (
+                            <div className="mt-2 pl-8"><div className="drink-alert">🥤 BEBIDA / GELADEIRA: conferir e separar</div></div>
+                          )}
+
                           {item.notes && (
-                            <div className="mt-2 pl-8">
-                              <span className="inline-block px-2.5 py-1 text-xs font-extrabold text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                                ⚠️ Obs: {item.notes}
-                              </span>
-                            </div>
+                            <div className="mt-2 pl-8"><div className="note-alert">⚠️ OBS DO ITEM: {item.notes}</div></div>
                           )}
                         </div>
                       )
@@ -295,15 +310,18 @@ export default function CozinhaPage() {
 
                   {/* Observação Geral do Pedido */}
                   {order.notes && (
-                    <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-sm text-left">
-                      <p className="font-extrabold text-[#FF6B35] text-xs uppercase tracking-wider mb-1">Observação do Pedido:</p>
-                      <p className="italic text-gray-300 font-medium">"{order.notes}"</p>
+                    <div className="note-alert text-sm text-left">
+                      <p className="font-extrabold uppercase tracking-wider mb-1">⚠️ Observação do Pedido:</p>
+                      <p>"{order.notes}"</p>
                     </div>
                   )}
                 </div>
 
                 {/* Footer do Card - Botões Grandes */}
-                <div className="p-6 border-t border-white/[0.05] bg-black/10">
+                <div className="p-6 border-t border-[#e8e8e8] bg-[#fafafa] space-y-3">
+                  <button onClick={() => printKitchen(order)} className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-[#e8e8e8] bg-white py-3 text-sm font-black text-[#1f1f1f] hover:bg-[#f5f5f5]">
+                    <Printer size={16} /> Imprimir Cozinha
+                  </button>
                   {isPending ? (
                     <Button
                       variant="primary"

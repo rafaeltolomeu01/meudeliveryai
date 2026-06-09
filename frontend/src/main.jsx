@@ -14,6 +14,8 @@ import './meudeliveryai-light-overrides.css'
 import './styles/ifood-admin-hard.css';
 import './utils/forceIfoodTheme';
 
+import './styles/ifood-admin-final.css';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
