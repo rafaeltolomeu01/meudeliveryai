@@ -57,7 +57,7 @@ export default function Sidebar() {
 
   return (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-64 z-40"
-      style={{ background: 'linear-gradient(180deg, #0f0220 0%, #1a0533 50%, #120218 100%)', borderRight: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: '#111827', borderRight: '1px solid rgba(255,255,255,0.08)' }}
     >
       {/* Logo */}
       <div className="px-5 py-6 border-b border-white/[0.06]">
@@ -74,12 +74,12 @@ export default function Sidebar() {
 
       {/* Restaurant Status */}
       <div className="px-5 py-3 border-b border-white/[0.06]">
-        <div className="glass-light rounded-xl px-3 py-2.5 flex items-center justify-between">
+        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-lg">🍔</span>
             <div>
               <p className="text-white text-xs font-semibold leading-none">{user?.restaurant?.name || 'Restaurante'}</p>
-              <p className="text-[#a991c7] text-[10px] mt-0.5">{user?.restaurant?.type}</p>
+              <p className="text-slate-300 text-[10px] mt-0.5">{user?.restaurant?.type}</p>
             </div>
           </div>
           <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium ${user?.restaurant?.isOpen ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
@@ -91,7 +91,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1">
-        <p className="text-[#6b5880] text-[10px] font-semibold uppercase tracking-wider px-2 mb-3">Menu Principal</p>
+        <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wider px-2 mb-3">Menu Principal</p>
         {navItems.map(({ to, icon: Icon, label }) => {
           const isOrders = to === '/dashboard/pedidos'
           const badge = isOrders && pendingCount > 0 ? pendingCount : null
@@ -103,8 +103,8 @@ export default function Sidebar() {
               className={({ isActive }) => [
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative',
                 isActive
-                  ? 'bg-[#FF6B35]/15 text-[#FF6B35] border border-[#FF6B35]/20'
-                  : 'text-[#a991c7] hover:text-white hover:bg-white/5',
+                  ? 'bg-[#ea1d2c] text-white border border-[#ea1d2c]'
+                  : 'text-slate-300 hover:text-white hover:bg-white/10',
               ].join(' ')}
             >
               {({ isActive }) => (
@@ -129,14 +129,14 @@ export default function Sidebar() {
       {/* User & Logout */}
       <div className="px-3 py-4 border-t border-white/[0.06] space-y-2">
         {/* Plan Badge */}
-        <div className="px-3 py-2 glass-light rounded-xl flex items-center justify-between">
+        <div className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF6B35] to-purple-600 flex items-center justify-center text-white text-xs font-bold">
               {user?.name?.[0] || 'A'}
             </div>
             <div>
               <p className="text-white text-xs font-medium leading-none">{user?.name?.split(' ')[0]}</p>
-              <p className="text-[#a991c7] text-[10px] mt-0.5 capitalize">{user?.restaurant?.plan || 'starter'}</p>
+              <p className="text-slate-300 text-[10px] mt-0.5 capitalize">{user?.restaurant?.plan || 'starter'}</p>
             </div>
           </div>
           <span className="text-[10px] bg-[#FF6B35]/20 text-[#FF6B35] px-2 py-0.5 rounded-full font-medium capitalize">
@@ -146,7 +146,7 @@ export default function Sidebar() {
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#a991c7] hover:text-red-400 hover:bg-red-500/5 transition-all duration-200 group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-red-400 hover:bg-red-500/5 transition-all duration-200 group"
         >
           <LogOut size={16} className="group-hover:rotate-12 transition-transform" />
           <span>Sair da conta</span>

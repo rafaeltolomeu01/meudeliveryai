@@ -101,12 +101,13 @@ export default function Header() {
   }, [user])
 
   return (
-    <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur"
+    <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-gray-200"
+      style={{ background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)' }}
     >
       {/* Page Title */}
       <div>
-        <h1 className="text-slate-900 font-bold text-lg lg:text-xl">{pageName}</h1>
-        <p className="text-slate-500 text-xs hidden sm:block">
+        <h1 className="text-gray-900 font-bold text-lg lg:text-xl">{pageName}</h1>
+        <p className="text-gray-500 text-xs hidden sm:block">
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
       </div>
@@ -130,7 +131,7 @@ export default function Header() {
         {isInstallable && (
           <button
             onClick={installApp}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#FF6B35]/20 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/20 text-xs font-bold transition-all shadow-[0_0_8px_rgba(255,107,53,0.15)] animate-pulse"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#FF6B35]/20 bg-[#ea1d2c]/10 text-[#ea1d2c] hover:bg-[#FF6B35]/20 text-xs font-bold transition-all shadow-[0_0_8px_rgba(255,107,53,0.15)] animate-pulse"
             title="Instalar Aplicativo"
           >
             <Download size={14} />
@@ -142,33 +143,33 @@ export default function Header() {
         <div className="relative">
           <button
             onClick={() => { setNotifOpen(!notifOpen); setDropdownOpen(false) }}
-            className="relative w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
+            className="relative w-9 h-9 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-600 hover:text-gray-900 transition-colors"
           >
             <Bell size={18} />
             {notifications.some(n => n.unread) && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF6B35] rounded-full animate-pulse" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#ea1d2c] rounded-full animate-pulse" />
             )}
           </button>
           {notifOpen && (
-            <div className="absolute right-0 top-12 w-72 glass rounded-2xl border border-slate-200 shadow-2xl animate-slide-down z-50">
-              <div className="px-4 py-3 border-b border-slate-200">
-                <p className="text-slate-900 font-semibold text-sm">Notificações</p>
+            <div className="absolute right-0 top-12 w-72 bg-white rounded-2xl border border-gray-200 shadow-2xl animate-slide-down z-50">
+              <div className="px-4 py-3 border-b border-gray-200">
+                <p className="text-gray-900 font-semibold text-sm">Notificações</p>
               </div>
               <div className="max-h-64 overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-[#a991c7] text-xs italic">
+                  <div className="px-4 py-8 text-center text-gray-500 text-xs italic">
                     Nenhum pedido encontrado
                   </div>
                 ) : (
                   notifications.map((n) => (
-                    <div key={n.id} className={`px-4 py-3 border-b border-white/[0.04] hover:bg-white/5 transition-colors cursor-pointer ${n.unread ? 'bg-white/[0.02]' : ''}`}>
+                    <div key={n.id} className={`px-4 py-3 border-b border-white/[0.04] hover:bg-gray-50 transition-colors cursor-pointer ${n.unread ? 'bg-white/[0.02]' : ''}`}>
                       <p className={`text-xs text-left ${n.unread ? 'text-white' : 'text-[#a991c7]'}`}>{n.text}</p>
                       <p className="text-[#6b5880] text-[10px] mt-1 text-left">{n.time} atrás</p>
                     </div>
                   ))
                 )}
               </div>
-              <div className="px-4 py-3 text-center border-t border-white/[0.06]">
+              <div className="px-4 py-3 text-center border-t border-gray-100">
                 <button onClick={() => { navigate('/dashboard/pedidos'); setNotifOpen(false) }} className="text-[#FF6B35] text-xs hover:underline">Ver todos os pedidos</button>
               </div>
             </div>
@@ -179,35 +180,35 @@ export default function Header() {
         <div className="relative">
           <button
             onClick={() => { setDropdownOpen(!dropdownOpen); setNotifOpen(false) }}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B35] to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ea1d2c] to-[#ff6b35] flex items-center justify-center text-white text-sm font-bold">
               {user?.name?.[0] || 'A'}
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-white text-xs font-medium leading-none">{user?.name?.split(' ')[0]}</p>
-              <p className="text-[#a991c7] text-[10px] mt-0.5">Admin</p>
+              <p className="text-gray-900 text-xs font-medium leading-none">{user?.name?.split(' ')[0]}</p>
+              <p className="text-gray-500 text-[10px] mt-0.5">Admin</p>
             </div>
-            <ChevronDown size={14} className={`text-[#a991c7] transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown size={14} className={`text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-12 w-52 glass rounded-2xl border border-slate-200 shadow-2xl animate-slide-down z-50">
-              <div className="px-4 py-3 border-b border-slate-200">
-                <p className="text-white font-medium text-sm">{user?.name}</p>
-                <p className="text-[#a991c7] text-xs">{user?.email}</p>
+            <div className="absolute right-0 top-12 w-52 bg-white rounded-2xl border border-gray-200 shadow-2xl animate-slide-down z-50">
+              <div className="px-4 py-3 border-b border-gray-200">
+                <p className="text-gray-900 font-medium text-sm">{user?.name}</p>
+                <p className="text-gray-500 text-xs">{user?.email}</p>
               </div>
               <div className="py-1">
                 <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-500 hover:text-slate-900 hover:bg-white/5 transition-colors">
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
                   <User size={15} /> Meu Perfil
                 </button>
                 <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-500 hover:text-slate-900 hover:bg-white/5 transition-colors">
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
                   <Settings size={15} /> Configurações
                 </button>
               </div>
-              <div className="py-1 border-t border-white/[0.06]">
+              <div className="py-1 border-t border-gray-100">
                 <button onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/5 transition-colors">
                   <LogOut size={15} /> Sair

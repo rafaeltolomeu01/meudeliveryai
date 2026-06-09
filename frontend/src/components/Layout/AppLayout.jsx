@@ -23,6 +23,9 @@ export default function AppLayout() {
   }
 
   useEffect(() => {
+    // Tema fixo estilo iFood: não carrega mais personalização de cor salva no banco.
+    document.documentElement.removeAttribute('style')
+    document.body.removeAttribute('style')
     fetchSubscription()
   }, [])
 
@@ -52,7 +55,7 @@ export default function AppLayout() {
   }, [isExpired, location.pathname, navigate])
 
   return (
-    <div className="min-h-screen bg-[#f7f7f7] text-slate-900 flex">
+    <div className="min-h-screen bg-[#f7f7f7] text-[#1f2937] flex">
       {/* Desktop Sidebar */}
       <Sidebar />
 
@@ -108,7 +111,7 @@ export default function AppLayout() {
           </div>
         )}
 
-        <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6 overflow-auto bg-[#f7f7f7] text-slate-900">
+        <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6 overflow-auto bg-[#f7f7f7]">
           <div className={`${location.pathname === '/dashboard/pedidos' ? 'max-w-none w-full' : 'max-w-7xl mx-auto'} animate-fade-in`}>
             <Outlet context={{ subscriptionData, refreshSubscription: fetchSubscription, isExpired }} />
           </div>

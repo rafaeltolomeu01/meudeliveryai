@@ -1,0 +1,36 @@
+
+/* Correção real: painel claro estilo iFood, removendo roxo salvo por tema do restaurante */
+:root {
+  --theme-bg: #f7f7f7 !important;
+  --theme-card: #ffffff !important;
+  --theme-primary: #ea1d2c !important;
+  --theme-secondary: #ff6b35 !important;
+  --theme-text: #1f2937 !important;
+}
+html, body, #root { background:#f7f7f7 !important; color:#1f2937 !important; }
+main { background:#f7f7f7 !important; color:#1f2937 !important; }
+main * { text-shadow:none !important; }
+main .text-white { color:#1f2937 !important; }
+main .text-\[\#a991c7\], main .text-\[\#6b5880\] { color:#6b7280 !important; }
+main .bg-white\/\[0\.02\],
+main .bg-white\/5,
+main .bg-\[\#1A0533\],
+main .bg-\[\#1A0533\]\/50,
+main .glass,
+main .glass-light {
+  background:#ffffff !important;
+  border:1px solid #e5e7eb !important;
+  box-shadow:0 8px 24px rgba(15,23,42,.06) !important;
+}
+main [class*="from-[#FF6B35]"], main [class*="from-\[\#FF6B35\]"], main [class*="to-[#1A0533]"], main [class*="to-\[\#1A0533\]"] {
+  background:#ffffff !important;
+}
+main .rounded-3xl, main .rounded-2xl { border-color:#e5e7eb !important; }
+main button, main a { text-shadow:none !important; }
+main a[href*="cardapio"], main button[class*="FF6B35"], main .bg-\[\#FF6B35\] {
+  background:#ea1d2c !important;
+  color:#fff !important;
+  border-color:#ea1d2c !important;
+}
+/* Remove menu/página de aparência visualmente, caso ainda exista em alguma rota */
+a[href="/dashboard/aparencia"], a[href*="/dashboard/aparencia"] { display:none !important; }
