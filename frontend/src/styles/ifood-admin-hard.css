@@ -1,0 +1,36 @@
+/* MeuDeliveryAI - Admin claro estilo iFood, mantendo sidebar escura.
+   Importar por ultimo no main.jsx. */
+:root{color-scheme:light!important;--mda-red:#ea1d2c;--mda-bg:#f7f7f7;--mda-card:#fff;--mda-text:#1f2937;--mda-muted:#6b7280;--mda-border:#e5e7eb;--mda-sidebar:#160023;--mda-sidebar2:#25003b;}
+html,body,#root{background:var(--mda-bg)!important;color:var(--mda-text)!important;}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+
+/* remove roxo do conteudo principal sem mexer no menu lateral */
+main, main > div, [class*="dashboard" i], [class*="content" i], [class*="page" i]{background:var(--mda-bg)!important;color:var(--mda-text)!important;}
+main [class*="bg-purple"], main [class*="bg-violet"], main [class*="bg-fuchsia"], main [class*="bg-[#2"], main [class*="bg-[#3"], main [class*="bg-[#4"], main [class*="bg-[#5"], main [class*="from-purple"], main [class*="from-violet"], main [class*="from-fuchsia"], main [class*="to-purple"], main [class*="to-violet"], main [class*="to-fuchsia"]{background:#fff!important;background-image:none!important;color:var(--mda-text)!important;}
+main section, main article, main .card, main [class*="rounded-2xl"], main [class*="rounded-3xl"]{border-color:var(--mda-border)!important;box-shadow:0 8px 22px rgba(15,23,42,.06)!important;}
+main h1,main h2,main h3,main h4,main p,main span,main div{border-color:var(--mda-border);}
+main .text-white, main [class*="text-white"]{color:var(--mda-text)!important;}
+main [class*="text-purple"], main [class*="text-violet"], main [class*="text-gray-300"], main [class*="text-slate-300"]{color:var(--mda-muted)!important;}
+
+/* sidebar fica escura */
+aside, nav[class*="side" i], [class*="sidebar" i]{background:linear-gradient(180deg,var(--mda-sidebar),var(--mda-sidebar2))!important;color:#fff!important;}
+aside *, nav[class*="side" i] *{color:inherit!important;}
+aside a, aside button, nav[class*="side" i] a, nav[class*="side" i] button{border-color:rgba(255,255,255,.12)!important;}
+aside [class*="bg-purple"], aside [class*="bg-violet"], aside [class*="bg-fuchsia"]{background:rgba(234,29,44,.18)!important;}
+
+/* header interno claro */
+header:not(.landing-header), [class*="topbar" i]{background:#fff!important;color:var(--mda-text)!important;border-bottom:1px solid var(--mda-border)!important;}
+
+/* botoes iFood */
+button[class*="bg-orange"], a[class*="bg-orange"], button[class*="bg-red"], a[class*="bg-red"], main button:not([class*="ghost"]):not([class*="outline"]){background:var(--mda-red)!important;color:#fff!important;border-color:var(--mda-red)!important;box-shadow:none!important;}
+button:hover,a:hover{filter:none!important;}
+
+/* cardapio publico claro */
+body:has([href*="cardapio"]), .mda-public-page{background:#f7f7f7!important;color:#1f2937!important;}
+.mda-public-page *, [data-public-menu] *{border-color:var(--mda-border);}
+.mda-public-page section,.mda-public-page article,.mda-public-page div[class*="rounded"], [data-public-menu] section,[data-public-menu] article{background:#fff!important;color:#1f2937!important;border-color:var(--mda-border)!important;box-shadow:0 6px 18px rgba(15,23,42,.06)!important;}
+.mda-public-page .text-white,.mda-public-page [class*="text-white"], [data-public-menu] .text-white{color:#1f2937!important;}
+.mda-public-page [class*="bg-black"],.mda-public-page [class*="bg-zinc"],.mda-public-page [class*="bg-neutral"],.mda-public-page [class*="bg-slate"],.mda-public-page [class*="bg-purple"],.mda-public-page [class*="bg-violet"]{background:#fff!important;background-image:none!important;}
+
+/* esconde menu de personalizacao/tema quando existir rota conhecida */
+a[href*="appearance"],a[href*="aparencia"],a[href*="theme"],a[href*="tema"]{display:none!important;}
