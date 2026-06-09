@@ -1,71 +1,87 @@
-let bellTimeout = null
-let bellInterval = null
-let audio = null
-let activeAudioContext = null
+let bellTimeout = null;
+let bellInterval = null;
+let activeAudio = null;
+let unlocked = false;
 
-const soundCandidates = ['/sounds/notification.mp3', '/sounds/notification.mp3.mp3']
+function getSoundUrl() {
+  return '/sounds/notification.mp3';
+}
 
-function playUploadedSound() {
-  if (typeof window === 'undefined') return false
+function unlockAudio() {
+  if (unlocked) return;
+  unlocked = true;
   try {
-    if (!audio) {
-      audio = new Audio(soundCandidates[0])
-      audio.volume = 1
-      audio.onerror = () => {
-        if (audio && audio.src.includes('notification.mp3') && !audio.src.includes('mp3.mp3')) {
-          audio.src = soundCandidates[1]
-        }
-      }
+    const a = new Audio(getSoundUrl());
+    a.volume = 0;
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+    }).catch(() => {});
+  } catch (_) {}
+}
+
+if (typeof window !== 'undefined') {
+  ['click', 'keydown', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, unlockAudio, { once: true, passive: true });
+  });
+}
+
+function playMp3Once() {
+  try {
+    const audio = new Audio(getSoundUrl());
+    activeAudio = audio;
+    audio.volume = 1;
+    audio.currentTime = 0;
+    const promise = audio.play();
+    if (promise && typeof promise.catch === 'function') {
+      promise.catch(() => playToneOnce());
     }
-    audio.currentTime = 0
-    const p = audio.play()
-    if (p?.catch) p.catch(() => ringOnce())
-    return true
-  } catch {
-    return false
+    setTimeout(() => {
+      try { audio.pause(); audio.currentTime = 0; } catch (_) {}
+    }, 1100);
+  } catch (_) {
+    playToneOnce();
   }
 }
 
-function ringOnce() {
-  const AudioContext = window.AudioContext || window.webkitAudioContext
-  if (!AudioContext) return
-  if (!activeAudioContext || activeAudioContext.state === 'closed') activeAudioContext = new AudioContext()
-  const ctx = activeAudioContext
-  const now = ctx.currentTime
-  const playTone = (frequency, startAt, duration, volume = 0.18) => {
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(frequency, startAt)
-    gain.gain.setValueAtTime(0.0001, startAt)
-    gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.03)
-    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration)
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start(startAt)
-    osc.stop(startAt + duration + 0.05)
+function playToneOnce() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const now = ctx.currentTime;
+    const tone = (freq, start, duration, volume = 0.18) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(start); osc.stop(start + duration + 0.05);
+    };
+    tone(784, now, 0.45);
+    tone(587.33, now + 0.35, 0.65);
+    setTimeout(() => ctx.close().catch(() => {}), 1800);
+  } catch (err) {
+    console.warn('Erro ao tocar campainha:', err);
   }
-  playTone(784, now, 0.45)
-  playTone(587.33, now + 0.32, 0.65)
 }
 
 export function stopNewOrderBell() {
-  if (bellInterval) clearInterval(bellInterval)
-  if (bellTimeout) clearTimeout(bellTimeout)
-  bellInterval = null
-  bellTimeout = null
-  if (audio) {
-    try { audio.pause(); audio.currentTime = 0 } catch {}
+  if (bellInterval) clearInterval(bellInterval);
+  if (bellTimeout) clearTimeout(bellTimeout);
+  bellInterval = null;
+  bellTimeout = null;
+  if (activeAudio) {
+    try { activeAudio.pause(); activeAudio.currentTime = 0; } catch (_) {}
   }
 }
 
 export function playNewOrderBell(durationMs = 5000) {
-  try {
-    stopNewOrderBell()
-    playUploadedSound() || ringOnce()
-    bellInterval = setInterval(() => playUploadedSound() || ringOnce(), 1200)
-    bellTimeout = setTimeout(stopNewOrderBell, durationMs)
-  } catch (error) {
-    console.warn('Erro ao tocar campainha de novo pedido:', error)
-  }
+  stopNewOrderBell();
+  playMp3Once();
+  bellInterval = setInterval(playMp3Once, 1200);
+  bellTimeout = setTimeout(stopNewOrderBell, durationMs);
 }

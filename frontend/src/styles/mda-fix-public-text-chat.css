@@ -1,0 +1,77 @@
+/* Correção final: telas públicas claras, textos legíveis e roxo removido das páginas do cliente */
+html, body, #root { background: #f7f7f7 !important; color: #1f2937 !important; }
+
+/* A área administrativa continua clara com sidebar escura */
+main, .main-content, [data-main] { color: #111827; }
+
+/* Páginas públicas: cardápio, carrinho, checkout e acompanhamento */
+body:has([href*="/cardapio"]),
+body:has(input[placeholder*="Digite sua mensagem"]),
+body:has(button),
+.public-page,
+.public-menu,
+.public-checkout,
+.public-cart {
+  background: #f7f7f7 !important;
+}
+
+/* Força blocos roxos das telas públicas para branco/cinza */
+[class*="bg-[#1A0533]"],
+[class*="bg-black/30"],
+[class*="bg-black/20"],
+[class*="bg-white/[0.02]"],
+[class*="bg-white/[0.04]"],
+[class*="bg-white/5"] {
+  background-color: #ffffff !important;
+}
+
+/* Deixa legível textos que ficaram brancos no fundo claro */
+.text-white,
+[class*="text-white"] {
+  color: #111827 !important;
+}
+.text-gray-300,
+.text-gray-400,
+.text-gray-500,
+[class*="text-gray-300"],
+[class*="text-gray-400"],
+[class*="text-gray-500"] {
+  color: #64748b !important;
+}
+
+/* Botões principais estilo iFood */
+button[style*="background"],
+a[style*="background"],
+.bg-green-600,
+.bg-red-600 {
+  color: #ffffff !important;
+}
+
+/* Chat do cliente */
+#chat-messages-container {
+  background: #f8fafc !important;
+}
+#chat-messages-container .self-end {
+  background: #ea1d2c !important;
+  color: #ffffff !important;
+}
+#chat-messages-container .self-start {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #e5e7eb !important;
+}
+#chat-messages-container .self-center {
+  background: #fff7ed !important;
+  color: #9a3412 !important;
+  border: 1px solid #fed7aa !important;
+}
+
+input, textarea, select {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+input::placeholder, textarea::placeholder { color: #94a3b8 !important; }
+
+.border-white\/5, .border-white\/10, [class*="border-white"] { border-color: #e5e7eb !important; }
+.divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: #e5e7eb !important; }

@@ -1,51 +1,262 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight, Download } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { restaurants as restaurantApi, orders as ordersApi } from '../../services/api'
+import { usePWA } from '../../contexts/PWAContext'
+import { restaurants as restaurantApi, orders as ordersApi, settings as settingsApi } from '../../services/api'
+import { playNewOrderBell } from '../../utils/orderSound'
 import toast from 'react-hot-toast'
 
 const pageNames = {
-  '/dashboard': 'Dashboard', '/dashboard/pedidos': 'Pedidos', '/dashboard/cozinha': 'Cozinha', '/dashboard/clientes': 'Clientes', '/dashboard/entregadores': 'Entregadores', '/dashboard/relatorios': 'Relatórios', '/dashboard/configuracoes': 'Configurações', '/dashboard/usuarios': 'Usuários', '/dashboard/produtos': 'Produtos', '/dashboard/categorias': 'Categorias', '/dashboard/complementos': 'Complementos', '/dashboard/whatsapp': 'WhatsApp', '/dashboard/assinatura': 'Assinatura'
+  '/dashboard': 'Dashboard',
+  '/dashboard/pedidos': 'Pedidos',
+  '/menu': 'Cardápio',
+  '/dashboard/clientes': 'Clientes',
+  '/dashboard/entregadores': 'Entregadores',
+  '/dashboard/relatorios': 'Relatórios',
+  '/dashboard/configuracoes': 'Configurações',
+  '/dashboard/usuarios': 'Usuários',
 }
 
 export default function Header() {
   const { user, logout, updateUser } = useAuth()
+  const { isInstallable, installApp } = usePWA()
   const location = useLocation()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const seenPendingOrders = useRef(new Set())
+  const firstOrdersLoad = useRef(true)
+
   const pageName = pageNames[location.pathname] || 'Painel'
-  const isOpen = !!user?.restaurant?.isOpen
+  const isOpen = user?.restaurant?.isOpen
 
   const toggleRestaurant = async () => {
     const next = !isOpen
-    try { await restaurantApi.toggleOpen() } catch (err) { console.warn(err) }
-    updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
-    toast.success(next ? 'Restaurante aberto para receber pedidos' : 'Restaurante fechado')
+    try {
+      await restaurantApi.toggleOpen()
+      updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
+      window.dispatchEvent(new CustomEvent('mda:restaurant-status-changed', { detail: { isOpen: next } }))
+      toast.success(next ? 'Restaurante aberto! 🟢' : 'Restaurante fechado! 🔴')
+    } catch (err) {
+      console.error(err)
+      toast.error('Erro ao alterar status da loja.')
+    }
   }
-  const handleLogout = () => { logout(); navigate('/login') }
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  const fetchRecentOrders = async () => {
+    if (!user) return
+    try {
+      const res = await ordersApi.list({ limit: 5 })
+      if (res.success && res.data) {
+        const pendingNow = res.data.filter(order => order.status === 'pending')
+        const hasNewPending = pendingNow.some(order => !seenPendingOrders.current.has(order.id))
+        if (hasNewPending && !firstOrdersLoad.current) {
+          playNewOrderBell(5000)
+          toast('Novo pedido recebido! 🔔', { icon: '🔔' })
+        }
+        pendingNow.forEach(order => seenPendingOrders.current.add(order.id))
+        firstOrdersLoad.current = false
+
+        const notifs = res.data.map(order => {
+          const createdTime = new Date(order.created_at)
+          const diffMs = new Date() - createdTime
+          const diffMins = Math.max(Math.floor(diffMs / 60000), 0)
+          let timeText = `${diffMins}min`
+          if (diffMins >= 60) {
+            timeText = `${Math.floor(diffMins / 60)}h`
+          }
+          if (diffMins >= 1440) {
+            timeText = `${Math.floor(diffMins / 1440)}d`
+          }
+          
+          let textText = ''
+          if (order.status === 'pending') {
+            textText = `Novo pedido ${order.order_number || ('#' + order.id)} recebido`
+          } else if (order.status === 'preparing') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} em preparação`
+          } else if (order.status === 'ready') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} pronto para entrega`
+          } else if (order.status === 'delivering') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} saiu para entrega`
+          } else if (order.status === 'delivered') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} entregue`
+          } else if (order.status === 'cancelled') {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} cancelado`
+          } else {
+            textText = `Pedido ${order.order_number || ('#' + order.id)} atualizado`
+          }
+
+          return {
+            id: order.id,
+            text: textText,
+            time: timeText,
+            unread: order.status === 'pending'
+          }
+        })
+        setNotifications(notifs)
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar notificações no header:', err)
+    }
+  }
 
   useEffect(() => {
-    const fetchRecentOrders = async () => {
-      if (!user) return
-      try {
-        const res = await ordersApi.list({ limit: 5 })
-        if (res.success && res.data) setNotifications(res.data.map(order => ({ id: order.id, text: order.status === 'pending' ? `Novo pedido ${order.order_number || ('#' + order.id)}` : `Pedido ${order.order_number || ('#' + order.id)} atualizado`, unread: order.status === 'pending' })))
-      } catch {}
-    }
-    fetchRecentOrders(); const interval = setInterval(fetchRecentOrders, 15000); return () => clearInterval(interval)
+    fetchRecentOrders()
+    const interval = setInterval(fetchRecentOrders, 15000)
+    return () => clearInterval(interval)
   }, [user])
 
+
+  useEffect(() => {
+    const refreshStatus = async () => {
+      try {
+        const res = await settingsApi.get()
+        if (res.success && res.data && user?.restaurant) {
+          const isOpenFresh = res.data.is_open === 1 || res.data.is_open === true || res.data.is_open === '1'
+          updateUser({ restaurant: { ...user.restaurant, isOpen: isOpenFresh } })
+        }
+      } catch (_) {}
+    }
+    refreshStatus()
+    const onChanged = (event) => {
+      if (user?.restaurant && typeof event.detail?.isOpen === 'boolean') {
+        updateUser({ restaurant: { ...user.restaurant, isOpen: event.detail.isOpen } })
+      }
+    }
+    window.addEventListener('mda:restaurant-status-changed', onChanged)
+    return () => window.removeEventListener('mda:restaurant-status-changed', onChanged)
+  }, [])
+
   return (
-    <header className="sticky top-0 z-30 px-4 lg:px-6 py-4 flex items-center justify-between border-b border-[#eeeeee] bg-white/95 backdrop-blur-xl shadow-sm">
-      <div><h1 className="text-[#1f2937] font-black text-xl lg:text-2xl">{pageName}</h1><p className="text-[#717171] text-xs hidden sm:block">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div>
-      <div className="flex items-center gap-3">
-        <button onClick={toggleRestaurant} className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-full font-black text-xs border ${isOpen ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>{isOpen ? <ToggleRight size={18}/> : <ToggleLeft size={18}/>} {isOpen ? 'Aberto' : 'Fechado'}</button>
-        <div className="relative"><button onClick={() => { setNotifOpen(!notifOpen); setDropdownOpen(false) }} className="relative w-10 h-10 rounded-full bg-[#f5f5f5] hover:bg-[#eeeeee] border border-[#eeeeee] flex items-center justify-center text-[#333]"><Bell size={18}/>{notifications.some(n=>n.unread) && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#ea1d2c] rounded-full border-2 border-white"/>}</button>{notifOpen && <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl border border-[#eeeeee] shadow-2xl z-50 overflow-hidden"><div className="px-4 py-3 border-b border-[#eeeeee]"><p className="font-black text-[#1f2937]">Notificações</p></div><div className="max-h-80 overflow-y-auto">{notifications.length === 0 ? <div className="p-6 text-center text-sm text-[#717171]">Nenhuma notificação.</div> : notifications.map(n => <button key={n.id} onClick={() => { navigate(`/dashboard/pedidos/${n.id}`); setNotifOpen(false) }} className="w-full px-4 py-3 text-left hover:bg-[#f7f7f7] border-b border-[#f1f1f1]"><p className="text-sm font-bold text-[#1f2937]">{n.text}</p></button>)}</div></div>}</div>
-        <div className="relative"><button onClick={() => { setDropdownOpen(!dropdownOpen); setNotifOpen(false) }} className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-[#f7f7f7]"><div className="w-9 h-9 rounded-full bg-[#ea1d2c] flex items-center justify-center text-white text-sm font-black">{user?.name?.[0] || 'A'}</div><div className="hidden md:block text-left"><p className="text-[#1f2937] text-xs font-black leading-none">{user?.name?.split(' ')[0]}</p><p className="text-[#717171] text-[10px] mt-1">Admin</p></div><ChevronDown size={14} className="text-[#717171]"/></button>{dropdownOpen && <div className="absolute right-0 top-12 w-56 bg-white rounded-2xl border border-[#eeeeee] shadow-2xl z-50 overflow-hidden"><div className="px-4 py-3 border-b border-[#eeeeee]"><p className="text-[#1f2937] font-black text-sm">{user?.name}</p><p className="text-[#717171] text-xs truncate">{user?.email}</p></div><button onClick={()=>{navigate('/dashboard/configuracoes');setDropdownOpen(false)}} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#333] hover:bg-[#f7f7f7]"><Settings size={15}/>Configurações</button><button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#ea1d2c] hover:bg-red-50 border-t border-[#eeeeee]"><LogOut size={15}/>Sair</button></div>}</div>
+    <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-white/[0.06]"
+      style={{ background: 'rgba(26, 5, 51, 0.8)', backdropFilter: 'blur(16px)' }}
+    >
+      {/* Page Title */}
+      <div>
+        <h1 className="text-white font-bold text-lg lg:text-xl">{pageName}</h1>
+        <p className="text-[#a991c7] text-xs hidden sm:block">
+          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
       </div>
+
+      {/* Right Actions */}
+      <div className="flex items-center gap-2 lg:gap-3">
+        {/* Restaurant Status Toggle */}
+        <button
+          onClick={toggleRestaurant}
+          className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+            isOpen
+              ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20'
+              : 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20'
+          }`}
+        >
+          {isOpen ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+          {isOpen ? 'Aberto' : 'Fechado'}
+        </button>
+
+        {/* PWA Install Button */}
+        {isInstallable && (
+          <button
+            onClick={installApp}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#FF6B35]/20 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/20 text-xs font-bold transition-all shadow-[0_0_8px_rgba(255,107,53,0.15)] animate-pulse"
+            title="Instalar Aplicativo"
+          >
+            <Download size={14} />
+            <span className="hidden md:inline">Instalar App</span>
+          </button>
+        )}
+
+        {/* Notifications */}
+        <div className="relative">
+          <button
+            onClick={() => { setNotifOpen(!notifOpen); setDropdownOpen(false) }}
+            className="relative w-9 h-9 rounded-xl glass flex items-center justify-center text-[#a991c7] hover:text-white transition-colors"
+          >
+            <Bell size={18} />
+            {notifications.some(n => n.unread) && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF6B35] rounded-full animate-pulse" />
+            )}
+          </button>
+          {notifOpen && (
+            <div className="absolute right-0 top-12 w-72 glass rounded-2xl border border-white/[0.08] shadow-2xl animate-slide-down z-50">
+              <div className="px-4 py-3 border-b border-white/[0.06]">
+                <p className="text-white font-semibold text-sm">Notificações</p>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-[#a991c7] text-xs italic">
+                    Nenhum pedido encontrado
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} className={`px-4 py-3 border-b border-white/[0.04] hover:bg-white/5 transition-colors cursor-pointer ${n.unread ? 'bg-white/[0.02]' : ''}`}>
+                      <p className={`text-xs text-left ${n.unread ? 'text-white' : 'text-[#a991c7]'}`}>{n.text}</p>
+                      <p className="text-[#6b5880] text-[10px] mt-1 text-left">{n.time} atrás</p>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="px-4 py-3 text-center border-t border-white/[0.06]">
+                <button onClick={() => { navigate('/dashboard/pedidos'); setNotifOpen(false) }} className="text-[#FF6B35] text-xs hover:underline">Ver todos os pedidos</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* User Avatar Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => { setDropdownOpen(!dropdownOpen); setNotifOpen(false) }}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B35] to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+              {user?.name?.[0] || 'A'}
+            </div>
+            <div className="hidden md:block text-left">
+              <p className="text-white text-xs font-medium leading-none">{user?.name?.split(' ')[0]}</p>
+              <p className="text-[#a991c7] text-[10px] mt-0.5">Admin</p>
+            </div>
+            <ChevronDown size={14} className={`text-[#a991c7] transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {dropdownOpen && (
+            <div className="absolute right-0 top-12 w-52 glass rounded-2xl border border-white/[0.08] shadow-2xl animate-slide-down z-50">
+              <div className="px-4 py-3 border-b border-white/[0.06]">
+                <p className="text-white font-medium text-sm">{user?.name}</p>
+                <p className="text-[#a991c7] text-xs">{user?.email}</p>
+              </div>
+              <div className="py-1">
+                <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#a991c7] hover:text-white hover:bg-white/5 transition-colors">
+                  <User size={15} /> Meu Perfil
+                </button>
+                <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#a991c7] hover:text-white hover:bg-white/5 transition-colors">
+                  <Settings size={15} /> Configurações
+                </button>
+              </div>
+              <div className="py-1 border-t border-white/[0.06]">
+                <button onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/5 transition-colors">
+                  <LogOut size={15} /> Sair
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Click outside handler */}
+      {(dropdownOpen || notifOpen) && (
+        <div className="fixed inset-0 z-40" onClick={() => { setDropdownOpen(false); setNotifOpen(false) }} />
+      )}
     </header>
   )
 }

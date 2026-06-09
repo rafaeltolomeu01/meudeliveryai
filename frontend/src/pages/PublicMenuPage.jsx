@@ -4,7 +4,6 @@ import { ShoppingBag, ChevronRight, Info, AlertTriangle, Plus, Minus, X, Clock, 
 import { publicApi } from '../services/api'
 import Button from '../components/ui/Button'
 import toast from 'react-hot-toast'
-import { applyTheme, removeTheme } from '../utils/theme'
 import { usePWA } from '../contexts/PWAContext'
 
 const DAYS_MAPPING = {
@@ -183,17 +182,6 @@ export default function PublicMenuPage() {
       }
     }
   }, [slug])
-
-  // Apply visual theme from database dynamically
-  useEffect(() => {
-    if (restaurant) {
-      applyTheme(restaurant)
-    }
-    return () => {
-      removeTheme()
-    }
-  }, [restaurant])
-
   const saveCart = (newCart) => {
     setCart(newCart)
     localStorage.setItem(`mda_cart_${slug}`, JSON.stringify(newCart))

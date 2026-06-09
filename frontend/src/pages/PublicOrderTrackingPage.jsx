@@ -4,7 +4,6 @@ import { ArrowLeft, MessageSquare, Phone, Bike, Clock, HelpCircle, Check, Loader
 import { publicApi } from '../services/api'
 import Button from '../components/ui/Button'
 import toast from 'react-hot-toast'
-import { applyTheme, removeTheme } from '../utils/theme'
 
 // Mock fallback for tracking orders when offline
 const MOCK_RESTAURANT = {
@@ -246,17 +245,6 @@ export default function PublicOrderTrackingPage() {
       container.scrollTop = container.scrollHeight
     }
   }, [messages])
-
-  // Apply visual theme from database dynamically
-  useEffect(() => {
-    if (restaurant) {
-      applyTheme(restaurant)
-    }
-    return () => {
-      removeTheme()
-    }
-  }, [restaurant])
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg, #0F0F0F)' }}>
@@ -292,10 +280,10 @@ export default function PublicOrderTrackingPage() {
   const isCancelled = order.status === 'cancelled'
 
   // WhatsApp click text
-  const supportContact = restaurant.support_phone || restaurant.whatsapp || ''
+  const supportContact = restaurant.whatsapp_number || restaurant.support_phone || restaurant.whatsapp || ''
   const cleanPhone = supportContact.replace(/\D/g, '')
   const formattedPhone = cleanPhone.length === 11 || cleanPhone.length === 10 ? `55${cleanPhone}` : cleanPhone
-  const whatsappUrl = `https://wa.me/${formattedPhone || restaurant.whatsapp}?text=Olá! Gostaria de informações sobre o meu pedido ${order.order_number}.`
+  const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(`Olá! Gostaria de informações sobre o meu pedido ${order.order_number}.`)}` : '#' 
 
   return (
     <div className="min-h-screen font-inter pb-12 text-left" style={{ backgroundColor: bgColor, color: restaurant.text_color || '#FFFFFF' }}>

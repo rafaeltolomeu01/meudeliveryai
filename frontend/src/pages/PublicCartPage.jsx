@@ -4,7 +4,6 @@ import { Trash2, ShoppingBag, Plus, Minus, ArrowLeft, ChevronRight, Bike, Store,
 import { publicApi } from '../services/api'
 import Button from '../components/ui/Button'
 import toast from 'react-hot-toast'
-import { applyTheme, removeTheme } from '../utils/theme'
 
 // Mock fallback for burger-house when offline
 const MOCK_RESTAURANT = {
@@ -61,17 +60,6 @@ export default function PublicCartPage() {
       setOrderType(savedType)
     }
   }, [slug])
-
-  // Apply visual theme from database dynamically
-  useEffect(() => {
-    if (restaurant) {
-      applyTheme(restaurant)
-    }
-    return () => {
-      removeTheme()
-    }
-  }, [restaurant])
-
   const saveCart = (newCart) => {
     setCart(newCart)
     localStorage.setItem(`mda_cart_${slug}`, JSON.stringify(newCart))

@@ -10,7 +10,6 @@ import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import toast from 'react-hot-toast'
-import { applyTheme, removeTheme } from '../utils/theme'
 
 export default function PublicCustomerProfilePage() {
   const { slug } = useParams()
@@ -118,17 +117,6 @@ export default function PublicCustomerProfilePage() {
       loadCustomerData()
     }
   }, [customerToken, slug])
-
-  // Apply visual theme from database dynamically
-  useEffect(() => {
-    if (restaurant) {
-      applyTheme(restaurant)
-    }
-    return () => {
-      removeTheme()
-    }
-  }, [restaurant])
-
   // Handle Login & Register submission
   const handleAuthSubmit = async (e) => {
     e.preventDefault()

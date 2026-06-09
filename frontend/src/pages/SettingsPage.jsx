@@ -5,6 +5,7 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
 import toast from 'react-hot-toast'
+import { useAuth } from '../contexts/AuthContext'
 import { settings as settingsApi, restaurants as restaurantApi } from '../services/api'
 
 const tabs = [
@@ -26,6 +27,7 @@ const DAYS_MAPPING = {
 }
 
 export default function SettingsPage() {
+  const { user, updateUser } = useAuth()
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'general')
   const [loading, setLoading] = useState(true)
@@ -44,8 +46,6 @@ export default function SettingsPage() {
     whatsapp_number: '',
     auto_accept_orders: false,
     default_print_format: 'ask',
-    auto_print_enabled: false,
-    kitchen_print_enabled: true,
   })
 
   const [paymentForm, setPaymentForm] = useState({
@@ -97,8 +97,6 @@ export default function SettingsPage() {
             whatsapp_number: d.whatsapp_number || '',
             auto_accept_orders: d.auto_accept_orders === 1 || d.auto_accept_orders === true,
             default_print_format: d.default_print_format || 'ask',
-            auto_print_enabled: d.auto_print_enabled === 1 || d.auto_print_enabled === true,
-            kitchen_print_enabled: d.kitchen_print_enabled !== 0 && d.kitchen_print_enabled !== false,
           })
 
           if (d.opening_hours) {
@@ -171,8 +169,6 @@ export default function SettingsPage() {
         whatsapp_number: form.whatsapp_number,
         auto_accept_orders: form.auto_accept_orders,
         default_print_format: form.default_print_format,
-        auto_print_enabled: form.auto_print_enabled,
-        kitchen_print_enabled: form.kitchen_print_enabled,
       }
 
       // Salva configurações de pagamento
@@ -194,6 +190,10 @@ export default function SettingsPage() {
         settingsApi.updatePayments(paymentPayload)
       ])
 
+      if (user?.restaurant) {
+        updateUser({ restaurant: { ...user.restaurant, isOpen: !!form.is_open } })
+        window.dispatchEvent(new CustomEvent('mda:restaurant-status-changed', { detail: { isOpen: !!form.is_open } }))
+      }
       toast.success('Configurações salvas com sucesso! 🚀')
     } catch (err) {
       console.error(err)
@@ -356,29 +356,6 @@ export default function SettingsPage() {
                     <ToggleLeft size={44} className="text-gray-500" />
                   )}
                 </button>
-              </div>
-
-
-
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                  <div>
-                    <label className="text-sm font-bold text-white block">Impressão automática ao aceitar</label>
-                    <span className="text-xs text-[#a991c7] mt-0.5">Quando aceitar um pedido, abrir a impressão automaticamente no navegador.</span>
-                  </div>
-                  <button type="button" onClick={() => setForm(p => ({ ...p, auto_print_enabled: !p.auto_print_enabled }))} className="focus:outline-none transition-transform active:scale-95">
-                    {form.auto_print_enabled ? <ToggleRight size={44} className="text-[#FF6B35]" /> : <ToggleLeft size={44} className="text-gray-500" />}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                  <div>
-                    <label className="text-sm font-bold text-white block">Impressão da cozinha</label>
-                    <span className="text-xs text-[#a991c7] mt-0.5">Habilita o modelo de impressão focado na produção/cozinha.</span>
-                  </div>
-                  <button type="button" onClick={() => setForm(p => ({ ...p, kitchen_print_enabled: !p.kitchen_print_enabled }))} className="focus:outline-none transition-transform active:scale-95">
-                    {form.kitchen_print_enabled ? <ToggleRight size={44} className="text-[#FF6B35]" /> : <ToggleLeft size={44} className="text-gray-500" />}
-                  </button>
-                </div>
               </div>
 
               <div className="md:col-span-2 flex flex-col p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">

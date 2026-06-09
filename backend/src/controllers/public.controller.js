@@ -82,7 +82,7 @@ const getRestaurantBySlug = async (req, res, next) => {
               rs.is_open, rs.delivery_enabled, rs.delivery_fee, rs.min_order_value,
               rs.estimated_delivery_time, rs.pickup_enabled, rs.estimated_pickup_time,
               rs.accept_orders_when_closed, rs.welcome_message, rs.order_confirmed_message,
-              rs.order_dispatched_message, rs.support_phone, rs.opening_hours,
+              rs.order_dispatched_message, rs.support_phone, rs.whatsapp_number, rs.opening_hours,
               ps.accepts_cash, ps.accepts_credit_card, ps.accepts_debit_card,
               ps.accepts_pix, ps.pix_key, ps.pix_key_type, ps.pix_receiver_name,
               ps.pix_receiver_city, ps.pix_instructions
@@ -282,7 +282,7 @@ const createPublicOrder = async (req, res, next) => {
     const {
       order_type = 'delivery', payment_method = 'cash', delivery_address, delivery_number,
       delivery_complement, delivery_neighborhood, delivery_city, delivery_state, delivery_zip_code,
-      reference, items, notes, change_for, table_number
+      reference, items, notes, change_for
     } = req.body;
 
     const restaurant = await getRestaurantIdBySlug(slug);
@@ -334,9 +334,9 @@ const createPublicOrder = async (req, res, next) => {
           (restaurant_id, customer_id, order_number, order_type, source, status, payment_method,
            payment_status, subtotal, delivery_fee, total, notes, change_for,
            delivery_address, delivery_number, delivery_complement, delivery_neighborhood,
-           delivery_city, delivery_state, delivery_zip_code, table_number)
-         VALUES (?, ?, ?, ?, 'site', 'pending', ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [restaurant.id, customerId, order_number, order_type, payment_method, subtotal, deliveryFee, total, notes || null, change_for ? parseFloat(change_for) : null, delivery_address || null, delivery_number || null, delivery_complement || null, delivery_neighborhood || null, delivery_city || null, delivery_state || null, delivery_zip_code || null, table_number || null]
+           delivery_city, delivery_state, delivery_zip_code)
+         VALUES (?, ?, ?, ?, 'site', 'pending', ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [restaurant.id, customerId, order_number, order_type, payment_method, subtotal, deliveryFee, total, notes || null, change_for ? parseFloat(change_for) : null, delivery_address || null, delivery_number || null, delivery_complement || null, delivery_neighborhood || null, delivery_city || null, delivery_state || null, delivery_zip_code || null]
       );
       const order_id = orderResult.insertId;
 
@@ -355,7 +355,7 @@ const createPublicOrder = async (req, res, next) => {
       await connection.commit();
       connection.release();
 
-      const orderForWhatsapp = { id: order_id, order_number, total, status: 'pending', customer_name, customer_phone, customer_email, table_number: table_number || null, items: validatedItems };
+      const orderForWhatsapp = { id: order_id, order_number, total, status: 'pending', customer_name, customer_phone, customer_email, items: validatedItems };
       await notifyWhatsappSafely(restaurant.id, orderForWhatsapp, 'pending');
 
       return res.status(201).json({ success: true, message: 'Pedido realizado com sucesso!', data: { id: order_id, order_number, total } });
