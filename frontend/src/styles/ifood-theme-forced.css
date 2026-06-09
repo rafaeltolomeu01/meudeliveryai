@@ -1,0 +1,143 @@
+/* MeuDeliveryAI - Tema iFood FORÇADO
+   Importar por último no frontend/src/main.jsx:
+   import './styles/ifood-theme-forced.css';
+*/
+:root{
+  --md-red:#ea1d2c;
+  --md-red-dark:#c91522;
+  --md-orange:#ff6b35;
+  --md-bg:#f7f7f7;
+  --md-surface:#ffffff;
+  --md-border:#e9e9e9;
+  --md-text:#1f1f1f;
+  --md-muted:#717171;
+  --md-sidebar:#19001f;
+  --md-sidebar-2:#260033;
+  --md-success:#16a34a;
+  --md-shadow:0 8px 24px rgba(0,0,0,.08);
+}
+html, body, #root{
+  background:var(--md-bg)!important;
+  color:var(--md-text)!important;
+}
+body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif!important;}
+/* Remove roxo pesado de áreas principais, mas preserva menu lateral */
+main, .main, [role="main"], .content, .page, .dashboard, .dashboard-page{
+  background:var(--md-bg)!important;
+  color:var(--md-text)!important;
+}
+/* Sidebar escura, como combinado */
+aside, [class*="sidebar"], [class*="SideBar"], [class*="side-bar"]{
+  background:linear-gradient(180deg,var(--md-sidebar),var(--md-sidebar-2))!important;
+  color:#fff!important;
+  border-right:1px solid rgba(255,255,255,.08)!important;
+}
+aside *, [class*="sidebar"] *{color:inherit;}
+aside a, aside button, [class*="sidebar"] a, [class*="sidebar"] button{
+  border-radius:14px!important;
+}
+aside a[aria-current="page"], aside .active, aside [class*="active"],
+[class*="sidebar"] a[aria-current="page"], [class*="sidebar"] .active{
+  background:var(--md-red)!important;
+  color:#fff!important;
+}
+/* Topbar/header interno claro */
+header:not(.landing-header), .topbar, [class*="Topbar"], [class*="Header"]:not(.landing-header){
+  background:#fff!important;
+  color:var(--md-text)!important;
+  border-bottom:1px solid var(--md-border)!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.03)!important;
+}
+/* Cards e painéis claros */
+.card, .panel, .box, section:not(.hero),
+[class*="card"], [class*="Card"], [class*="panel"], [class*="Panel"],
+[class*="rounded"][class*="border"]{
+  background:#fff!important;
+  color:var(--md-text)!important;
+  border-color:var(--md-border)!important;
+  box-shadow:var(--md-shadow)!important;
+}
+/* Corrige classes Tailwind de fundo roxo/preto em conteúdo */
+main [class*="bg-purple"], main [class*="bg-violet"], main [class*="bg-zinc"], main [class*="bg-neutral"], main [class*="bg-black"], main [class*="bg-slate"],
+[role="main"] [class*="bg-purple"], [role="main"] [class*="bg-violet"], [role="main"] [class*="bg-zinc"], [role="main"] [class*="bg-neutral"], [role="main"] [class*="bg-black"], [role="main"] [class*="bg-slate"]{
+  background:#fff!important;
+  color:var(--md-text)!important;
+  border-color:var(--md-border)!important;
+}
+/* Textos */
+h1,h2,h3,h4,h5,h6{color:var(--md-text)!important;font-weight:800!important;}
+p,span,small,label,td,th,li{border-color:var(--md-border);}
+main p, main span, main small, main label, main td, main th, main li,
+[role="main"] p, [role="main"] span, [role="main"] small, [role="main"] label{
+  color:inherit;
+}
+main [class*="text-purple"], main [class*="text-violet"], main [class*="text-slate"], main [class*="text-zinc"], main [class*="text-neutral"]{
+  color:var(--md-muted)!important;
+}
+main h1 [class*="text"], main h2 [class*="text"], main h3 [class*="text"]{color:inherit!important;}
+/* Botões estilo iFood */
+button, a[role="button"], input[type="submit"]{
+  transition:.18s ease!important;
+}
+button[class*="orange"], button[class*="red"], .btn-primary, [class*="btn-primary"],
+main button:not([class*="ghost"]):not([class*="outline"]):not([class*="secondary"]),
+[role="main"] button:not([class*="ghost"]):not([class*="outline"]):not([class*="secondary"]){
+  background:var(--md-red)!important;
+  color:#fff!important;
+  border-color:var(--md-red)!important;
+  box-shadow:0 8px 20px rgba(234,29,44,.18)!important;
+}
+button:hover, a[role="button"]:hover{transform:translateY(-1px);}
+/* Inputs */
+input, select, textarea{
+  background:#fff!important;
+  color:var(--md-text)!important;
+  border:1px solid #d9d9d9!important;
+  border-radius:12px!important;
+}
+input:focus, select:focus, textarea:focus{
+  outline:2px solid rgba(234,29,44,.18)!important;
+  border-color:var(--md-red)!important;
+}
+/* Tabelas */
+table{background:#fff!important;color:var(--md-text)!important;border-radius:14px!important;overflow:hidden!important;}
+thead, thead tr{background:#f3f4f6!important;color:#333!important;}
+tbody tr{border-color:var(--md-border)!important;}
+/* Status pills */
+[class*="Aberto"], [class*="open"], [class*="success"], .status-open{
+  background:#dcfce7!important;color:#166534!important;border-color:#bbf7d0!important;
+}
+/* Cardápio público estilo iFood */
+body:has([href*="cardapio"]), body:has([class*="cardapio"]), body:has([class*="menu"]){background:#fff!important;}
+.public-menu, [class*="PublicMenu"], [class*="Cardapio"], [class*="cardapio"]{
+  background:#fff!important;color:var(--md-text)!important;
+}
+[class*="product"], [class*="Produto"], [class*="Product"]{
+  background:#fff!important;border:1px solid var(--md-border)!important;border-radius:16px!important;box-shadow:0 4px 16px rgba(0,0,0,.05)!important;
+}
+/* Banner/carrinho inferior */
+[class*="cart"], [class*="Cart"], [class*="carrinho"], [class*="Carrinho"]{
+  border-color:var(--md-border)!important;
+}
+main [class*="fixed"][class*="bottom"], [class*="cart-floating"], [class*="floating-cart"]{
+  background:#fff!important;color:var(--md-text)!important;box-shadow:0 -8px 28px rgba(0,0,0,.12)!important;
+}
+/* Landing pode manter hero bonito, mas com vermelho */
+.landing-page, [class*="Landing"]{background:#fff!important;}
+.hero, [class*="hero"], [class*="Hero"]{
+  background:linear-gradient(135deg,#fff 0%,#fff5f5 50%,#ffe8e8 100%)!important;
+  color:var(--md-text)!important;
+}
+.hero h1, [class*="Hero"] h1{color:var(--md-text)!important;}
+.hero strong, .hero em, [class*="Hero"] strong{color:var(--md-red)!important;}
+/* Força limpeza de gradientes roxos em páginas internas */
+.dashboard [class*="gradient"], .dashboard-page [class*="gradient"], main [class*="from-purple"], main [class*="to-purple"], main [class*="from-violet"], main [class*="to-violet"]{
+  background:#fff!important;
+}
+/* Scrollbar */
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:#f1f1f1}::-webkit-scrollbar-thumb{background:#c7c7c7;border-radius:999px}::-webkit-scrollbar-thumb:hover{background:#999}
+/* Ajustes mobile */
+@media(max-width:768px){
+  aside{box-shadow:0 10px 30px rgba(0,0,0,.2)!important;}
+  .card, [class*="Card"], [class*="card"]{border-radius:14px!important;}
+}

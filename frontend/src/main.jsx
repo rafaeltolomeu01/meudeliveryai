@@ -8,6 +8,8 @@ import { PWAProvider } from './contexts/PWAContext'
 import ErrorBoundary from './components/ui/ErrorBoundary'
 import App from './App'
 import './index.css'
+import './styles/ifood-theme.css';
+import './styles/ifood-theme-forced.css';
 import './meudeliveryai-light-overrides.css'
 
 const queryClient = new QueryClient({
