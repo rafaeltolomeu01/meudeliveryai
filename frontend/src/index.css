@@ -1,6 +1,4 @@
-@import './styles/ifood-theme.css';
-@import './styles/ifood-admin-real.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+

@@ -1,26 +1,13 @@
 import { useState, useEffect } from 'react'
-import {
-  ShoppingBag, DollarSign, Clock, Users, TrendingUp, TrendingDown,
-  ArrowUpRight, Package, ChevronRight, ToggleLeft, ToggleRight,
-  TrendingUp as TicketIcon, Play, CheckCircle2, AlertCircle, Sparkles, Loader2,
-  Share2, Copy, ExternalLink
-} from 'lucide-react'
-import Card from '../components/ui/Card'
-import Badge from '../components/ui/Badge'
-import Button from '../components/ui/Button'
+import { ShoppingBag, DollarSign, Users, Package, ToggleLeft, ToggleRight, Share2, Copy, ExternalLink, Clock, CheckCircle2, ChefHat } from 'lucide-react'
 import { formatCurrency } from '../utils/helpers'
 import { useAuth } from '../contexts/AuthContext'
 import { orders as ordersApi, products as productsApi, customers as customersApi, restaurants as restaurantApi } from '../services/api'
 import toast from 'react-hot-toast'
 
-const statusMap = {
-  pending: { label: 'Pendente', color: 'yellow' },
-  confirmed: { label: 'Confirmado', color: 'blue' },
-  preparing: { label: 'Preparando', color: 'orange' },
-  ready: { label: 'Pronto', color: 'purple' },
-  delivering: { label: 'A caminho', color: 'cyan' },
-  delivered: { label: 'Entregue', color: 'green' },
-  cancelled: { label: 'Cancelado', color: 'red' },
+function Kpi({ title, value, icon: Icon, tone = 'red' }) {
+  const tones = { red: 'bg-red-50 text-[#ea1d2c]', green: 'bg-green-50 text-green-700', amber: 'bg-amber-50 text-amber-700', blue: 'bg-blue-50 text-blue-700' }
+  return <div className="bg-white rounded-3xl p-5 border border-[#eeeeee] shadow-sm flex items-center justify-between gap-4"><div><span className="text-[#717171] text-xs font-bold">{title}</span><p className="text-2xl font-black text-[#1f2937] mt-2">{value}</p></div><div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${tones[tone]}`}><Icon size={22}/></div></div>
 }
 
 export default function DashboardPage() {
@@ -28,454 +15,47 @@ export default function DashboardPage() {
   const isOpen = !!user?.restaurant?.isOpen
   const [loading, setLoading] = useState(true)
   const [recentOrders, setRecentOrders] = useState([])
-  const [weeklyData, setWeeklyData] = useState(() => {
-    const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-    const last7Days = []
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      last7Days.push({
-        dateStr: d.toISOString().split('T')[0],
-        day: daysOfWeek[d.getDay()],
-        orders: 0,
-        revenue: 0
-      })
-    }
-    return last7Days
-  })
-  
-  const [stats, setStats] = useState({
-    revenue: 0,
-    ordersCount: 0,
-    ticketAvg: 0,
-    pending: 0,
-    preparing: 0,
-    finalized: 0,
-    totalProducts: 0,
-    totalCustomers: 0
-  })
+  const [stats, setStats] = useState({ revenue: 0, ordersCount: 0, ticketAvg: 0, pending: 0, preparing: 0, finalized: 0, totalProducts: 0, totalCustomers: 0 })
 
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      const [statsRes, prodRes, custRes, ordersRes] = await Promise.all([
-        ordersApi.stats(),
-        productsApi.list({ limit: 1 }),
-        customersApi.list({ limit: 1 }),
-        ordersApi.list({ limit: 5 })
-      ])
-      
+      const [statsRes, prodRes, custRes, ordersRes] = await Promise.all([ordersApi.stats(), productsApi.list({ limit: 1 }), customersApi.list({ limit: 1 }), ordersApi.list({ limit: 5 })])
       if (statsRes.success) {
         const s = statsRes.data
         const todayTotal = parseInt(s.today?.total || 0)
         const todayRev = parseFloat(s.today?.revenue || 0)
-        
-        let pendingCount = 0
-        let preparingCount = 0
-        let finalizedCount = 0
-        
-        s.by_status?.forEach(item => {
-          if (item.status === 'pending') {
-            pendingCount = item.count
-          } else if (item.status === 'preparing' || item.status === 'confirmed' || item.status === 'ready') {
-            preparingCount += item.count
-          } else if (item.status === 'delivered' || item.status === 'picked_up') {
-            finalizedCount += item.count
-          }
-        })
-
-        setStats({
-          revenue: todayRev,
-          ordersCount: todayTotal,
-          ticketAvg: todayTotal > 0 ? todayRev / todayTotal : 0,
-          pending: pendingCount,
-          preparing: preparingCount,
-          finalized: finalizedCount,
-          totalProducts: prodRes.pagination?.total || 0,
-          totalCustomers: custRes.pagination?.total || 0
-        })
+        let pending = 0, preparing = 0, finalized = 0
+        s.by_status?.forEach(item => { if (item.status === 'pending') pending = item.count; else if (['preparing','confirmed','ready'].includes(item.status)) preparing += item.count; else if (['delivered','picked_up'].includes(item.status)) finalized += item.count })
+        setStats({ revenue: todayRev, ordersCount: todayTotal, ticketAvg: todayTotal ? todayRev / todayTotal : 0, pending, preparing, finalized, totalProducts: prodRes.pagination?.total || 0, totalCustomers: custRes.pagination?.total || 0 })
       }
-
-      if (ordersRes.success && ordersRes.data) {
-        setRecentOrders(ordersRes.data)
-      }
-
-      // Calculate last 7 days sales dynamically
-      const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-      const last7Days = []
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date()
-        d.setDate(d.getDate() - i)
-        last7Days.push({
-          dateStr: d.toISOString().split('T')[0],
-          day: daysOfWeek[d.getDay()],
-          orders: 0,
-          revenue: 0
-        })
-      }
-
-      const dateFrom = last7Days[0].dateStr
-      const allOrdersRes = await ordersApi.list({ date_from: dateFrom, limit: 1000 })
-      if (allOrdersRes.success && allOrdersRes.data) {
-        allOrdersRes.data.forEach(order => {
-          const orderDate = new Date(order.created_at).toLocaleDateString('en-CA')
-          const dayObj = last7Days.find(d => d.dateStr === orderDate)
-          if (dayObj) {
-            dayObj.orders += 1
-            dayObj.revenue += parseFloat(order.total || 0)
-          }
-        })
-      }
-      setWeeklyData(last7Days)
-    } catch (err) {
-      console.warn('Erro ao carregar dados do dashboard.', err)
-    } finally {
-      setLoading(false)
-    }
+      if (ordersRes.success) setRecentOrders(ordersRes.data || [])
+    } catch (err) { console.warn('Erro ao carregar dashboard.', err) } finally { setLoading(false) }
   }
-
-  useEffect(() => {
-    loadDashboardData()
-  }, [])
+  useEffect(() => { loadDashboardData(); const i=setInterval(loadDashboardData, 15000); return ()=>clearInterval(i) }, [])
 
   const toggleRestaurant = async () => {
     const next = !isOpen
-    
-    try {
-      await restaurantApi.toggleOpen()
-      updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
-      toast.success(next ? 'Restaurante aberto para receber pedidos! 🟢' : 'Restaurante fechado temporariamente. 🔴')
-    } catch (err) {
-      // Local fallback
-      updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
-      toast.success(next ? 'Restaurante aberto! (Modo Simulação)' : 'Restaurante fechado! (Modo Simulação)')
-    }
+    try { await restaurantApi.toggleOpen() } catch (err) { console.warn(err) }
+    updateUser({ restaurant: { ...user.restaurant, isOpen: next } })
+    toast.success(next ? 'Restaurante aberto para receber pedidos' : 'Restaurante fechado')
   }
+  const menuLink = user?.restaurant?.slug ? `${window.location.origin}/cardapio/${user.restaurant.slug}` : ''
 
-  const maxOrders = Math.max(...weeklyData.map((d) => d.orders), 1)
-
-  return (
-    <div className="space-y-6 text-left">
-      
-      {/* Welcome & Status Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 rounded-3xl p-5">
-        <div>
-          <h2 className="text-2xl font-extrabold text-white flex items-center gap-2">
-            Olá, {user?.name?.split(' ')[0]} 👋
-            <span className="text-xs font-bold bg-[#FF6B35]/10 text-[#FF6B35] border border-[#FF6B35]/20 px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
-              <Sparkles size={11} />
-              {user?.role || 'Dono'}
-            </span>
-          </h2>
-          <p className="text-[#a991c7] text-xs mt-1">Veja um resumo operacional e o faturamento do seu restaurante hoje.</p>
-        </div>
-
-        <button
-          onClick={toggleRestaurant}
-          className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm transition-all duration-300 shadow-md ${
-            isOpen
-              ? 'bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20'
-              : 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20'
-          }`}
-        >
-          {isOpen ? <ToggleRight size={22} className="text-green-400" /> : <ToggleLeft size={22} className="text-red-400" />}
-          <span className={`w-2 h-2 rounded-full ${isOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-          <span>{isOpen ? 'Restaurante Aberto' : 'Restaurante Fechado'}</span>
-        </button>
-      </div>
-
-      {/* Cardápio Link Banner */}
-      {user?.restaurant?.slug && (
-        <div className="bg-gradient-to-r from-[#FF6B35]/15 to-[#1A0533]/50 border border-[#FF6B35]/20 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4 text-left">
-            <div className="w-12 h-12 rounded-2xl bg-[#FF6B35]/10 flex items-center justify-center text-[#FF6B35] shrink-0">
-              <Share2 size={24} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                Seu Cardápio Digital está Online! 🚀
-              </h3>
-              <p className="text-[#a991c7] text-xs mt-1">
-                Compartilhe o link do seu restaurante para receber pedidos diretamente no painel.
-              </p>
-              <div className="mt-2.5 flex items-center gap-2 text-xs bg-black/40 border border-white/5 px-3 py-1.5 rounded-xl text-white font-mono break-all select-all">
-                {`${window.location.origin}/cardapio/${user.restaurant.slug}`}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 w-full md:w-auto justify-end shrink-0">
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}/cardapio/${user.restaurant.slug}`)
-                toast.success('Link do cardápio copiado! 📋')
-              }}
-              className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs border border-white/10 transition-all"
-            >
-              <Copy size={14} />
-              Copiar Link
-            </button>
-            <a
-              href={`/cardapio/${user.restaurant.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white font-bold text-xs shadow-lg shadow-[#FF6B35]/20 transition-all"
-            >
-              Visualizar Cardápio
-              <ExternalLink size={14} />
-            </a>
-          </div>
-        </div>
-      )}
-
-      {/* Main KPI Grid (Vendas, Pedidos, Ticket, Status) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Vendas do Dia */}
-        <div className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-[#a991c7] text-xs font-semibold">Vendas do Dia</span>
-            <p className="text-2xl font-black text-white">{formatCurrency(stats.revenue)}</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-green-500/10 text-green-400">
-            <DollarSign size={20} />
-          </div>
-        </div>
-
-        {/* Pedidos do Dia */}
-        <div className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-[#a991c7] text-xs font-semibold">Pedidos Hoje</span>
-            <p className="text-2xl font-black text-white">{stats.ordersCount}</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FF6B35]/10 text-[#FF6B35]">
-            <ShoppingBag size={20} />
-          </div>
-        </div>
-
-        {/* Ticket Médio */}
-        <div className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-[#a991c7] text-xs font-semibold">Ticket Médio</span>
-            <p className="text-2xl font-black text-white">{formatCurrency(stats.ticketAvg)}</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-cyan-500/10 text-cyan-400">
-            <TicketIcon size={20} />
-          </div>
-        </div>
-
-        {/* Status do Restaurante */}
-        <div className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-[#a991c7] text-xs font-semibold">Status de Funcionamento</span>
-            <p className={`text-base font-black ${isOpen ? 'text-green-400' : 'text-red-400'}`}>
-              {isOpen ? 'Recebendo Pedidos' : 'Pedidos Suspensos'}
-            </p>
-          </div>
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isOpen ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-            <span className={`w-3.5 h-3.5 rounded-full ${isOpen ? 'bg-green-400 animate-ping' : 'bg-red-400'}`} />
-          </div>
-        </div>
-      </div>
-
-      {/* Operational Pipeline Row (Aprovação, Preparo, Finalizados) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Aguardando Aprovação */}
-        <div className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center gap-4 hover:border-yellow-500/20 transition-all">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-yellow-500/10 text-yellow-400 shrink-0">
-            <AlertCircle size={24} />
-          </div>
-          <div className="text-left">
-            <p className="text-[#a991c7] text-xs font-semibold">Aguardando Aprovação</p>
-            <p className="text-xl font-black text-white mt-0.5">{stats.pending} pedidos</p>
-          </div>
-        </div>
-
-        {/* Em Preparo */}
-        <div className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center gap-4 hover:border-orange-500/20 transition-all">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-orange-500/10 text-orange-400 shrink-0">
-            <Play size={24} className="animate-pulse" />
-          </div>
-          <div className="text-left">
-            <p className="text-[#a991c7] text-xs font-semibold">Em Preparação</p>
-            <p className="text-xl font-black text-white mt-0.5">{stats.preparing} pedidos</p>
-          </div>
-        </div>
-
-        {/* Pedidos Finalizados */}
-        <div className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center gap-4 hover:border-green-500/20 transition-all">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-green-500/10 text-green-400 shrink-0">
-            <CheckCircle2 size={24} />
-          </div>
-          <div className="text-left">
-            <p className="text-[#a991c7] text-xs font-semibold">Pedidos Finalizados (Hoje)</p>
-            <p className="text-xl font-black text-white mt-0.5">{stats.finalized} pedidos</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Inventory & Clients Summary Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Resumo de Produtos */}
-        <div
-          onClick={() => window.location.href = '/dashboard/produtos'}
-          className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center justify-between gap-4 cursor-pointer hover:bg-white/[0.04] transition-all"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-400">
-              <Package size={24} />
-            </div>
-            <div className="text-left">
-              <p className="text-[#a991c7] text-xs font-semibold">Resumo de Produtos</p>
-              <p className="text-xl font-black text-white mt-0.5">{stats.totalProducts} itens no cardápio</p>
-            </div>
-          </div>
-          <ChevronRight size={18} className="text-gray-500" />
-        </div>
-
-        {/* Resumo de Clientes */}
-        <div
-          onClick={() => window.location.href = '/dashboard/clientes'}
-          className="glass rounded-2xl p-5 border border-white/[0.06] flex items-center justify-between gap-4 cursor-pointer hover:bg-white/[0.04] transition-all"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-400">
-              <Users size={24} />
-            </div>
-            <div className="text-left">
-              <p className="text-[#a991c7] text-xs font-semibold">Resumo de Clientes</p>
-              <p className="text-xl font-black text-white mt-0.5">{stats.totalCustomers} clientes ativos</p>
-            </div>
-          </div>
-          <ChevronRight size={18} className="text-gray-500" />
-        </div>
-      </div>
-
-      {/* Charts & Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Weekly Chart */}
-        <Card
-          title="Pedidos nos Últimos 7 Dias"
-          className="lg:col-span-2"
-          subtitle="Comparação diária de pedidos"
-        >
-          <div className="flex items-end gap-2 h-40 pt-2">
-            {weeklyData.map(({ day, orders }, i) => {
-              const pct = (orders / maxOrders) * 100
-              const isToday = i === weeklyData.length - 1
-              return (
-                <div key={day} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-[10px] text-[#a991c7]">{orders}</span>
-                  <div className="w-full relative group" style={{ height: `${pct}%`, minHeight: 8 }}>
-                    <div
-                      className="w-full h-full rounded-t-lg transition-all duration-700 progress-bar animate-grow-height"
-                      style={{
-                        background: isToday
-                          ? 'linear-gradient(180deg, #FF6B35, #e84e15)'
-                          : 'rgba(255,107,53,0.3)',
-                        boxShadow: isToday ? '0 0 12px rgba(255,107,53,0.4)' : 'none',
-                      }}
-                    />
-                  </div>
-                  <span className={`text-[10px] font-medium ${isToday ? 'text-[#FF6B35]' : 'text-[#6b5880]'}`}>{day}</span>
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-
-        {/* simulated status notice */}
-        <Card title="Canais Ativos" subtitle="Origem dos pedidos hoje">
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center text-xs mb-1.5 text-gray-300">
-                <span>WhatsApp</span>
-                <span className="font-bold">60%</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '60%' }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center text-xs mb-1.5 text-gray-300">
-                <span>Cardápio Digital PWA</span>
-                <span className="font-bold">30%</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full bg-[#FF6B35] rounded-full" style={{ width: '30%' }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center text-xs mb-1.5 text-gray-300">
-                <span>iFood / Integrações</span>
-                <span className="font-bold">10%</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full bg-red-500 rounded-full" style={{ width: '10%' }} />
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Recent Orders */}
-      <Card
-        title="Pedidos Recentes"
-        subtitle="Últimos 5 pedidos cadastrados"
-        action={
-          <Button
-            variant="ghost"
-            size="sm"
-            rightIcon={ChevronRight}
-            onClick={() => window.location.href = '/orders'}
-          >
-            Ver todos
-          </Button>
-        }
-        noPad
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/[0.05]">
-                {['Pedido', 'Cliente', 'Itens', 'Total', 'Status', 'Tempo'].map((h) => (
-                  <th key={h} className="text-left px-5 py-3 text-[#6b5880] text-xs font-semibold uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-xs text-gray-500 italic">
-                    Nenhum pedido registrado hoje. Compartilhe seu link para começar a receber pedidos!
-                  </td>
-                </tr>
-              ) : (
-                recentOrders.map((order) => {
-                  const itemsList = Array.isArray(order.items)
-                    ? order.items.map(i => `${i.quantity}x ${i.product_name}`).join(', ')
-                    : (order.items || '');
-                    
-                  return (
-                    <tr key={order.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-5 py-3.5 text-[#FF6B35] font-bold text-sm">{order.order_number || `#${order.id}`}</td>
-                      <td className="px-5 py-3.5 text-white text-sm font-medium">{order.customer_name || 'Anônimo'}</td>
-                      <td className="px-5 py-3.5 text-[#a991c7] text-xs max-w-[200px] truncate" title={itemsList}>{itemsList}</td>
-                      <td className="px-5 py-3.5 text-white text-sm font-semibold">{formatCurrency(order.total)}</td>
-                      <td className="px-5 py-3.5">
-                        <Badge color={statusMap[order.status]?.color || 'gray'}>
-                          {statusMap[order.status]?.label || order.status}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-3.5 text-[#6b5880] text-xs">
-                        {new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+  return <div className="space-y-6 text-left">
+    <div className="bg-white rounded-[28px] p-6 border border-[#eeeeee] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div><h2 className="text-2xl md:text-3xl font-black text-[#1f2937]">Olá, {user?.name?.split(' ')[0]} 👋</h2><p className="text-[#717171] text-sm mt-1">Resumo operacional do restaurante hoje.</p></div>
+      <button onClick={toggleRestaurant} className={`flex items-center justify-center gap-2.5 px-5 py-3 rounded-2xl font-black text-sm border ${isOpen ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>{isOpen ? <ToggleRight size={24}/> : <ToggleLeft size={24}/>}<span>{isOpen ? 'Recebendo pedidos' : 'Loja fechada'}</span></button>
     </div>
-  )
+
+    {menuLink && <div className="bg-white border border-[#eeeeee] rounded-[28px] p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-sm">
+      <div className="flex items-start gap-4"><div className="w-12 h-12 rounded-2xl bg-red-50 text-[#ea1d2c] flex items-center justify-center"><Share2 size={24}/></div><div><h3 className="text-xl font-black text-[#1f2937]">Link do catálogo digital</h3><p className="text-[#717171] text-sm mt-1">Compartilhe este link para receber pedidos pelo cardápio.</p><div className="mt-3 px-3 py-2 rounded-xl bg-[#f7f7f7] border border-[#eeeeee] text-[#333] text-xs font-mono break-all">{menuLink}</div></div></div>
+      <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto"><button onClick={()=>{navigator.clipboard.writeText(menuLink); toast.success('Link copiado!')}} className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f5f5f5] hover:bg-[#eeeeee] text-[#333] font-black text-sm"><Copy size={16}/>Copiar link</button><a href={menuLink} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#ea1d2c] hover:bg-[#c91422] text-white font-black text-sm"><ExternalLink size={16}/>Visualizar</a></div>
+    </div>}
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><Kpi title="Vendas do dia" value={formatCurrency(stats.revenue)} icon={DollarSign} tone="green"/><Kpi title="Pedidos hoje" value={stats.ordersCount} icon={ShoppingBag}/><Kpi title="Ticket médio" value={formatCurrency(stats.ticketAvg)} icon={Clock} tone="blue"/><Kpi title="Status" value={isOpen ? 'Aberto' : 'Fechado'} icon={CheckCircle2} tone={isOpen ? 'green' : 'amber'}/></div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><Kpi title="Aguardando aprovação" value={`${stats.pending} pedidos`} icon={Clock} tone="amber"/><Kpi title="Em preparação" value={`${stats.preparing} pedidos`} icon={ChefHat} tone="red"/><Kpi title="Finalizados hoje" value={`${stats.finalized} pedidos`} icon={CheckCircle2} tone="green"/></div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Kpi title="Produtos no cardápio" value={`${stats.totalProducts} itens`} icon={Package} tone="blue"/><Kpi title="Clientes ativos" value={`${stats.totalCustomers} clientes`} icon={Users} tone="green"/></div>
+    <div className="bg-white rounded-[28px] p-6 border border-[#eeeeee] shadow-sm"><h3 className="text-xl font-black text-[#1f2937] mb-4">Vendas recentes</h3>{recentOrders.length === 0 ? <p className="text-[#717171] text-sm">Nenhum pedido recente.</p> : <div className="divide-y divide-[#eeeeee]">{recentOrders.map(o => <div key={o.id} className="py-3 flex items-center justify-between gap-3"><div><p className="font-black text-[#1f2937]">{o.order_number || `#${o.id}`}</p><p className="text-sm text-[#717171]">{o.customer_name || o.customer?.name || 'Cliente'}</p></div><div className="text-right"><p className="font-black text-[#1f2937]">{formatCurrency(o.total || 0)}</p><span className="text-xs font-bold px-2 py-1 rounded-full bg-[#f5f5f5] text-[#555]">{o.status}</span></div></div>)}</div>}</div>
+  </div>
 }

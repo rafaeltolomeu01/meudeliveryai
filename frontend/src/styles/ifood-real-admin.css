@@ -1,0 +1,41 @@
+/* Correção real: remove roxo do painel e força visual claro estilo iFood */
+:root, html.mda-ifood-admin {
+  --theme-bg: #f7f7f7 !important;
+  --theme-surface: #ffffff !important;
+  --theme-card: #ffffff !important;
+  --theme-text: #1f2937 !important;
+  --theme-muted: #717171 !important;
+  --theme-primary: #ea1d2c !important;
+  --theme-primary-rgb: 234,29,44 !important;
+}
+html.mda-ifood-admin, body.mda-ifood-admin, body.mda-ifood-admin #root { background: #f7f7f7 !important; color: #1f2937 !important; }
+.mda-ifood-admin .mda-admin-shell { background: #f7f7f7 !important; color: #1f2937 !important; }
+.mda-ifood-admin main { background: #f7f7f7 !important; color: #1f2937 !important; }
+.mda-ifood-admin .glass, .mda-ifood-admin .glass-light { background: #ffffff !important; border: 1px solid #eeeeee !important; box-shadow: 0 10px 30px rgba(0,0,0,.04) !important; color: #1f2937 !important; }
+.mda-ifood-admin .gradient-text { color: #ea1d2c !important; background: none !important; -webkit-text-fill-color: initial !important; }
+.mda-ifood-admin h1, .mda-ifood-admin h2, .mda-ifood-admin h3, .mda-ifood-admin h4,
+.mda-ifood-admin p, .mda-ifood-admin span, .mda-ifood-admin label { text-shadow: none !important; }
+/* neutraliza classes roxas fixas em páginas antigas dentro do conteúdo, sem mexer na sidebar */
+.mda-ifood-admin main [class*="bg-[#1A0533]"],
+.mda-ifood-admin main [class*="bg-[#1a0533]"],
+.mda-ifood-admin main [class*="bg-purple"],
+.mda-ifood-admin main [class*="from-purple"],
+.mda-ifood-admin main [class*="to-purple"],
+.mda-ifood-admin main [class*="bg-white/[0.02]"],
+.mda-ifood-admin main [class*="bg-white/5"] { background: #ffffff !important; background-image: none !important; }
+.mda-ifood-admin main [class*="border-white"], .mda-ifood-admin header [class*="border-white"] { border-color: #eeeeee !important; }
+.mda-ifood-admin main [class*="text-white"] { color: #1f2937 !important; }
+.mda-ifood-admin main [class*="text-[#a991c7]"] { color: #717171 !important; }
+.mda-ifood-admin main [class*="text-[#FF6B35]"] { color: #ea1d2c !important; }
+.mda-ifood-admin main [class*="bg-[#FF6B35]"] { background: #ea1d2c !important; }
+.mda-ifood-admin main [class*="shadow-[#FF6B35]"] { box-shadow: 0 10px 25px rgba(234,29,44,.18) !important; }
+/* mantém sidebar escura */
+.mda-ifood-admin aside, .mda-ifood-admin aside * { color-scheme: dark; }
+.mda-ifood-admin aside .glass, .mda-ifood-admin aside .glass-light { background: rgba(255,255,255,.06) !important; border-color: rgba(255,255,255,.10) !important; color: #fff !important; }
+.mda-ifood-admin aside [class*="text-white"] { color: #fff !important; }
+.mda-ifood-admin aside [class*="text-[#a991c7]"] { color: rgba(255,255,255,.65) !important; }
+/* botões padrão */
+.mda-ifood-admin button, .mda-ifood-admin a { text-decoration: none; }
+@keyframes mdaBlinkOrder { 0%,100% { box-shadow: 0 0 0 0 rgba(234,29,44,.32); } 50% { box-shadow: 0 0 0 8px rgba(234,29,44,.12); } }
+.mda-new-order-blink { animation: mdaBlinkOrder 1s infinite; border-color: #ea1d2c !important; }
+@media print { aside, header, .no-print { display:none !important } main { padding:0 !important } }
