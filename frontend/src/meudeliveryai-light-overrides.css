@@ -7,6 +7,29 @@
   --mda-border: #e5e7eb;
   --mda-sidebar: #161a22;
   --mda-orange: #ff6b35;
+
+  /* Força variáveis css para tema claro do iFood */
+  --primary: #ea1d2c !important;
+  --primary-color: #ea1d2c !important;
+  --secondary: #ffffff !important;
+  --accent: #ea1d2c !important;
+  --background: #f7f7f7 !important;
+  --foreground: #1f2937 !important;
+  --card: #ffffff !important;
+  --card-foreground: #1f2937 !important;
+  --muted: #f3f4f6 !important;
+  --muted-foreground: #6b7280 !important;
+  --border: #e5e7eb !important;
+  --input: #ffffff !important;
+  --ring: #ea1d2c !important;
+  --sidebar: #160023 !important;
+  --sidebar-background: #160023 !important;
+  --sidebar-foreground: #ffffff !important;
+}
+
+/* Oculta link da tela de aparência/personalização na sidebar */
+a[href="/dashboard/aparencia"] {
+  display: none !important;
 }
 
 body {

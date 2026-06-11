@@ -22,71 +22,60 @@ function clearThemeStorage() {
 }
 
 function setVars() {
-  const root = document.documentElement;
-  const vars = {
-    '--primary': '#ea1d2c',
-    '--primary-color': '#ea1d2c',
-    '--secondary': '#ffffff',
-    '--accent': '#ea1d2c',
-    '--background': '#f7f7f7',
-    '--foreground': '#1f2937',
-    '--card': '#ffffff',
-    '--card-foreground': '#1f2937',
-    '--muted': '#f3f4f6',
-    '--muted-foreground': '#6b7280',
-    '--border': '#e5e7eb',
-    '--input': '#ffffff',
-    '--ring': '#ea1d2c',
-    '--sidebar': '#160023',
-    '--sidebar-background': '#160023',
-    '--sidebar-foreground': '#ffffff'
-  };
-  Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v, 'important'));
-  root.classList.remove('dark');
-  document.body?.classList?.remove('dark');
-}
-
-function hideAppearanceMenu() {
-  const words = ['Aparência', 'Personalização', 'Personalizacao', 'Tema', 'Temas'];
-  const nodes = document.querySelectorAll('a, button, [role="button"], li, nav div');
-  nodes.forEach((el) => {
-    const text = (el.textContent || '').trim();
-    const href = (el.getAttribute?.('href') || '').toLowerCase();
-    const shouldHide = words.some(w => text === w || text.includes(w)) || href.includes('appearance') || href.includes('aparencia') || href.includes('theme');
-    if (!shouldHide) return;
-    let target = el;
-    for (let i = 0; i < 2; i++) {
-      if (target.parentElement && (target.parentElement.tagName === 'LI' || target.parentElement.tagName === 'DIV')) {
-        target = target.parentElement;
-      }
-    }
-    target.style.setProperty('display', 'none', 'important');
-  });
-}
-
-function keepMenuLinkVisible() {
-  // Garante que o bloco de link do cardapio nao suma por CSS antigo.
-  const candidates = [...document.querySelectorAll('section, div, article')].filter((el) => {
-    const t = (el.textContent || '').toLowerCase();
-    return t.includes('cardápio digital') || t.includes('cardapio digital') || t.includes('copiar link') || t.includes('visualizar cardápio') || t.includes('visualizar cardapio');
-  });
-  candidates.forEach((el) => {
-    el.style.removeProperty('display');
-    el.style.removeProperty('visibility');
-    el.style.removeProperty('opacity');
-  });
+  try {
+    const root = document.documentElement;
+    const vars = {
+      '--primary': '#ea1d2c',
+      '--primary-color': '#ea1d2c',
+      '--secondary': '#ffffff',
+      '--accent': '#ea1d2c',
+      '--background': '#f7f7f7',
+      '--foreground': '#1f2937',
+      '--card': '#ffffff',
+      '--card-foreground': '#1f2937',
+      '--muted': '#f3f4f6',
+      '--muted-foreground': '#6b7280',
+      '--border': '#e5e7eb',
+      '--input': '#ffffff',
+      '--ring': '#ea1d2c',
+      '--sidebar': '#160023',
+      '--sidebar-background': '#160023',
+      '--sidebar-foreground': '#ffffff'
+    };
+    Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v, 'important'));
+    
+    if (root.classList.contains('dark')) root.classList.remove('dark');
+    if (document.body && document.body.classList.contains('dark')) document.body.classList.remove('dark');
+  } catch (_) {}
 }
 
 function boot() {
   clearThemeStorage();
   setVars();
-  hideAppearanceMenu();
-  keepMenuLinkVisible();
 }
 
+// Executa o boot
 boot();
-window.addEventListener('load', boot);
-window.addEventListener('focus', boot);
 
-const observer = new MutationObserver(() => boot());
-observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', boot);
+  window.addEventListener('focus', boot);
+  
+  // Observa apenas a classe do HTML para remover 'dark', evitando loop recursivo de MutationObserver
+  const observer = new MutationObserver((mutations) => {
+    let shouldFix = false;
+    for (const m of mutations) {
+      if (m.attributeName === 'class' && document.documentElement.classList.contains('dark')) {
+        shouldFix = true;
+        break;
+      }
+    }
+    if (shouldFix) {
+      observer.disconnect();
+      document.documentElement.classList.remove('dark');
+      if (document.body) document.body.classList.remove('dark');
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+}
