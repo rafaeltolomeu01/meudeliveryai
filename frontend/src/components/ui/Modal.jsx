@@ -39,11 +39,15 @@ export default function Modal({
     full: 'max-w-6xl',
   }
 
+  const isIfoodAdmin = typeof document !== 'undefined' && document.documentElement.classList.contains('mda-ifood-admin')
+  const overlayBg = isIfoodAdmin ? 'rgba(255, 255, 255, 0.82)' : 'rgba(0, 0, 0, 0.7)'
+  const overlayBlur = isIfoodAdmin ? 'blur(12px)' : 'blur(8px)'
+
   return (
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(8px)' }}
+      style={{ backgroundColor: overlayBg, backdropFilter: overlayBlur }}
       onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
       <div

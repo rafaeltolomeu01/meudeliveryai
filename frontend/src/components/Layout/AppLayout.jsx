@@ -23,8 +23,14 @@ export default function AppLayout() {
   }
 
   useEffect(() => {
+    document.documentElement.classList.add('mda-ifood-admin')
+    document.body?.classList?.add('mda-ifood-admin')
     fetchSubscription()
-}, [])
+    return () => {
+      document.documentElement.classList.remove('mda-ifood-admin')
+      document.body?.classList?.remove('mda-ifood-admin')
+    }
+  }, [])
 
   const isExpired = subscriptionData && (
     subscriptionData.status === 'canceled' ||
