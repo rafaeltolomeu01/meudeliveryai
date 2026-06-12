@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, MapPin, Plus, Trash2, LogOut, Loader2, Clipboard,
@@ -261,45 +261,44 @@ export default function PublicCustomerProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0F0F0F]" style={{ backgroundColor: restaurant?.background_color || '#0F0F0F' }}>
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="text-center flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-[#FF6B35]" size={40} style={{ color: restaurant?.primary_color || '#FF6B35' }} />
-          <p className="text-gray-400 text-sm font-medium">Carregando seus dados...</p>
+          <Loader2 className="animate-spin text-[#FF5A1F]" size={40} />
+          <p className="text-slate-500 text-sm font-semibold">Carregando seus dados...</p>
         </div>
       </div>
     )
   }
 
-  const primaryColor = restaurant?.primary_color || '#FF6B35'
-  const bgColor = restaurant?.background_color || '#0F0F0F'
-  const buttonColor = restaurant?.button_color || primaryColor
-  const buttonRadiusClass = restaurant?.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-xl'
+  const primaryColor = restaurant?.primary_color || '#FF5A1F'
+  const buttonColor = primaryColor
+  const buttonRadiusClass = restaurant?.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-2xl'
   const borderRadiusClass = restaurant?.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-3xl'
 
   const orderStatusMap = {
-    pending: { label: 'Pendente', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-    confirmed: { label: 'Confirmado', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-    preparing: { label: 'Em Preparo', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
-    ready: { label: 'Pronto p/ Retirada', color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' },
-    out_for_delivery: { label: 'Saiu p/ Entrega', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
-    delivered: { label: 'Entregue', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-    cancelled: { label: 'Cancelado', color: 'text-red-400 bg-red-500/10 border-red-500/20' }
+    pending: { label: 'Pendente', color: 'text-amber-700 bg-amber-50 border-amber-200' },
+    confirmed: { label: 'Confirmado', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+    preparing: { label: 'Em Preparo', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+    ready: { label: 'Pronto p/ Retirada', color: 'text-purple-700 bg-purple-50 border-purple-200' },
+    out_for_delivery: { label: 'Saiu p/ Entrega', color: 'text-orange-700 bg-orange-50 border-orange-200' },
+    delivered: { label: 'Entregue', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+    cancelled: { label: 'Cancelado', color: 'text-red-700 bg-red-50 border-red-200' }
   }
 
   return (
-    <div className="min-h-screen pb-12 font-inter text-left" style={{ backgroundColor: bgColor, color: restaurant?.text_color || '#FFFFFF' }}>
+    <div className="min-h-screen pb-12 font-inter text-left bg-[#F8FAFC] text-[#111827]">
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-6">
         
         {/* Navigation header */}
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => navigate(`/cardapio/${slug}`)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft size={16} />
-            <span>CardÃ¡pio Principal</span>
+            <span>Cardápio Principal</span>
           </button>
-          <span className="text-white font-extrabold text-base">Minha Conta</span>
+          <span className="text-slate-900 font-extrabold text-base tracking-tight">Minha Conta</span>
           <div className="w-6" /> {/* spacer */}
         </div>
 
@@ -309,38 +308,38 @@ export default function PublicCustomerProfilePage() {
         {!customer ? (
           <div className="max-w-md mx-auto">
             {redirect === 'checkout' && (
-              <div className="flex items-start gap-2.5 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/20 mb-6 animate-pulse">
-                <ShieldAlert className="text-amber-500 shrink-0 mt-0.5" size={18} />
-                <p className="text-xs text-amber-200 leading-normal font-semibold">
-                  AtenÃ§Ã£o: VocÃª precisa se identificar ou cadastrar para prosseguir com a finalizaÃ§Ã£o do seu pedido.
+              <div className="flex items-start gap-2.5 p-4 rounded-2xl bg-amber-50 border border-amber-200 mb-6 text-amber-900">
+                <ShieldAlert className="text-amber-600 shrink-0 mt-0.5" size={18} />
+                <p className="text-xs leading-normal font-semibold">
+                  Atenção: Você precisa se identificar ou cadastrar para prosseguir com a finalização do seu pedido.
                 </p>
               </div>
             )}
 
-            <div className="bg-[#1A0533]/80 border border-white/5 rounded-3xl p-6 space-y-6 shadow-2xl backdrop-blur-md">
-              <div className="flex border-b border-white/5 pb-1 gap-6">
+            <div className="bg-white border border-slate-200 shadow-xl rounded-3xl p-6 space-y-6">
+              <div className="flex border-b border-slate-100 pb-1 gap-6">
                 <button
                   type="button"
                   onClick={() => setAuthMode('login')}
                   className={`pb-3 text-sm font-extrabold transition-all relative ${
-                    authMode === 'login' ? 'text-white' : 'text-gray-400 hover:text-white'
+                    authMode === 'login' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-650'
                   }`}
                 >
                   Entrar na Conta
                   {authMode === 'login' && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: primaryColor }} />
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 animate-fade-in" style={{ backgroundColor: primaryColor }} />
                   )}
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuthMode('register')}
                   className={`pb-3 text-sm font-extrabold transition-all relative ${
-                    authMode === 'register' ? 'text-white' : 'text-gray-400 hover:text-white'
+                    authMode === 'register' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-650'
                   }`}
                 >
                   Criar Cadastro
                   {authMode === 'register' && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: primaryColor }} />
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 animate-fade-in" style={{ backgroundColor: primaryColor }} />
                   )}
                 </button>
               </div>
@@ -349,7 +348,7 @@ export default function PublicCustomerProfilePage() {
                 {authMode === 'register' && (
                   <Input
                     label="Nome Completo *"
-                    placeholder="Ex: JoÃ£o da Silva"
+                    placeholder="Ex: João da Silva"
                     value={authForm.name}
                     onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
                     required
@@ -395,7 +394,7 @@ export default function PublicCustomerProfilePage() {
                   variant="primary"
                   size="lg"
                   loading={authLoading}
-                  className="w-full py-3.5 rounded-2xl font-bold shadow-lg mt-2"
+                  className="w-full py-3.5 rounded-2xl font-bold shadow-md mt-2 text-white"
                   style={{ backgroundColor: buttonColor }}
                 >
                   {authMode === 'login' ? 'Entrar' : 'Confirmar Cadastro'}
@@ -411,19 +410,19 @@ export default function PublicCustomerProfilePage() {
             
             {/* Sidebar Navigation */}
             <div className="md:col-span-1 space-y-4">
-              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-5 flex flex-col items-center text-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF6B35] to-purple-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg">
+              <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 flex flex-col items-center text-center gap-4">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-white font-extrabold text-2xl shadow-md" style={{ backgroundColor: primaryColor }}>
                   {customer.name?.[0]?.toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-white text-base leading-tight truncate max-w-[150px]">{customer.name}</h3>
-                  <p className="text-xs text-gray-400 mt-1">{customer.phone}</p>
+                  <h3 className="font-extrabold text-slate-900 text-base leading-tight truncate max-w-[150px]">{customer.name}</h3>
+                  <p className="text-xs text-slate-500 mt-1">{customer.phone}</p>
                 </div>
               </div>
 
-              <div className="glass rounded-3xl p-2 border border-white/[0.04] flex flex-col gap-1">
+              <div className="bg-white rounded-3xl p-2.5 border border-slate-200 shadow-sm flex flex-col gap-1.5">
                 {[
-                  { key: 'addresses', label: 'Meus EndereÃ§os', icon: MapPin },
+                  { key: 'addresses', label: 'Meus Endereços', icon: MapPin },
                   { key: 'orders', label: 'Meus Pedidos', icon: ShoppingBag },
                   { key: 'profile', label: 'Meus Dados', icon: User }
                 ].map(tab => (
@@ -435,8 +434,8 @@ export default function PublicCustomerProfilePage() {
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
                       activeTab === tab.key
-                        ? 'bg-[#FF6B35] text-white shadow-md'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'text-white shadow-sm'
+                        : 'text-slate-655 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                     style={activeTab === tab.key ? { backgroundColor: primaryColor } : {}}
                   >
@@ -447,7 +446,7 @@ export default function PublicCustomerProfilePage() {
                 
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-400 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/10 mt-2"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-600 hover:bg-red-50 transition-all border border-transparent hover:border-red-100 mt-2"
                 >
                   <LogOut size={16} />
                   <span>Sair da Conta</span>
@@ -460,11 +459,11 @@ export default function PublicCustomerProfilePage() {
               
               {/* TAB 1: ADDRESSES */}
               {activeTab === 'addresses' && (
-                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-6">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
-                      <h2 className="text-lg font-extrabold text-white">EndereÃ§os Salvos</h2>
-                      <p className="text-xs text-gray-400 mt-0.5">Cadastre seus endereÃ§os de entrega para checkouts mais rÃ¡pidos.</p>
+                      <h2 className="text-lg font-black text-slate-900">Endereços Salvos</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">Cadastre seus endereços de entrega para checkouts mais rápidos.</p>
                     </div>
                     {!showAddAddress && (
                       <Button
@@ -472,20 +471,20 @@ export default function PublicCustomerProfilePage() {
                         size="sm"
                         leftIcon={Plus}
                         onClick={() => setShowAddAddress(true)}
-                        className="rounded-xl border border-white/10 hover:bg-white/5"
+                        className="rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold"
                       >
-                        Novo EndereÃ§o
+                        Novo Endereço
                       </Button>
                     )}
                   </div>
 
                   {/* Add Address Form */}
                   {showAddAddress && (
-                    <form onSubmit={handleAddAddressSubmit} className="p-5 rounded-2xl bg-white/[0.01] border border-white/5 space-y-4 animate-fade-in text-left">
-                      <div className="flex items-center justify-between mb-2 border-b border-white/5 pb-2">
-                        <span className="text-sm font-bold text-white flex items-center gap-2">
+                    <form onSubmit={handleAddAddressSubmit} className="p-5 rounded-2xl bg-slate-50/50 border border-slate-200/80 space-y-4 animate-fade-in text-left">
+                      <div className="flex items-center justify-between mb-2 border-b border-slate-200/50 pb-2">
+                        <span className="text-sm font-bold text-slate-900 flex items-center gap-2">
                           <MapPin size={16} style={{ color: primaryColor }} />
-                          Cadastrar Novo EndereÃ§o
+                          Cadastrar Novo Endereço
                         </span>
                         <button
                           type="button"
@@ -493,7 +492,7 @@ export default function PublicCustomerProfilePage() {
                             setShowAddAddress(false)
                             setAddressFormErrors({})
                           }}
-                          className="text-xs text-gray-400 hover:text-white"
+                          className="text-xs font-bold text-slate-500 hover:text-slate-900"
                         >
                           Cancelar
                         </button>
@@ -524,7 +523,7 @@ export default function PublicCustomerProfilePage() {
                       <div className="grid grid-cols-3 gap-4">
                         <div className="col-span-1">
                           <Input
-                            label="NÃºmero *"
+                            label="Número *"
                             placeholder="Ex: 100"
                             value={addressForm.number}
                             onChange={(e) => setAddressForm({ ...addressForm, number: e.target.value })}
@@ -542,8 +541,8 @@ export default function PublicCustomerProfilePage() {
                         </div>
                         <div className="col-span-1">
                           <Input
-                            label="ReferÃªncia"
-                            placeholder="Ex: PrÃ³ximo ao metrÃ´"
+                            label="Referência"
+                            placeholder="Ex: Próximo ao metrô"
                             value={addressForm.reference}
                             onChange={(e) => setAddressForm({ ...addressForm, reference: e.target.value })}
                           />
@@ -564,7 +563,7 @@ export default function PublicCustomerProfilePage() {
                         <div className="col-span-1">
                           <Input
                             label="Cidade *"
-                            placeholder="SÃ£o Paulo"
+                            placeholder="São Paulo"
                             value={addressForm.city}
                             onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
                             error={addressFormErrors.city}
@@ -589,10 +588,10 @@ export default function PublicCustomerProfilePage() {
                           id="isDefault"
                           checked={addressForm.isDefault}
                           onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
-                          className="w-4 h-4 accent-[#FF6B35] bg-transparent border-white/10 rounded focus:ring-0"
+                          className="w-4 h-4 accent-[#FF5A1F] bg-transparent border-slate-300 rounded focus:ring-0 cursor-pointer"
                         />
-                        <label htmlFor="isDefault" className="text-xs text-gray-300 font-semibold cursor-pointer">
-                          Definir como endereÃ§o padrÃ£o de entrega
+                        <label htmlFor="isDefault" className="text-xs text-slate-700 font-semibold cursor-pointer">
+                          Definir como endereço padrão de entrega
                         </label>
                       </div>
 
@@ -600,10 +599,10 @@ export default function PublicCustomerProfilePage() {
                         type="submit"
                         variant="primary"
                         loading={addressLoading}
-                        className="px-6 py-2.5 rounded-xl font-bold shadow-md text-xs uppercase"
+                        className="px-6 py-2.5 rounded-xl font-bold shadow-md text-xs uppercase text-white"
                         style={{ backgroundColor: buttonColor }}
                       >
-                        Salvar EndereÃ§o
+                        Salvar Endereço
                       </Button>
                     </form>
                   )}
@@ -611,44 +610,44 @@ export default function PublicCustomerProfilePage() {
                   {/* Addresses List */}
                   {addressLoading && addresses.length === 0 ? (
                     <div className="flex justify-center py-12">
-                      <Loader2 className="animate-spin text-[#FF6B35]" size={24} style={{ color: primaryColor }} />
+                      <Loader2 className="animate-spin text-[#FF5A1F]" size={24} />
                     </div>
                   ) : addresses.length === 0 ? (
-                    <div className="text-center py-12 space-y-3 bg-white/[0.01] border border-white/5 rounded-2xl">
-                      <MapPin size={32} className="mx-auto text-gray-600" />
-                      <p className="text-xs text-gray-400">Nenhum endereÃ§o cadastrado ainda.</p>
+                    <div className="text-center py-12 space-y-3 bg-slate-50 border border-slate-200/60 rounded-2xl p-8">
+                      <MapPin size={32} className="mx-auto text-slate-400" />
+                      <p className="text-xs text-slate-505 font-semibold">Nenhum endereço cadastrado ainda.</p>
                       <button
                         type="button"
                         onClick={() => setShowAddAddress(true)}
-                        className="text-xs font-bold hover:underline"
+                        className="text-xs font-black hover:underline"
                         style={{ color: primaryColor }}
                       >
-                        Cadastrar primeiro endereÃ§o
+                        Cadastrar primeiro endereço
                       </button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {addresses.map((addr) => (
-                        <div key={addr.id} className="p-4 rounded-2xl border border-white/5 bg-white/[0.01] flex justify-between gap-4 relative">
-                          <div className="space-y-1 max-w-[85%] text-left">
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold text-sm text-white">
+                        <div key={addr.id} className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-sm flex justify-between gap-4 relative hover:border-slate-350 transition-all text-left">
+                          <div className="space-y-1.5 max-w-[85%]">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-extrabold text-sm text-slate-900">
                                 {addr.street}, {addr.number}
                               </span>
                               {addr.is_default === 1 && (
-                                <span className="text-[8px] bg-green-500/10 text-green-400 border border-green-500/20 font-bold px-2 py-0.5 rounded-full uppercase">
-                                  PadrÃ£o
+                                <span className="text-[8px] bg-green-50 text-green-700 border border-green-200 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                  Padrão
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-400">
-                              {addr.complement ? `${addr.complement} â€¢ ` : ''} {addr.neighborhood}
+                            <p className="text-xs text-slate-505 font-medium">
+                              {addr.complement ? `${addr.complement} • ` : ''} {addr.neighborhood}
                             </p>
-                            <p className="text-xs text-gray-400">
-                              {addr.city} - {addr.state} â€¢ CEP {addr.zip_code}
+                            <p className="text-xs text-slate-505 font-medium">
+                              {addr.city} - {addr.state} • CEP {addr.zip_code}
                             </p>
                             {addr.reference && (
-                              <p className="text-[10px] text-gray-500 italic mt-1.5">
+                              <p className="text-[10px] text-slate-400 italic mt-1.5">
                                 Ref: {addr.reference}
                               </p>
                             )}
@@ -656,8 +655,8 @@ export default function PublicCustomerProfilePage() {
                           <button
                             type="button"
                             onClick={() => handleDeleteAddress(addr.id)}
-                            className="p-2 text-gray-500 hover:text-red-400 transition-colors self-start hover:bg-white/5 rounded-lg"
-                            title="Excluir EndereÃ§o"
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-100 rounded-lg transition-colors self-start"
+                            title="Excluir Endereço"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -670,58 +669,58 @@ export default function PublicCustomerProfilePage() {
 
               {/* TAB 2: ORDERS */}
               {activeTab === 'orders' && (
-                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-6">
+                <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 space-y-6">
                   <div>
-                    <h2 className="text-lg font-extrabold text-white">HistÃ³rico de Pedidos</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">Veja e acompanhe os seus pedidos realizados neste restaurante.</p>
+                    <h2 className="text-lg font-black text-slate-900">Histórico de Pedidos</h2>
+                    <p className="text-xs text-slate-505 mt-0.5">Veja e acompanhe os seus pedidos realizados neste restaurante.</p>
                   </div>
 
                   {ordersLoading ? (
                     <div className="flex justify-center py-12">
-                      <Loader2 className="animate-spin text-[#FF6B35]" size={24} style={{ color: primaryColor }} />
+                      <Loader2 className="animate-spin text-[#FF5A1F]" size={24} />
                     </div>
                   ) : orders.length === 0 ? (
-                    <div className="text-center py-12 space-y-3 bg-white/[0.01] border border-white/5 rounded-2xl">
-                      <ShoppingBag size={32} className="mx-auto text-gray-600" />
-                      <p className="text-xs text-gray-400">VocÃª ainda nÃ£o fez nenhum pedido.</p>
+                    <div className="text-center py-12 space-y-3 bg-slate-50 border border-slate-200/60 rounded-2xl p-8">
+                      <ShoppingBag size={32} className="mx-auto text-slate-400" />
+                      <p className="text-xs text-slate-500 font-semibold">Você ainda não fez nenhum pedido.</p>
                       <Link
                         to={`/cardapio/${slug}`}
-                        className="inline-block text-xs font-bold hover:underline"
+                        className="inline-block text-xs font-black hover:underline"
                         style={{ color: primaryColor }}
                       >
-                        Navegar pelo cardÃ¡pio
+                        Navegar pelo cardápio
                       </Link>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {orders.map((ord) => {
-                        const statusInfo = orderStatusMap[ord.status] || { label: ord.status, color: 'text-gray-400 bg-gray-500/10' }
+                        const statusInfo = orderStatusMap[ord.status] || { label: ord.status, color: 'text-slate-600 bg-slate-100 border-slate-200' }
                         return (
-                          <div key={ord.id} className="p-5 rounded-2xl border border-white/5 bg-white/[0.01] flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-left">
+                          <div key={ord.id} className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-left hover:border-slate-350 transition-all">
                             <div className="space-y-1">
                               <div className="flex items-center gap-3">
-                                <span className="font-extrabold text-sm text-white">Pedido #{ord.order_number || ord.id}</span>
-                                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusInfo.color}`}>
+                                <span className="font-extrabold text-sm text-slate-900">Pedido #{ord.order_number || ord.id}</span>
+                                <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${statusInfo.color}`}>
                                   {statusInfo.label}
                                 </span>
                               </div>
-                              <p className="text-[10px] text-gray-500">
+                              <p className="text-[10px] text-slate-450 font-medium">
                                 Realizado em {new Date(ord.created_at).toLocaleString('pt-BR')}
                               </p>
-                              <div className="text-xs text-gray-400 mt-2">
-                                <span className="font-semibold text-white">Itens: </span>
+                              <div className="text-xs text-slate-500 font-medium mt-2">
+                                <span className="font-extrabold text-slate-800">Itens: </span>
                                 {ord.items?.map(item => `${item.quantity}x ${item.product_name || 'Produto'}`).join(', ')}
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-0 border-white/5 pt-3 sm:pt-0">
+                            <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-0 border-slate-100 pt-3 sm:pt-0">
                               <div className="text-left sm:text-right">
-                                <p className="text-[10px] text-gray-500 font-semibold">Valor Total</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Valor Total</p>
                                 <p className="text-base font-black" style={{ color: primaryColor }}>R$ {parseFloat(ord.total).toFixed(2)}</p>
                               </div>
                               <button
                                 onClick={() => navigate(`/cardapio/${slug}/pedido/${ord.id}`)}
-                                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1"
+                                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200/80 text-slate-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1 border border-slate-200/50"
                               >
                                 <span>Acompanhar</span>
                                 <ChevronRight size={14} />
@@ -737,50 +736,50 @@ export default function PublicCustomerProfilePage() {
 
               {/* TAB 3: PROFILE INFO */}
               {activeTab === 'profile' && (
-                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-6">
+                <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 space-y-6">
                   <div>
-                    <h2 className="text-lg font-extrabold text-white">Meus Dados Cadastrais</h2>
-                    <p className="text-xs text-gray-400 mt-0.5 font-medium">InformaÃ§Ãµes de identificaÃ§Ã£o da sua conta.</p>
+                    <h2 className="text-lg font-black text-slate-900">Meus Dados Cadastrais</h2>
+                    <p className="text-xs text-slate-500 mt-0.5 font-medium">Informações de identificação da sua conta.</p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-white/[0.01] border border-white/5 p-6 rounded-2xl text-left">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 border border-slate-200/80 p-6 rounded-2xl text-left">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Nome Completo</span>
-                      <p className="text-sm font-bold text-white flex items-center gap-2">
+                      <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider block">Nome Completo</span>
+                      <p className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                         <User size={14} style={{ color: primaryColor }} />
                         {customer.name}
                       </p>
                     </div>
                     
                     <div className="space-y-1">
-                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">WhatsApp</span>
-                      <p className="text-sm font-bold text-white flex items-center gap-2">
+                      <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider block">WhatsApp</span>
+                      <p className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                         <Smartphone size={14} style={{ color: primaryColor }} />
                         {customer.phone}
                       </p>
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">E-mail</span>
-                      <p className="text-sm font-bold text-white flex items-center gap-2">
+                      <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider block">E-mail</span>
+                      <p className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                         <Mail size={14} style={{ color: primaryColor }} />
-                        {customer.email || <span className="text-gray-500 font-normal italic">NÃ£o informado</span>}
+                        {customer.email || <span className="text-slate-400 font-normal italic">Não informado</span>}
                       </p>
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">CPF</span>
-                      <p className="text-sm font-bold text-white flex items-center gap-2">
+                      <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider block">CPF</span>
+                      <p className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                         <FileText size={14} style={{ color: primaryColor }} />
-                        {customer.document || <span className="text-gray-500 font-normal italic">NÃ£o informado</span>}
+                        {customer.document || <span className="text-slate-400 font-normal italic">Não informado</span>}
                       </p>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-white/[0.01] border border-white/5 text-xs text-gray-400 flex items-start gap-2.5">
-                    <AlertCircle size={16} className="text-gray-500 shrink-0 mt-0.5" />
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-500 flex items-start gap-2.5">
+                    <AlertCircle size={16} className="text-slate-400 shrink-0 mt-0.5" />
                     <p className="leading-normal">
-                      Seus dados de cadastro sÃ£o confidenciais e armazenados de forma segura, sendo compartilhados apenas com o estabelecimento para a emissÃ£o e entrega dos seus pedidos.
+                      Seus dados de cadastro são confidenciais e armazenados de forma segura, sendo compartilhados apenas com o estabelecimento para a emissão e entrega dos seus pedidos.
                     </p>
                   </div>
                 </div>

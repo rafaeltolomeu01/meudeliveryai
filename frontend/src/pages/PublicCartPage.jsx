@@ -95,19 +95,18 @@ export default function PublicCartPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg, #0F0F0F)' }}>
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="text-center flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--theme-primary, #FF6B35)', borderTopColor: 'transparent' }} />
-          <p className="text-gray-400 text-sm font-medium">Carregando seu carrinho...</p>
+          <div className="w-12 h-12 border-2 border-slate-200 border-t-[#FF5A1F] rounded-full animate-spin" />
+          <p className="text-slate-500 text-sm font-semibold">Carregando seu carrinho...</p>
         </div>
       </div>
     )
   }
 
-  const primaryColor = restaurant?.primary_color || '#FF6B35'
-  const bgColor = restaurant?.background_color || '#0F0F0F'
-  const buttonColor = restaurant?.button_color || primaryColor
-  const buttonRadiusClass = restaurant?.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-xl'
+  const primaryColor = restaurant?.primary_color || '#FF5A1F'
+  const buttonColor = primaryColor
+  const buttonRadiusClass = restaurant?.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-2xl'
   const borderRadiusClass = restaurant?.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-3xl'
 
   const subtotal = cart.reduce((sum, item) => sum + item.total_price, 0)
@@ -118,33 +117,33 @@ export default function PublicCartPage() {
   const isBelowMinOrder = subtotal < minOrderVal
 
   return (
-    <div className="min-h-screen flex flex-col justify-between font-inter pb-12" style={{ backgroundColor: bgColor, color: restaurant?.text_color || '#FFFFFF' }}>
+    <div className="min-h-screen flex flex-col justify-between font-inter pb-12 bg-[#F8FAFC] text-[#111827] text-left">
       <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-6">
         
         {/* Navigation */}
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => navigate(`/cardapio/${slug}`)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft size={16} />
             <span>Cardápio</span>
           </button>
-          <span className="text-white font-extrabold text-base">Seu Carrinho</span>
+          <span className="text-slate-900 font-extrabold text-base tracking-tight">Seu Carrinho</span>
           <div className="w-6" /> {/* spacer */}
         </div>
 
         {/* Empty state */}
         {cart.length === 0 ? (
-          <div className="text-center py-16 flex flex-col items-center justify-center">
-            <div className="w-20 h-20 rounded-full bg-white/[0.02] border border-white/5 flex items-center justify-center text-gray-600 mb-6">
+          <div className="text-center py-16 flex flex-col items-center justify-center bg-white rounded-3xl border border-slate-200/80 shadow-sm p-8">
+            <div className="w-20 h-20 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 mb-6">
               <ShoppingBag size={36} />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Seu carrinho está vazio</h2>
-            <p className="text-gray-400 text-sm max-w-xs mb-8">Navegue pelo nosso cardápio e adicione seus itens favoritos!</p>
+            <h2 className="text-lg font-black text-slate-900 mb-2">Seu carrinho está vazio</h2>
+            <p className="text-slate-500 text-sm max-w-xs mb-8">Navegue pelo nosso cardápio e adicione seus itens favoritos!</p>
             <Button
               onClick={() => navigate(`/cardapio/${slug}`)}
-              className={`px-8 py-3 ${buttonRadiusClass} font-extrabold text-xs uppercase tracking-wider text-white shadow-lg`}
+              className={`px-8 py-3.5 ${buttonRadiusClass} font-extrabold text-xs uppercase tracking-wider text-white shadow-md hover:opacity-95 transition-all`}
               style={{ backgroundColor: buttonColor }}
             >
               Ver Cardápio
@@ -154,14 +153,14 @@ export default function PublicCartPage() {
           <div className="space-y-6">
             
             {/* Delivery/Pickup Selector */}
-            <div className={`grid grid-cols-2 p-1.5 bg-white/[0.02] border border-white/5 ${buttonRadiusClass}`}>
+            <div className={`grid grid-cols-2 p-1 bg-slate-100 border border-slate-200/60 ${buttonRadiusClass}`}>
               <button
                 onClick={() => handleOrderTypeChange('delivery')}
                 disabled={!restaurant.delivery_enabled}
                 className={`flex items-center justify-center gap-2 py-3 ${buttonRadiusClass} text-xs font-bold transition-all ${
                   orderType === 'delivery'
-                    ? 'text-white'
-                    : 'text-gray-400 hover:text-white disabled:opacity-30'
+                    ? 'text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 disabled:opacity-30'
                 }`}
                 style={orderType === 'delivery' ? { backgroundColor: buttonColor } : {}}
               >
@@ -173,8 +172,8 @@ export default function PublicCartPage() {
                 disabled={!restaurant.pickup_enabled}
                 className={`flex items-center justify-center gap-2 py-3 ${buttonRadiusClass} text-xs font-bold transition-all ${
                   orderType === 'pickup'
-                    ? 'text-white'
-                    : 'text-gray-400 hover:text-white disabled:opacity-30'
+                    ? 'text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 disabled:opacity-30'
                 }`}
                 style={orderType === 'pickup' ? { backgroundColor: buttonColor } : {}}
               >
@@ -184,27 +183,27 @@ export default function PublicCartPage() {
             </div>
 
             {/* Cart Items List */}
-            <div className={`divide-y divide-white/5 bg-white/[0.02] border border-white/5 p-5 space-y-4 ${borderRadiusClass}`}>
+            <div className={`divide-y divide-slate-100 bg-white border border-slate-200/80 p-6 shadow-sm ${borderRadiusClass}`}>
               {cart.map((item) => (
                 <div key={item.id} className="flex items-start justify-between gap-4 py-4 first:pt-0 last:pb-0">
                   <div className="flex-1 text-left">
-                    <h3 className="text-sm font-bold text-white leading-tight">{item.name}</h3>
+                    <h3 className="text-sm font-extrabold text-slate-900 leading-tight">{item.name}</h3>
                     
                     {/* Options Details */}
                     {item.optionsDetails?.length > 0 && (
-                      <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
+                      <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
                         {item.optionsDetails.map(o => o.name).join(', ')}
                       </p>
                     )}
 
                     {/* Notes */}
                     {item.notes && (
-                      <p className="text-[10px] italic text-gray-500 mt-1.5 bg-white/[0.02] border border-white/5 px-2.5 py-1.5 rounded-lg">
+                      <p className="text-[10px] italic text-slate-500 mt-1.5 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-lg">
                         Obs: "{item.notes}"
                       </p>
                     )}
 
-                    <span className="text-xs font-bold text-gray-400 mt-2.5 inline-block">
+                    <span className="text-xs font-bold text-slate-400 mt-2.5 inline-block">
                       R$ {item.unit_price.toFixed(2)}
                     </span>
                   </div>
@@ -213,22 +212,22 @@ export default function PublicCartPage() {
                   <div className="flex flex-col items-end justify-between gap-3 shrink-0 self-stretch">
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="p-1 rounded-lg text-gray-500 hover:text-red-500 hover:bg-white/5 transition-all"
+                      className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-all"
                     >
                       <Trash2 size={15} />
                     </button>
 
-                    <div className="flex items-center border border-white/10 rounded-lg overflow-hidden bg-white/5">
+                    <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
                       <button
                         onClick={() => updateQuantity(item.id, -1)}
-                        className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                        className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors"
                       >
                         <Minus size={11} />
                       </button>
-                      <span className="px-2.5 font-bold text-xs text-white min-w-6 text-center">{item.quantity}</span>
+                      <span className="px-2.5 font-bold text-xs text-slate-900 min-w-6 text-center">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.id, 1)}
-                        className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                        className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors"
                       >
                         <Plus size={11} />
                       </button>
@@ -240,11 +239,11 @@ export default function PublicCartPage() {
 
             {/* Closed / Blocking Order Warning */}
             {(!restaurant?.is_open || restaurant?.is_open === 0) && (!restaurant?.accept_orders_when_closed || restaurant?.accept_orders_when_closed === 0) && (
-              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-left flex items-start gap-3">
-                <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-left flex items-start gap-3">
+                <AlertTriangle size={18} className="text-rose-600 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-white">Estabelecimento Fechado</h4>
-                  <p className="text-[10px] text-gray-400 mt-0.5">
+                  <h4 className="text-xs font-extrabold text-rose-950">Estamos fechados no momento</h4>
+                  <p className="text-[10px] text-rose-700 mt-0.5">
                     O estabelecimento está fechado no momento e não está aceitando novos pedidos. A finalização está suspensa.
                   </p>
                 </div>
@@ -253,11 +252,11 @@ export default function PublicCartPage() {
 
             {/* Minimum Order Value Warning */}
             {isBelowMinOrder && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-left flex items-start gap-3">
-                <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-left flex items-start gap-3">
+                <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-white">Pedido mínimo não atingido</h4>
-                  <p className="text-[10px] text-gray-400 mt-0.5">
+                  <h4 className="text-xs font-extrabold text-amber-950">Pedido mínimo não atingido</h4>
+                  <p className="text-[10px] text-amber-700 mt-0.5">
                     O restaurante exige um valor mínimo de **R$ {minOrderVal.toFixed(2)}** em itens para aceitar pedidos. Adicione mais R$ {(minOrderVal - subtotal).toFixed(2)} ao carrinho.
                   </p>
                 </div>
@@ -265,19 +264,19 @@ export default function PublicCartPage() {
             )}
 
             {/* Pricing Summary */}
-            <div className={`bg-white/[0.02] border border-white/5 p-5 space-y-3.5 text-sm ${borderRadiusClass}`}>
-              <div className="flex justify-between items-center text-gray-400">
+            <div className={`bg-white border border-slate-200/80 p-6 space-y-4 text-sm shadow-sm ${borderRadiusClass}`}>
+              <div className="flex justify-between items-center text-slate-500 font-medium">
                 <span>Subtotal</span>
-                <span className="font-semibold text-white">R$ {subtotal.toFixed(2)}</span>
+                <span className="font-bold text-slate-950">R$ {subtotal.toFixed(2)}</span>
               </div>
               {orderType === 'delivery' && (
-                <div className="flex justify-between items-center text-gray-400">
+                <div className="flex justify-between items-center text-slate-500 font-medium">
                   <span>Taxa de entrega</span>
-                  <span className="font-semibold text-white">R$ {deliveryFee.toFixed(2)}</span>
+                  <span className="font-bold text-slate-950">R$ {deliveryFee.toFixed(2)}</span>
                 </div>
               )}
-              <div className="border-t border-white/5 pt-3.5 flex justify-between items-center text-white">
-                <span className="font-bold text-base">Total</span>
+              <div className="border-t border-slate-100 pt-4 flex justify-between items-center text-slate-900">
+                <span className="font-black text-slate-900 text-base">Total</span>
                 <span className="font-black text-xl" style={{ color: primaryColor }}>
                   R$ {total.toFixed(2)}
                 </span>
@@ -289,7 +288,7 @@ export default function PublicCartPage() {
               <Button
                 onClick={() => navigate(`/cardapio/${slug}/checkout`)}
                 disabled={isBelowMinOrder || ((!restaurant?.is_open || restaurant?.is_open === 0) && (!restaurant?.accept_orders_when_closed || restaurant?.accept_orders_when_closed === 0))}
-                className={`w-full py-4 ${buttonRadiusClass} font-extrabold text-xs uppercase tracking-wider text-white shadow-lg flex items-center justify-center gap-2`}
+                className={`w-full py-4 ${buttonRadiusClass} font-extrabold text-xs uppercase tracking-wider text-white shadow-md flex items-center justify-center gap-2`}
                 style={{ backgroundColor: buttonColor }}
               >
                 Avançar para Checkout
@@ -298,7 +297,7 @@ export default function PublicCartPage() {
               
               <button
                 onClick={() => navigate(`/cardapio/${slug}`)}
-                className={`w-full py-3.5 ${buttonRadiusClass} font-bold text-xs uppercase tracking-wider text-gray-400 hover:text-white border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-all`}
+                className={`w-full py-3.5 ${buttonRadiusClass} font-bold text-xs uppercase tracking-wider text-slate-600 hover:text-slate-950 border border-slate-200 bg-white hover:bg-slate-50 transition-all`}
               >
                 Adicionar mais itens
               </button>
