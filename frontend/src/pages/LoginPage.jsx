@@ -56,7 +56,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex mda-auth-container" style={{ background: '#F8FAFC' }}>
       {/* LEFT — Branding (Dark Elegant SaaS) */}
-      <div className="hidden lg:flex flex-1 flex-col justify-between p-12 relative overflow-hidden"
+      <div className="hidden lg:flex flex-1 flex-col justify-between p-12 relative overflow-hidden mda-auth-dark-side"
         style={{ background: '#111827' }}>
         
         {/* Subtle grid pattern background */}

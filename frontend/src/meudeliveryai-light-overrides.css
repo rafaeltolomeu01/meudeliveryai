@@ -158,3 +158,109 @@ button.bg-primary:hover {
   color: #111827 !important;
 }
 
+/* ==========================================
+   AUTHENTICATION DARK PANEL OVERRIDES (.mda-auth-dark-side)
+   ========================================== */
+.mda-auth-dark-side,
+.mda-auth-dark-side * {
+  color: #FFFFFF !important;
+}
+
+.mda-auth-dark-side .text-white,
+.mda-auth-dark-side p.text-white,
+.mda-auth-dark-side span.text-white,
+.mda-auth-dark-side h1,
+.mda-auth-dark-side h2,
+.mda-auth-dark-side h3 {
+  color: #FFFFFF !important;
+}
+
+.mda-auth-dark-side .text-\[\#FF5A1F\],
+.mda-auth-dark-side .text-orange-500,
+.mda-auth-dark-side [class*="text-[#FF5A1F]"] {
+  color: #FF5A1F !important;
+}
+
+.mda-auth-dark-side .text-slate-400,
+.mda-auth-dark-side [class*="text-slate-400"] {
+  color: #94A3B8 !important;
+}
+
+.mda-auth-dark-side .text-slate-300,
+.mda-auth-dark-side [class*="text-slate-300"] {
+  color: #CBD5E1 !important;
+}
+
+.mda-auth-dark-side .text-slate-500,
+.mda-auth-dark-side [class*="text-slate-500"] {
+  color: #64748B !important;
+}
+
+.mda-auth-dark-side .text-amber-300 {
+  color: #FCD34D !important;
+}
+
+.mda-auth-dark-side .text-emerald-400 {
+  color: #34D399 !important;
+}
+
+.mda-auth-dark-side [class*="bg-white/5"] {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.mda-auth-dark-side [class*="bg-white/[0.02]"] {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.mda-auth-dark-side [class*="bg-white/[0.03]"] {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  background-image: none !important;
+}
+
+.mda-auth-dark-side [class*="bg-white/10"] {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  background-image: none !important;
+}
+
+.mda-auth-dark-side [class*="bg-slate-950/40"] {
+  background-color: rgba(2, 6, 23, 0.4) !important;
+}
+
+.mda-auth-dark-side [class*="border-white/10"] {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mda-auth-dark-side [class*="bg-slate-900/60"] {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+}
+
+.mda-auth-dark-side [class*="bg-slate-950/60"] {
+  background-color: rgba(2, 6, 23, 0.6) !important;
+}
+
+.mda-auth-dark-side [class*="bg-[#FF5A1F]/10"] {
+  background-color: rgba(255, 90, 31, 0.1) !important;
+}
+
+.mda-auth-dark-side [class*="bg-[#FF5A1F]/15"] {
+  background-color: rgba(255, 90, 31, 0.15) !important;
+}
+
+.mda-auth-dark-side [class*="border-[#FF5A1F]/30"] {
+  border-color: rgba(255, 90, 31, 0.3) !important;
+}
+
+.mda-auth-dark-side [class*="bg-amber-500/20"] {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+.mda-auth-dark-side [class*="bg-emerald-500/20"] {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+}
+
+
