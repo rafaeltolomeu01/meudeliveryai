@@ -1,13 +1,13 @@
 /* Correção final: telas públicas claras, textos legíveis e roxo removido das páginas do cliente */
-html, body, #root { background: #f7f7f7 !important; color: #1f2937 !important; }
+html:not(.mda-ifood-admin), body:not(.mda-ifood-admin) { background: #f7f7f7 !important; color: #1f2937 !important; }
 
 /* A área administrativa continua clara com sidebar escura */
 main, .main-content, [data-main] { color: #111827; }
 
 /* Páginas públicas: cardápio, carrinho, checkout e acompanhamento */
-body:has([href*="/cardapio"]),
-body:has(input[placeholder*="Digite sua mensagem"]),
-body:has(button),
+body:not(.mda-ifood-admin):has([href*="/cardapio"]),
+body:not(.mda-ifood-admin):has(input[placeholder*="Digite sua mensagem"]),
+body:not(.mda-ifood-admin):has(button),
 .public-page,
 .public-menu,
 .public-checkout,
@@ -16,34 +16,34 @@ body:has(button),
 }
 
 /* Força blocos roxos das telas públicas para branco/cinza */
-[class*="bg-[#1A0533]"],
-[class*="bg-black/30"],
-[class*="bg-black/20"],
-[class*="bg-white/[0.02]"],
-[class*="bg-white/[0.04]"],
-[class*="bg-white/5"] {
+body:not(.mda-ifood-admin) [class*="bg-[#1A0533]"],
+body:not(.mda-ifood-admin) [class*="bg-black/30"],
+body:not(.mda-ifood-admin) [class*="bg-black/20"],
+body:not(.mda-ifood-admin) [class*="bg-white/[0.02]"],
+body:not(.mda-ifood-admin) [class*="bg-white/[0.04]"],
+body:not(.mda-ifood-admin) [class*="bg-white/5"] {
   background-color: #ffffff !important;
 }
 
 /* Deixa legível textos que ficaram brancos no fundo claro */
-.text-white,
-[class*="text-white"] {
+body:not(.mda-ifood-admin) .text-white,
+body:not(.mda-ifood-admin) [class*="text-white"] {
   color: #111827 !important;
 }
-.text-gray-300,
-.text-gray-400,
-.text-gray-500,
-[class*="text-gray-300"],
-[class*="text-gray-400"],
-[class*="text-gray-500"] {
+body:not(.mda-ifood-admin) .text-gray-300,
+body:not(.mda-ifood-admin) .text-gray-400,
+body:not(.mda-ifood-admin) .text-gray-500,
+body:not(.mda-ifood-admin) [class*="text-gray-300"],
+body:not(.mda-ifood-admin) [class*="text-gray-400"],
+body:not(.mda-ifood-admin) [class*="text-gray-500"] {
   color: #64748b !important;
 }
 
 /* Botões principais estilo iFood */
-button[style*="background"],
-a[style*="background"],
-.bg-green-600,
-.bg-red-600 {
+body:not(.mda-ifood-admin) button[style*="background"],
+body:not(.mda-ifood-admin) a[style*="background"],
+body:not(.mda-ifood-admin) .bg-green-600,
+body:not(.mda-ifood-admin) .bg-red-600 {
   color: #ffffff !important;
 }
 
@@ -66,12 +66,23 @@ a[style*="background"],
   border: 1px solid #fed7aa !important;
 }
 
-input, textarea, select {
+body:not(.mda-ifood-admin) input,
+body:not(.mda-ifood-admin) textarea,
+body:not(.mda-ifood-admin) select {
   background: #ffffff !important;
   color: #111827 !important;
   border-color: #e5e7eb !important;
 }
-input::placeholder, textarea::placeholder { color: #94a3b8 !important; }
+body:not(.mda-ifood-admin) input::placeholder,
+body:not(.mda-ifood-admin) textarea::placeholder {
+  color: #94a3b8 !important;
+}
 
-.border-white\/5, .border-white\/10, [class*="border-white"] { border-color: #e5e7eb !important; }
-.divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: #e5e7eb !important; }
+body:not(.mda-ifood-admin) .border-white\/5,
+body:not(.mda-ifood-admin) .border-white\/10,
+body:not(.mda-ifood-admin) [class*="border-white"] {
+  border-color: #e5e7eb !important;
+}
+body:not(.mda-ifood-admin) .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e5e7eb !important;
+}

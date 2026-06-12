@@ -125,13 +125,13 @@ export default function Header() {
   }, [user])
 
   return (
-    <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-white/[0.06]"
-      style={{ background: 'rgba(26, 5, 51, 0.8)', backdropFilter: 'blur(16px)' }}
+    <header className="sticky top-0 z-30 px-4 lg:px-6 py-3 flex items-center justify-between border-b border-slate-200"
+      style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(12px)' }}
     >
       {/* Page Title */}
       <div>
-        <h1 className="text-white font-bold text-lg lg:text-xl">{pageName}</h1>
-        <p className="text-[#a991c7] text-xs hidden sm:block">
+        <h1 className="text-slate-900 font-extrabold text-lg lg:text-xl tracking-tight">{pageName}</h1>
+        <p className="text-slate-500 font-medium text-xs hidden sm:block">
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
       </div>
@@ -141,10 +141,10 @@ export default function Header() {
         {/* Restaurant Status Toggle */}
         <button
           onClick={toggleRestaurant}
-          className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+          className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
             isOpen
-              ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20'
-              : 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20'
+              ? 'bg-green-550/10 border-green-500/20 text-green-700 hover:bg-green-500/20'
+              : 'bg-red-500/10 border-red-500/20 text-red-600 hover:bg-red-500/20'
           }`}
         >
           {isOpen ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
@@ -155,7 +155,7 @@ export default function Header() {
         {isInstallable && (
           <button
             onClick={installApp}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#FF6B35]/20 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/20 text-xs font-bold transition-all shadow-[0_0_8px_rgba(255,107,53,0.15)] animate-pulse"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#FF5A1F]/20 bg-[#FF5A1F]/10 text-[#FF5A1F] hover:bg-[#FF5A1F]/20 text-xs font-bold transition-all shadow-sm animate-pulse"
             title="Instalar Aplicativo"
           >
             <Download size={14} />
@@ -167,34 +167,34 @@ export default function Header() {
         <div className="relative">
           <button
             onClick={() => { setNotifOpen(!notifOpen); setDropdownOpen(false) }}
-            className="relative w-9 h-9 rounded-xl glass flex items-center justify-center text-[#a991c7] hover:text-white transition-colors"
+            className="relative w-9 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors shadow-sm"
           >
             <Bell size={18} />
             {notifications.some(n => n.unread) && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF6B35] rounded-full animate-pulse" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF5A1F] rounded-full animate-pulse" />
             )}
           </button>
           {notifOpen && (
-            <div className="absolute right-0 top-12 w-72 glass rounded-2xl border border-white/[0.08] shadow-2xl animate-slide-down z-50">
-              <div className="px-4 py-3 border-b border-white/[0.06]">
-                <p className="text-white font-semibold text-sm">Notificações</p>
+            <div className="absolute right-0 top-12 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl animate-slide-down z-50 p-1">
+              <div className="px-4 py-3 border-b border-slate-100">
+                <p className="text-slate-800 font-extrabold text-sm">Notificações</p>
               </div>
               <div className="max-h-64 overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-[#a991c7] text-xs italic">
+                  <div className="px-4 py-8 text-center text-slate-400 text-xs italic">
                     Nenhum pedido encontrado
                   </div>
                 ) : (
                   notifications.map((n) => (
-                    <div key={n.id} className={`px-4 py-3 border-b border-white/[0.04] hover:bg-white/5 transition-colors cursor-pointer ${n.unread ? 'bg-white/[0.02]' : ''}`}>
-                      <p className={`text-xs text-left ${n.unread ? 'text-white' : 'text-[#a991c7]'}`}>{n.text}</p>
-                      <p className="text-[#6b5880] text-[10px] mt-1 text-left">{n.time} atrás</p>
+                    <div key={n.id} className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer rounded-xl ${n.unread ? 'bg-slate-50/50' : ''}`}>
+                      <p className={`text-xs text-left ${n.unread ? 'text-slate-900 font-bold' : 'text-slate-600'}`}>{n.text}</p>
+                      <p className="text-slate-400 text-[10px] mt-1 text-left">{n.time} atrás</p>
                     </div>
                   ))
                 )}
               </div>
-              <div className="px-4 py-3 text-center border-t border-white/[0.06]">
-                <button onClick={() => { navigate('/dashboard/pedidos'); setNotifOpen(false) }} className="text-[#FF6B35] text-xs hover:underline">Ver todos os pedidos</button>
+              <div className="px-4 py-3 text-center border-t border-slate-100">
+                <button onClick={() => { navigate('/dashboard/pedidos'); setNotifOpen(false) }} className="text-[#FF5A1F] text-xs font-bold hover:underline">Ver todos os pedidos</button>
               </div>
             </div>
           )}
@@ -204,37 +204,37 @@ export default function Header() {
         <div className="relative">
           <button
             onClick={() => { setDropdownOpen(!dropdownOpen); setNotifOpen(false) }}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-100/80 transition-colors"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B35] to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+            <div className="w-8 h-8 rounded-lg bg-[#FF5A1F] flex items-center justify-center text-white text-sm font-black">
               {user?.name?.[0] || 'A'}
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-white text-xs font-medium leading-none">{user?.name?.split(' ')[0]}</p>
-              <p className="text-[#a991c7] text-[10px] mt-0.5">Admin</p>
+              <p className="text-slate-900 text-xs font-extrabold leading-none">{user?.name?.split(' ')[0]}</p>
+              <p className="text-slate-500 text-[10px] font-bold mt-0.5">Admin</p>
             </div>
-            <ChevronDown size={14} className={`text-[#a991c7] transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown size={14} className={`text-slate-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-12 w-52 glass rounded-2xl border border-white/[0.08] shadow-2xl animate-slide-down z-50">
-              <div className="px-4 py-3 border-b border-white/[0.06]">
-                <p className="text-white font-medium text-sm">{user?.name}</p>
-                <p className="text-[#a991c7] text-xs">{user?.email}</p>
+            <div className="absolute right-0 top-12 w-52 bg-white rounded-2xl border border-slate-200 shadow-xl animate-slide-down z-50 p-1">
+              <div className="px-4 py-3 border-b border-slate-100 text-left">
+                <p className="text-slate-800 font-extrabold text-sm">{user?.name}</p>
+                <p className="text-slate-500 text-xs mt-0.5 truncate">{user?.email}</p>
               </div>
               <div className="py-1">
                 <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#a991c7] hover:text-white hover:bg-white/5 transition-colors">
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors rounded-xl font-medium">
                   <User size={15} /> Meu Perfil
                 </button>
                 <button onClick={() => { navigate('/dashboard/configuracoes'); setDropdownOpen(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#a991c7] hover:text-white hover:bg-white/5 transition-colors">
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors rounded-xl font-medium">
                   <Settings size={15} /> Configurações
                 </button>
               </div>
-              <div className="py-1 border-t border-white/[0.06]">
+              <div className="py-1 border-t border-slate-100">
                 <button onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/5 transition-colors">
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-650 hover:bg-red-50 transition-colors rounded-xl font-medium">
                   <LogOut size={15} /> Sair
                 </button>
               </div>
