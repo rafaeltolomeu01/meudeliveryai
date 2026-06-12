@@ -58,29 +58,29 @@ export default function Sidebar() {
 
   return (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-64 z-40"
-      style={{ background: 'linear-gradient(180deg, #0f0220 0%, #1a0533 50%, #120218 100%)', borderRight: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: '#111827', borderRight: '1px solid #1F2937' }}
     >
       {/* Logo */}
-      <div className="px-5 py-6 border-b border-white/[0.06]">
+      <div className="px-5 py-6 border-b border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B35] to-[#e84e15] flex items-center justify-center shadow-[0_0_20px_rgba(255,107,53,0.4)]">
+          <div style={{ background: 'linear-gradient(135deg, #FF5A1F, #e84e15)', boxShadow: '0 0 20px rgba(255,90,31,0.4)' }} className="w-9 h-9 rounded-xl flex items-center justify-center">
             <Zap size={18} className="text-white" />
           </div>
           <div>
             <span className="text-white font-bold text-base tracking-tight">MeuDelivery</span>
-            <span className="gradient-text font-bold text-base">AI</span>
+            <span className="text-[#FF5A1F] font-bold text-base">AI</span>
           </div>
         </div>
       </div>
 
       {/* Restaurant Status */}
-      <div className="px-5 py-3 border-b border-white/[0.06]">
-        <div className="glass-light rounded-xl px-3 py-2.5 flex items-center justify-between">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <div className="bg-gray-800/40 rounded-xl px-3 py-2.5 flex items-center justify-between border border-gray-800/60">
           <div className="flex items-center gap-2">
             <span className="text-lg">🍔</span>
-            <div>
-              <p className="text-white text-xs font-semibold leading-none">{user?.restaurant?.name || 'Restaurante'}</p>
-              <p className="text-[#a991c7] text-[10px] mt-0.5">{user?.restaurant?.type}</p>
+            <div className="min-w-0">
+              <p className="text-white text-xs font-semibold leading-none truncate max-w-[100px]">{user?.restaurant?.name || 'Restaurante'}</p>
+              <p className="text-gray-400 text-[10px] mt-0.5 capitalize">{user?.restaurant?.type || 'Delivery'}</p>
             </div>
           </div>
           <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium ${user?.restaurant?.isOpen ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
@@ -92,7 +92,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1">
-        <p className="text-[#6b5880] text-[10px] font-semibold uppercase tracking-wider px-2 mb-3">Menu Principal</p>
+        <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider px-2 mb-3">Menu Principal</p>
         {navItems.map(({ to, icon: Icon, label }) => {
           const isOrders = to === '/dashboard/pedidos'
           const badge = isOrders && pendingCount > 0 ? pendingCount : null
@@ -104,21 +104,21 @@ export default function Sidebar() {
               className={({ isActive }) => [
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative',
                 isActive
-                  ? 'bg-[#FF6B35]/15 text-[#FF6B35] border border-[#FF6B35]/20'
-                  : 'text-[#a991c7] hover:text-white hover:bg-white/5',
+                  ? 'bg-[#FF5A1F]/10 text-[#FF5A1F] border border-[#FF5A1F]/15'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5',
               ].join(' ')}
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={18} className={`flex-shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-[#FF6B35]' : ''}`} />
+                  <Icon size={18} className={`flex-shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-[#FF5A1F]' : ''}`} />
                   <span className="flex-1">{label}</span>
                   {badge !== null && (
-                    <span className="bg-[#FF6B35] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    <span className="bg-[#FF5A1F] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                       {badge}
                     </span>
                   )}
                   {isActive && (
-                    <ChevronRight size={14} className="text-[#FF6B35] opacity-60" />
+                    <ChevronRight size={14} className="text-[#FF5A1F] opacity-60" />
                   )}
                 </>
               )}
@@ -128,26 +128,26 @@ export default function Sidebar() {
       </nav>
 
       {/* User & Logout */}
-      <div className="px-3 py-4 border-t border-white/[0.06] space-y-2">
+      <div className="px-3 py-4 border-t border-gray-800 space-y-2">
         {/* Plan Badge */}
-        <div className="px-3 py-2 glass-light rounded-xl flex items-center justify-between">
+        <div className="px-3 py-2 bg-gray-800/40 rounded-xl flex items-center justify-between border border-gray-800/30">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF6B35] to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF5A1F] to-[#6D28D9] flex items-center justify-center text-white text-xs font-bold">
               {user?.name?.[0] || 'A'}
             </div>
             <div>
               <p className="text-white text-xs font-medium leading-none">{user?.name?.split(' ')[0]}</p>
-              <p className="text-[#a991c7] text-[10px] mt-0.5 capitalize">{user?.restaurant?.plan || 'starter'}</p>
+              <p className="text-gray-400 text-[10px] mt-0.5 capitalize">{user?.restaurant?.plan || 'starter'}</p>
             </div>
           </div>
-          <span className="text-[10px] bg-[#FF6B35]/20 text-[#FF6B35] px-2 py-0.5 rounded-full font-medium capitalize">
+          <span className="text-[10px] bg-[#FF5A1F]/20 text-[#FF5A1F] px-2 py-0.5 rounded-full font-medium capitalize">
             {user?.restaurant?.plan?.toUpperCase() || 'PRO'}
           </span>
         </div>
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#a991c7] hover:text-red-400 hover:bg-red-500/5 transition-all duration-200 group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/5 transition-all duration-200 group"
         >
           <LogOut size={16} className="group-hover:rotate-12 transition-transform" />
           <span>Sair da conta</span>

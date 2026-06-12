@@ -10,10 +10,10 @@ import { customers as customersApi } from '../services/api'
 import toast from 'react-hot-toast'
 
 const avatarColors = [
-  'from-[#FF6B35] to-[#e84e15]',
-  'from-purple-500 to-purple-700',
+  'from-[#FF5A1F] to-[#e84e15]',
+  'from-violet-500 to-violet-700',
   'from-blue-500 to-blue-700',
-  'from-green-500 to-green-700',
+  'from-emerald-500 to-emerald-700',
   'from-pink-500 to-pink-700',
 ]
 
@@ -191,7 +191,7 @@ export default function CustomersPage() {
   // Estatísticas calculadas dinamicamente
   const totalCustomers = customers.length
   const totalSpentAll = customers.reduce((sum, c) => sum + parseFloat(c.total_spent || 0), 0)
-  const totalOrdersAll = customers.reduce((sum, c) => sum + parseInt(c.total_orders || 0), 0)
+  const totalOrdersAll = customers.reduce((sum, c) => sum + parseInt(c.total_orders || 0, 10), 0)
   const avgOrders = totalCustomers > 0 ? (totalOrdersAll / totalCustomers).toFixed(1) : '0'
   const topCustomer = [...customers].sort((a, b) => parseFloat(b.total_spent || 0) - parseFloat(a.total_spent || 0))[0]
 
@@ -201,10 +201,10 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Clientes</h2>
-          <p className="text-[#a991c7] text-sm">{totalCustomers} clientes ativos no painel</p>
+          <h2 className="text-2xl font-extrabold text-[#111827] tracking-tight">Clientes</h2>
+          <p className="text-[#64748B] text-sm">{totalCustomers} clientes ativos no painel</p>
         </div>
-        <Button variant="primary" size="md" leftIcon={Plus} onClick={handleOpenCreate}>
+        <Button variant="primary" size="md" leftIcon={Plus} onClick={handleOpenCreate} className="shadow-[0_4px_12px_rgba(255,90,31,0.2)]">
           Novo Cliente
         </Button>
       </div>
@@ -212,29 +212,39 @@ export default function CustomersPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Clientes Cadastrados', value: totalCustomers, icon: '👥', color: '#a855f7' },
-          { label: 'Faturamento Clientes', value: formatCurrency(totalSpentAll), icon: '💰', color: '#22c55e' },
-          { label: 'Média de Pedidos', value: `${avgOrders} / cli`, icon: '📦', color: '#FF6B35' },
-          { label: 'Top Cliente', value: topCustomer ? topCustomer.name.split(' ')[0] : 'Nenhum', icon: '⭐', color: '#f59e0b' },
-        ].map((stat) => (
-          <div key={stat.label} className="glass rounded-3xl p-5 border border-white/[0.06] bg-[#220d3a]/40 shadow-md">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">{stat.icon}</span>
+          { label: 'Clientes Cadastrados', value: totalCustomers, icon: '👥', tone: 'purple' },
+          { label: 'Faturamento Clientes', value: formatCurrency(totalSpentAll), icon: '💰', tone: 'green' },
+          { label: 'Média de Pedidos', value: `${avgOrders} / cli`, icon: '📦', tone: 'orange' },
+          { label: 'Top Cliente', value: topCustomer ? topCustomer.name.split(' ')[0] : 'Nenhum', icon: '⭐', tone: 'amber' },
+        ].map((stat) => {
+          const tones = {
+            orange: 'bg-orange-50 text-[#FF5A1F]',
+            green: 'bg-emerald-50 text-emerald-600',
+            amber: 'bg-amber-50 text-amber-600',
+            purple: 'bg-violet-50 text-violet-600'
+          }
+          return (
+            <div key={stat.label} className="bg-white rounded-3xl p-5 border border-[#E5E7EB] shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4">
+              <div>
+                <span className="text-[#64748B] text-xs font-bold uppercase tracking-wider">{stat.label}</span>
+                <p className="text-2xl font-black text-[#111827] mt-2 tracking-tight">{stat.value}</p>
+              </div>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${tones[stat.tone]}`}>
+                {stat.icon}
+              </div>
             </div>
-            <p className="text-white font-black text-lg sm:text-xl tracking-tight">{stat.value}</p>
-            <p className="text-[#6b5880] text-xs font-semibold mt-0.5">{stat.label}</p>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Search Input */}
       <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6b5880]" />
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B]" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por nome ou telefone do cliente..."
-          className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-[#6b5880] focus:outline-none focus:border-[#FF6B35]/50 focus:bg-white/10"
+          className="w-full bg-white border border-[#E5E7EB] rounded-2xl pl-12 pr-4 py-3 text-sm text-[#111827] placeholder-[#64748B] focus:outline-none focus:border-[#FF5A1F]/50 focus:ring-1 focus:ring-[#FF5A1F]/30"
         />
       </div>
 
@@ -242,70 +252,70 @@ export default function CustomersPage() {
       {loading && customers.length === 0 ? (
         <div className="min-h-[200px] flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <Loader2 className="animate-spin text-[#FF6B35]" size={32} />
-            <p className="text-[#a991c7] text-sm">Carregando lista de clientes...</p>
+            <Loader2 className="animate-spin text-[#FF5A1F]" size={32} />
+            <p className="text-[#64748B] text-sm font-medium">Carregando lista de clientes...</p>
           </div>
         </div>
       ) : (
-        <Card noPad>
+        <Card noPad className="border border-[#E5E7EB] shadow-sm overflow-hidden bg-white rounded-3xl">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px] border-collapse">
               <thead>
-                <tr className="border-b border-white/[0.05] bg-black/10">
+                <tr className="border-b border-[#E5E7EB] bg-[#F8FAFC]">
                   {['Cliente', 'Telefone', 'Endereço Principal', 'Pedidos', 'Total Gasto', 'Último Pedido', ''].map((h) => (
-                    <th key={h} className="text-left px-6 py-4 text-[#6b5880] text-xs font-bold uppercase tracking-wider">{h}</th>
+                    <th key={h} className="text-left px-6 py-4 text-[#64748B] text-xs font-bold uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.03]">
+              <tbody className="divide-y divide-[#E5E7EB]">
                 {customers.map((customer, i) => (
-                  <tr key={customer.id} className="hover:bg-white/[0.02] transition-colors group">
+                  <tr key={customer.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${avatarColors[i % avatarColors.length]} flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-md`}>
+                        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${avatarColors[i % avatarColors.length]} flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm`}>
                           {getInitials(customer.name)}
                         </div>
                         <div>
-                          <p className="text-white text-sm font-bold leading-none">{customer.name}</p>
-                          {customer.email && <p className="text-[#6b5880] text-[10px] mt-1">{customer.email}</p>}
+                          <p className="text-[#111827] text-sm font-bold leading-none">{customer.name}</p>
+                          {customer.email && <p className="text-[#64748B] text-[10px] mt-1.5 font-medium">{customer.email}</p>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-white text-xs font-semibold">{customer.phone || 'Não informado'}</td>
+                    <td className="px-6 py-4 text-[#111827] text-xs font-semibold">{customer.phone || 'Não informado'}</td>
                     <td className="px-6 py-4">
                       {customer.address ? (
-                        <div className="text-xs text-gray-300">
-                          <p className="font-semibold text-white">{customer.address}, N° {customer.address_number || 'S/N'}</p>
-                          <p className="text-gray-500 mt-0.5">{customer.neighborhood} — {customer.city || ''}/{customer.state || ''}</p>
+                        <div className="text-xs text-[#4B5563]">
+                          <p className="font-semibold text-[#111827]">{customer.address}, N° {customer.address_number || 'S/N'}</p>
+                          <p className="text-[#64748B] mt-1 font-medium">{customer.neighborhood} — {customer.city || ''}/{customer.state || ''}</p>
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-500 italic">Nenhum endereço</span>
+                        <span className="text-xs text-[#64748B] italic">Nenhum endereço cadastrado</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5">
-                        <ShoppingBag size={13} className="text-[#FF6B35]" />
-                        <span className="text-white text-sm font-bold">{customer.total_orders}</span>
+                        <ShoppingBag size={14} className="text-[#FF5A1F]" />
+                        <span className="text-[#111827] text-sm font-bold">{customer.total_orders}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-[#FF6B35] font-black text-sm">{formatCurrency(customer.total_spent)}</span>
+                      <span className="text-[#FF5A1F] font-black text-sm">{formatCurrency(customer.total_spent)}</span>
                     </td>
-                    <td className="px-6 py-4 text-gray-400 text-xs font-medium">
+                    <td className="px-6 py-4 text-[#64748B] text-xs font-semibold">
                       {customer.last_order_at ? formatDate(customer.last_order_at) : 'Nunca comprou'}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => setSelected(customer)}
-                          className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-lg transition-all"
+                          className="p-2 bg-slate-100 hover:bg-slate-200 text-[#4B5563] hover:text-[#111827] rounded-xl transition-all"
                           title="Visualizar Histórico"
                         >
                           <Eye size={14} />
                         </button>
                         <button
                           onClick={() => handleOpenEdit(customer)}
-                          className="p-2 bg-white/5 hover:bg-[#FF6B35]/20 text-gray-300 hover:text-[#FF6B35] rounded-lg transition-all"
+                          className="p-2 bg-slate-100 hover:bg-[#FF5A1F]/10 text-[#4B5563] hover:text-[#FF5A1F] rounded-xl transition-all"
                           title="Editar Cadastro"
                         >
                           <Edit2 size={14} />
@@ -317,7 +327,7 @@ export default function CustomersPage() {
               </tbody>
             </table>
             {customers.length === 0 && (
-              <div className="text-center py-16 text-[#6b5880]">
+              <div className="text-center py-16 text-[#64748B]">
                 <p className="text-5xl mb-3">🔍</p>
                 <p className="text-sm font-bold">Nenhum cliente cadastrado com esses parâmetros.</p>
               </div>
@@ -337,16 +347,16 @@ export default function CustomersPage() {
           <div className="space-y-6 text-left">
             
             {/* Header info */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E7EB]">
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF5A1F] to-[#6D28D9] flex items-center justify-center text-white text-xl font-bold shadow-md">
                   {getInitials(selected.name)}
                 </div>
                 <div>
-                  <h3 className="text-white text-lg font-black">{selected.name}</h3>
-                  <div className="flex flex-col gap-0.5 text-xs text-gray-400 mt-1">
-                    <span className="flex items-center gap-1.5"><Phone size={12} className="text-gray-500" /> {selected.phone || 'Sem telefone'}</span>
-                    {selected.email && <span className="flex items-center gap-1.5"><Mail size={12} className="text-gray-500" /> {selected.email}</span>}
+                  <h3 className="text-[#111827] text-lg font-extrabold">{selected.name}</h3>
+                  <div className="flex flex-col gap-0.5 text-xs text-[#64748B] mt-1 font-medium">
+                    <span className="flex items-center gap-1.5"><Phone size={12} className="text-[#64748B]" /> {selected.phone || 'Sem telefone'}</span>
+                    {selected.email && <span className="flex items-center gap-1.5"><Mail size={12} className="text-[#64748B]" /> {selected.email}</span>}
                   </div>
                 </div>
               </div>
@@ -363,41 +373,41 @@ export default function CustomersPage() {
             {/* Metrics cards */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Pedidos', value: selected.total_orders, icon: ShoppingBag },
-                { label: 'Total Gasto', value: formatCurrency(selected.total_spent), icon: DollarSign },
+                { label: 'Pedidos', value: selected.total_orders },
+                { label: 'Total Gasto', value: formatCurrency(selected.total_spent) },
                 { label: 'Ticket Médio', value: formatCurrency(selected.total_orders > 0 ? (selected.total_spent / selected.total_orders) : 0) },
               ].map(({ label, value }) => (
-                <div key={label} className="glass rounded-2xl p-3 bg-white/[0.01] border border-white/5 text-center">
-                  <p className="text-[#FF6B35] font-black text-sm sm:text-base">{value}</p>
-                  <p className="text-[#6b5880] text-[10px] font-bold uppercase tracking-wider mt-0.5">{label}</p>
+                <div key={label} className="bg-[#F8FAFC] rounded-2xl p-3 border border-[#E5E7EB] text-center shadow-sm">
+                  <p className="text-[#FF5A1F] font-black text-sm sm:text-base">{value}</p>
+                  <p className="text-[#64748B] text-[10px] font-bold uppercase tracking-wider mt-0.5">{label}</p>
                 </div>
               ))}
             </div>
 
             {/* Address & Notes */}
-            <div className="glass rounded-2xl p-4 bg-white/[0.01] border border-white/5 space-y-3.5 text-xs">
+            <div className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E5E7EB] space-y-3.5 text-xs shadow-sm">
               <div>
-                <span className="text-[#6b5880] font-bold uppercase tracking-wider text-[10px] block mb-1">Endereço Principal</span>
+                <span className="text-[#64748B] font-bold uppercase tracking-wider text-[10px] block mb-1">Endereço Principal</span>
                 {selected.address ? (
                   <div className="flex gap-2">
-                    <MapPin size={14} className="text-[#FF6B35] shrink-0 mt-0.5" />
-                    <div className="text-gray-200">
-                      <p className="font-semibold text-white">{selected.address}, N° {selected.address_number || 'S/N'}</p>
-                      {selected.complement && <p className="text-gray-400 font-medium">Compl/Ref: {selected.complement}</p>}
-                      <p className="text-gray-400">{selected.neighborhood} — {selected.city}/{selected.state} — CEP: {selected.zip_code || 'S/CEP'}</p>
+                    <MapPin size={14} className="text-[#FF5A1F] shrink-0 mt-0.5" />
+                    <div className="text-[#4B5563]">
+                      <p className="font-semibold text-[#111827]">{selected.address}, N° {selected.address_number || 'S/N'}</p>
+                      {selected.complement && <p className="text-[#64748B] font-medium mt-0.5">Compl/Ref: {selected.complement}</p>}
+                      <p className="text-[#64748B] mt-0.5">{selected.neighborhood} — {selected.city}/{selected.state} — CEP: {selected.zip_code || 'S/CEP'}</p>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500 italic pl-1">Endereço não cadastrado.</p>
+                  <p className="text-[#64748B] italic pl-1">Endereço não cadastrado.</p>
                 )}
               </div>
 
               {selected.notes && (
-                <div className="border-t border-white/5 pt-3.5">
-                  <span className="text-[#6b5880] font-bold uppercase tracking-wider text-[10px] block mb-1">Observações Internas</span>
+                <div className="border-t border-[#E5E7EB] pt-3.5">
+                  <span className="text-[#64748B] font-bold uppercase tracking-wider text-[10px] block mb-1">Observações Internas</span>
                   <div className="flex gap-2">
-                    <FileText size={14} className="text-purple-400 shrink-0 mt-0.5" />
-                    <p className="text-gray-300 italic font-medium">"{selected.notes}"</p>
+                    <FileText size={14} className="text-[#6D28D9] shrink-0 mt-0.5" />
+                    <p className="text-[#4B5563] italic font-medium">"{selected.notes}"</p>
                   </div>
                 </div>
               )}
@@ -405,31 +415,31 @@ export default function CustomersPage() {
 
             {/* Orders History List */}
             <div className="space-y-3">
-              <span className="text-[#6b5880] font-bold uppercase tracking-wider text-[10px] block">Histórico de Pedidos</span>
+              <span className="text-[#64748B] font-bold uppercase tracking-wider text-[10px] block">Histórico de Pedidos</span>
               {loadingOrders ? (
                 <div className="py-8 flex justify-center items-center">
-                  <Loader2 className="animate-spin text-[#FF6B35]" size={20} />
+                  <Loader2 className="animate-spin text-[#FF5A1F]" size={20} />
                 </div>
               ) : ordersHistory.length === 0 ? (
-                <p className="text-xs text-gray-500 italic py-4">Nenhum pedido localizado no sistema.</p>
+                <p className="text-xs text-[#64748B] italic py-4">Nenhum pedido localizado no sistema.</p>
               ) : (
-                <div className="border border-white/5 rounded-2xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-white/5 no-scrollbar">
+                <div className="border border-[#E5E7EB] rounded-2xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-[#E5E7EB] no-scrollbar">
                   {ordersHistory.map((ord) => (
-                    <div key={ord.id} className="p-3.5 flex items-center justify-between text-xs hover:bg-white/[0.01]">
+                    <div key={ord.id} className="p-3.5 flex items-center justify-between text-xs hover:bg-[#F8FAFC]">
                       <div>
                         <Link 
                           to={`/dashboard/pedidos/${ord.id}`}
-                          className="text-[#FF6B35] font-black hover:underline"
+                          className="text-[#FF5A1F] font-black hover:underline"
                         >
                           {ord.order_number}
                         </Link>
-                        <p className="text-gray-500 text-[10px] mt-0.5">{new Date(ord.created_at).toLocaleString('pt-BR')}</p>
+                        <p className="text-[#64748B] text-[10px] mt-0.5 font-medium">{new Date(ord.created_at).toLocaleString('pt-BR')}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge color={orderStatusColors[ord.status]} size="sm">
                           {orderStatusLabels[ord.status] || ord.status}
                         </Badge>
-                        <span className="text-white font-bold">{formatCurrency(ord.total)}</span>
+                        <span className="text-[#111827] font-bold">{formatCurrency(ord.total)}</span>
                       </div>
                     </div>
                   ))}
@@ -454,145 +464,145 @@ export default function CustomersPage() {
               
               {/* Nome */}
               <div className="flex flex-col gap-1.5 col-span-2">
-                <label className="text-xs font-bold text-gray-300">Nome Completo *</label>
+                <label className="text-xs font-bold text-[#4B5563]">Nome Completo *</label>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Ex: Maria Silva"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* Telefone */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-300">Telefone</label>
+                <label className="text-xs font-bold text-[#4B5563]">Telefone</label>
                 <input
                   type="text"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="Ex: (11) 99999-9999"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* E-mail */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-300">E-mail</label>
+                <label className="text-xs font-bold text-[#4B5563]">E-mail</label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="Ex: cliente@email.com"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* Endereço */}
               <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
-                <label className="text-xs font-bold text-gray-300">Endereço (Rua, Av.)</label>
+                <label className="text-xs font-bold text-[#4B5563]">Endereço (Rua, Av.)</label>
                 <input
                   type="text"
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                   placeholder="Ex: Rua das Flores"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* Número */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-300">Número</label>
+                <label className="text-xs font-bold text-[#4B5563]">Número</label>
                 <input
                   type="text"
                   value={form.address_number}
                   onChange={(e) => setForm({ ...form, address_number: e.target.value })}
                   placeholder="Ex: 123"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* Bairro */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-300">Bairro</label>
+                <label className="text-xs font-bold text-[#4B5563]">Bairro</label>
                 <input
                   type="text"
                   value={form.neighborhood}
                   onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
                   placeholder="Ex: Centro"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* Complemento */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-300">Complemento / Ref</label>
+                <label className="text-xs font-bold text-[#4B5563]">Complemento / Ref</label>
                 <input
                   type="text"
                   value={form.complement}
                   onChange={(e) => setForm({ ...form, complement: e.target.value })}
                   placeholder="Ex: Apto 101, fundos"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* Cidade */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-300">Cidade</label>
+                <label className="text-xs font-bold text-[#4B5563]">Cidade</label>
                 <input
                   type="text"
                   value={form.city}
                   onChange={(e) => setForm({ ...form, city: e.target.value })}
                   placeholder="Ex: São Paulo"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* Estado */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-300">Estado (UF)</label>
+                <label className="text-xs font-bold text-[#4B5563]">Estado (UF)</label>
                 <input
                   type="text"
                   maxLength={2}
                   value={form.state}
                   onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
                   placeholder="Ex: SP"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* CEP */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-300">CEP</label>
+                <label className="text-xs font-bold text-[#4B5563]">CEP</label>
                 <input
                   type="text"
                   value={form.zip_code}
                   onChange={(e) => setForm({ ...form, zip_code: e.target.value })}
                   placeholder="Ex: 01234-567"
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35]"
+                  className="bg-white border border-[#D1D5DB] rounded-xl px-3 py-2.5 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                 />
               </div>
 
               {/* Observações */}
               <div className="flex flex-col gap-1.5 col-span-2">
-                <label className="text-xs font-bold text-gray-300">Observações Internas (Alergias, restrições, etc.)</label>
+                <label className="text-xs font-bold text-[#4B5563]">Observações Internas (Alergias, restrições, etc.)</label>
                 <textarea
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   placeholder="Ex: Cliente prefere sachê de maionese extra. Atenção para pedidos sem cebola."
                   rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#FF6B35] resize-none"
+                  className="w-full bg-white border border-[#D1D5DB] rounded-xl p-3 text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30 resize-none"
                 />
               </div>
 
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t border-white/5">
+            <div className="flex justify-end gap-2 pt-4 border-t border-[#E5E7EB]">
               <Button type="button" variant="ghost" size="sm" onClick={() => setFormModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" variant="primary" size="sm" loading={submitting}>
+              <Button type="submit" variant="primary" size="sm" loading={submitting} className="shadow-[0_4px_12px_rgba(255,90,31,0.2)]">
                 Salvar Cadastro
               </Button>
             </div>

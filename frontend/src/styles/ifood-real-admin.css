@@ -1,56 +1,79 @@
-/* Correção real: remove roxo do painel e força visual claro estilo iFood */
+/* Correção real: remove roxo do painel e força visual claro estilo SaaS Premium */
 :root, html.mda-ifood-admin {
-  --theme-bg: #f7f7f7 !important;
-  --theme-surface: #ffffff !important;
-  --theme-card: #ffffff !important;
-  --theme-text: #1f2937 !important;
-  --theme-muted: #717171 !important;
-  --theme-primary: #ea1d2c !important;
-  --theme-primary-rgb: 234,29,44 !important;
+  --theme-bg: #F8FAFC !important;
+  --theme-surface: #FFFFFF !important;
+  --theme-card: #FFFFFF !important;
+  --theme-text: #111827 !important;
+  --theme-muted: #64748B !important;
+  --theme-primary: #FF5A1F !important;
+  --theme-primary-rgb: 255,90,31 !important;
 }
-html.mda-ifood-admin, body.mda-ifood-admin, body.mda-ifood-admin #root { background: #f7f7f7 !important; color: #1f2937 !important; }
-.mda-ifood-admin .mda-admin-shell { background: #f7f7f7 !important; color: #1f2937 !important; }
-.mda-ifood-admin main { background: #f7f7f7 !important; color: #1f2937 !important; }
-.mda-ifood-admin .glass, .mda-ifood-admin .glass-light { background: #ffffff !important; border: 1px solid #eeeeee !important; box-shadow: 0 10px 30px rgba(0,0,0,.04) !important; color: #1f2937 !important; }
-.mda-ifood-admin .gradient-text { color: #ea1d2c !important; background: none !important; -webkit-text-fill-color: initial !important; }
+
+html.mda-ifood-admin, body.mda-ifood-admin, body.mda-ifood-admin #root {
+  background: #F8FAFC !important;
+  color: #111827 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.mda-ifood-admin .mda-admin-shell {
+  background: #F8FAFC !important;
+  color: #111827 !important;
+}
+
+.mda-ifood-admin main {
+  background: #F8FAFC !important;
+  color: #111827 !important;
+}
+
+.mda-ifood-admin .glass, .mda-ifood-admin .glass-light {
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
+  color: #111827 !important;
+  border-radius: 16px !important;
+  text-shadow: none !important;
+}
+
+.mda-ifood-admin .gradient-text {
+  color: #FF5A1F !important;
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+}
+
 .mda-ifood-admin h1, .mda-ifood-admin h2, .mda-ifood-admin h3, .mda-ifood-admin h4,
-.mda-ifood-admin p, .mda-ifood-admin span, .mda-ifood-admin label { text-shadow: none !important; }
-/* neutraliza classes roxas fixas em páginas antigas dentro do conteúdo, sem mexer na sidebar */
+.mda-ifood-admin p, .mda-ifood-admin span, .mda-ifood-admin label {
+  text-shadow: none !important;
+}
+
+/* neutraliza classes roxas fixas em páginas antigas dentro do conteúdo, sem mexer na barra lateral */
 .mda-ifood-admin main [class*="bg-[#1A0533]"],
 .mda-ifood-admin main [class*="bg-[#1a0533]"],
-.mda-ifood-admin main [class*="bg-purple"],
-.mda-ifood-admin main [class*="from-purple"],
-.mda-ifood-admin main [class*="to-purple"],
-.mda-ifood-admin main [class*="bg-white/[0.02]"],
-.mda-ifood-admin main [class*="bg-white/5"] { background: #ffffff !important; background-image: none !important; }
-.mda-ifood-admin main [class*="border-white"], .mda-ifood-admin header [class*="border-white"] { border-color: #eeeeee !important; }
-.mda-ifood-admin main [class*="text-white"] { color: #1f2937 !important; }
-.mda-ifood-admin main [class*="text-[#a991c7]"] { color: #717171 !important; }
-.mda-ifood-admin main [class*="text-[#FF6B35]"] { color: #ea1d2c !important; }
-.mda-ifood-admin main [class*="bg-[#FF6B35]"] { background: #ea1d2c !important; }
-.mda-ifood-admin main [class*="shadow-[#FF6B35]"] { box-shadow: 0 10px 25px rgba(234,29,44,.18) !important; }
-/* mantém sidebar escura */
-.mda-ifood-admin aside, .mda-ifood-admin aside * { color-scheme: dark; }
-.mda-ifood-admin aside .glass, .mda-ifood-admin aside .glass-light { background: rgba(255,255,255,.06) !important; border-color: rgba(255,255,255,.10) !important; color: #fff !important; }
-.mda-ifood-admin aside [class*="text-white"] { color: #fff !important; }
-.mda-ifood-admin aside [class*="text-[#a991c7]"] { color: rgba(255,255,255,.65) !important; }
-/* botões padrão */
-.mda-ifood-admin button, .mda-ifood-admin a { text-decoration: none; }
-@keyframes mdaBlinkOrder { 0%,100% { box-shadow: 0 0 0 0 rgba(234,29,44,.32); } 50% { box-shadow: 0 0 0 8px rgba(234,29,44,.12); } }
-.mda-new-order-blink { animation: mdaBlinkOrder 1s infinite; border-color: #ea1d2c !important; }
-
-/* Correções adicionais de contraste no painel iFood */
 .mda-ifood-admin main [class*="bg-[#220d3a]"],
 .mda-ifood-admin main [class*="bg-[#220d3a]/"],
 .mda-ifood-admin main [class*="bg-[#1e0a38]"],
 .mda-ifood-admin main [class*="bg-[#240e3c]"],
 .mda-ifood-admin main [class*="bg-[#240e3c]/"],
+.mda-ifood-admin main [class*="bg-purple"],
+.mda-ifood-admin main [class*="from-purple"],
+.mda-ifood-admin main [class*="to-purple"],
+.mda-ifood-admin main [class*="bg-white/[0.02]"],
 .mda-ifood-admin main [class*="bg-white/5"] {
-  background-color: #ffffff !important;
+  background-color: #FFFFFF !important;
   background-image: none !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 16px !important;
+}
+
+.mda-ifood-admin main [class*="border-white"],
+.mda-ifood-admin header [class*="border-white"] {
+  border-color: #E5E7EB !important;
 }
 
 /* Força contraste do texto em fundo claro */
+.mda-ifood-admin main [class*="text-white"] {
+  color: #111827 !important;
+}
 .mda-ifood-admin main [class*="text-gray-100"],
 .mda-ifood-admin main [class*="text-gray-200"],
 .mda-ifood-admin main [class*="text-gray-300"],
@@ -58,24 +81,71 @@ html.mda-ifood-admin, body.mda-ifood-admin, body.mda-ifood-admin #root { backgro
 .mda-ifood-admin main [class*="text-slate-200"],
 .mda-ifood-admin main [class*="text-slate-300"],
 .mda-ifood-admin main [class*="text-slate-400"] {
-  color: #4b5563 !important; /* cinza escuro legível */
+  color: #4B5563 !important; /* cinza escuro legível */
+}
+.mda-ifood-admin main [class*="text-[#a991c7]"] {
+  color: #64748B !important;
+}
+.mda-ifood-admin main [class*="text-[#FF6B35]"] {
+  color: #FF5A1F !important;
+}
+.mda-ifood-admin main [class*="text-[#6b5880]"] {
+  color: #555555 !important;
 }
 
-.mda-ifood-admin main [class*="text-[#6b5880]"] {
-  color: #555555 !important; /* cinza de suporte legível */
+/* Força o laranja de destaque nas cores de fundo */
+.mda-ifood-admin main [class*="bg-[#FF6B35]"] {
+  background-color: #FF5A1F !important;
+}
+.mda-ifood-admin main [class*="shadow-[#FF6B35]"] {
+  box-shadow: 0 10px 25px rgba(255,90,31,.15) !important;
+}
+
+/* mantém sidebar chumbo escura (#111827) */
+.mda-ifood-admin aside, .mda-ifood-admin aside * {
+  color-scheme: dark;
+}
+.mda-ifood-admin aside {
+  background: #111827 !important;
+  border-right: 1px solid #1F2937 !important;
+}
+.mda-ifood-admin aside .glass, .mda-ifood-admin aside .glass-light {
+  background: rgba(255,255,255,.05) !important;
+  border-color: rgba(255,255,255,.08) !important;
+  color: #FFFFFF !important;
+  border-radius: 12px !important;
+}
+.mda-ifood-admin aside [class*="text-white"] {
+  color: #FFFFFF !important;
+}
+.mda-ifood-admin aside [class*="text-[#a991c7]"] {
+  color: #9CA3AF !important;
+}
+
+/* botões padrão */
+.mda-ifood-admin button, .mda-ifood-admin a {
+  text-decoration: none;
+}
+@keyframes mdaBlinkOrder {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,90,31,.3); }
+  50% { box-shadow: 0 0 0 8px rgba(255,90,31,.1); }
+}
+.mda-new-order-blink {
+  animation: mdaBlinkOrder 1s infinite;
+  border-color: #FF5A1F !important;
 }
 
 /* Estilo padrão de inputs no painel para remover visual escuro/roxo */
 .mda-ifood-admin main input,
 .mda-ifood-admin main textarea,
 .mda-ifood-admin main select {
-  background-color: #ffffff !important;
-  color: #1f2937 !important;
-  border: 1px solid #d1d5db !important;
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  border: 1px solid #D1D5DB !important;
 }
 .mda-ifood-admin main input::placeholder,
 .mda-ifood-admin main textarea::placeholder {
-  color: #9ca3af !important;
+  color: #9CA3AF !important;
 }
 
 /* Corrige cores dentro de modais glass no modo claro */
@@ -84,13 +154,16 @@ html.mda-ifood-admin, body.mda-ifood-admin, body.mda-ifood-admin #root { backgro
 .mda-ifood-admin .glass p,
 .mda-ifood-admin .glass label,
 .mda-ifood-admin .glass span {
-  color: #1f2937 !important;
+  color: #111827 !important;
 }
 .mda-ifood-admin .glass button[class*="text-[#a991c7]"] {
-  color: #4b5563 !important;
+  color: #4B5563 !important;
 }
 .mda-ifood-admin .glass button[class*="text-[#a991c7]"]:hover {
   background-color: rgba(0, 0, 0, 0.05) !important;
 }
 
-@media print { aside, header, .no-print { display:none !important } main { padding:0 !important } }
+@media print {
+  aside, header, .no-print { display:none !important }
+  main { padding:0 !important }
+}

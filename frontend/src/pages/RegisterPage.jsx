@@ -90,26 +90,24 @@ export default function RegisterPage() {
     { n: 1, label: 'Restaurante' },
     { n: 2, label: 'Responsável' },
   ]
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6" style={{ background: '#1A0533' }}>
-      {/* Background blobs */}
-      <div style={{ position: 'fixed', top: '0', left: '0', right: '0', bottom: '0', overflow: 'hidden', zIndex: 0 }}>
-        <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,107,53,0.12) 0%, transparent 70%)', filter: 'blur(60px)' }} />
-        <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%)', filter: 'blur(60px)' }} />
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 mda-auth-container" style={{ background: '#F8FAFC' }}>
+      {/* Subtle grid pattern background */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
       <div className="relative z-10 w-full max-w-lg">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div style={{ background: 'linear-gradient(135deg, #FF6B35, #e84e15)', boxShadow: '0 0 20px rgba(255,107,53,0.4)' }} className="w-10 h-10 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FF5A1F] shadow-[0_4px_12px_rgba(255,90,31,0.2)]">
             <Zap size={20} color="white" />
           </div>
-          <span className="text-white font-bold text-2xl">MeuDelivery<span style={{ background: 'linear-gradient(135deg, #FF6B35, #ff9a70)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>AI</span></span>
+          <span className="text-slate-900 font-bold text-2xl tracking-tight">
+            MeuDelivery<span className="text-[#FF5A1F]">AI</span>
+          </span>
         </div>
 
         {/* Card */}
-        <div style={{ background: 'rgba(42,15,74,0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '32px' }}>
+        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl shadow-slate-100/50">
           {/* Header */}
           <div className="text-center mb-8">
             {selectedPlan && (
@@ -119,44 +117,43 @@ export default function RegisterPage() {
                 </span>
               </div>
             )}
-            <h1 className="text-2xl font-extrabold text-white mb-1">Crie sua conta grátis</h1>
-            <p className="text-[#a991c7] text-sm">
+            <h1 className="text-2xl font-black text-slate-900 mb-1 tracking-tight">Crie sua conta grátis</h1>
+            <p className="text-slate-500 text-sm">
               Já tem conta?{' '}
-              <Link to="/login" className="text-[#FF6B35] hover:underline font-medium">Entrar</Link>
+              <Link to="/login" className="text-[#FF5A1F] hover:underline font-bold transition-all">Entrar</Link>
             </p>
           </div>
 
-          {/* Progress */}
+          {/* Progress Indicator */}
           <div className="flex items-center gap-3 mb-8">
             {steps.map((s) => (
               <div key={s.n} className="flex-1 flex flex-col items-center gap-1.5 relative">
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 z-10"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 z-10"
                   style={{
-                    background: step > s.n ? 'linear-gradient(135deg, #22c55e, #16a34a)' : step === s.n ? 'linear-gradient(135deg, #FF6B35, #e84e15)' : 'rgba(255,255,255,0.05)',
-                    border: step >= s.n ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                    color: step >= s.n ? 'white' : '#6b5880',
-                    boxShadow: step === s.n ? '0 0 20px rgba(255,107,53,0.4)' : 'none',
+                    background: step > s.n ? '#22c55e' : step === s.n ? '#FF5A1F' : '#F1F5F9',
+                    color: step >= s.n ? 'white' : '#64748B',
+                    boxShadow: step === s.n ? '0 0 15px rgba(255,90,31,0.25)' : 'none',
                   }}
                 >
-                  {step > s.n ? <Check size={14} /> : s.n}
+                  {step > s.n ? <Check size={12} /> : s.n}
                 </div>
-                <span className="text-xs font-medium" style={{ color: step >= s.n ? '#d4bfee' : '#6b5880' }}>{s.label}</span>
+                <span className="text-[11px] font-bold" style={{ color: step === s.n ? '#111827' : '#64748B' }}>{s.label}</span>
               </div>
             ))}
           </div>
 
           {/* Progress Bar */}
-          <div className="h-1 rounded-full mb-8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <div className="h-1 rounded-full mb-8 overflow-hidden bg-slate-100">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${((step - 1) / (steps.length - 1)) * 100}%`, background: 'linear-gradient(90deg, #FF6B35, #e84e15)' }}
+              style={{ width: `${((step - 1) / (steps.length - 1)) * 100}%`, background: '#FF5A1F' }}
             />
           </div>
 
           {/* Step 1 */}
           {step === 1 && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-4 animate-fade-in text-left">
               <Input
                 label="Nome do Restaurante"
                 placeholder="Ex: Pizzaria do João"
@@ -205,7 +202,15 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <Button variant="primary" size="lg" fullWidth rightIcon={ArrowRight} onClick={handleNext} id="reg-next">
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                rightIcon={ArrowRight}
+                onClick={handleNext}
+                id="reg-next"
+                className="mt-6 py-3.5 bg-[#FF5A1F] font-bold"
+              >
                 Próximo passo
               </Button>
             </div>
@@ -213,7 +218,7 @@ export default function RegisterPage() {
 
           {/* Step 2 */}
           {step === 2 && (
-            <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
+            <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in text-left">
               <Input
                 label="Nome do Responsável"
                 placeholder="João Silva"
@@ -261,11 +266,28 @@ export default function RegisterPage() {
                 id="reg-confirm-password"
               />
 
-              <div className="flex gap-3 pt-2">
-                <Button variant="ghost" size="lg" leftIcon={ArrowLeft} onClick={() => setStep(1)} type="button" id="reg-back">
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  leftIcon={ArrowLeft}
+                  onClick={() => setStep(1)}
+                  type="button"
+                  id="reg-back"
+                  className="font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl"
+                >
                   Voltar
                 </Button>
-                <Button variant="primary" size="lg" fullWidth loading={loading} rightIcon={ArrowRight} type="submit" id="reg-submit">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  loading={loading}
+                  rightIcon={ArrowRight}
+                  type="submit"
+                  id="reg-submit"
+                  className="bg-[#FF5A1F] font-bold"
+                >
                   Criar Conta Grátis
                 </Button>
               </div>
@@ -273,13 +295,14 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <p className="text-center text-[#6b5880] text-xs mt-6">
+        <p className="text-center text-slate-500 text-xs mt-8">
           Ao criar sua conta, você concorda com nossos{' '}
-          <a href="#" className="text-[#a991c7] hover:underline">Termos de Uso</a>
+          <a href="#" className="hover:text-slate-900 font-semibold transition-colors">Termos de Uso</a>
           {' '}e{' '}
-          <a href="#" className="text-[#a991c7] hover:underline">Política de Privacidade</a>
+          <a href="#" className="hover:text-slate-900 font-semibold transition-colors">Política de Privacidade</a>
         </p>
       </div>
     </div>
   )
 }
+

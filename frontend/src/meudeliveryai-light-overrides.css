@@ -1,40 +1,36 @@
 :root {
-  --mda-page: #f6f7fb;
-  --mda-card: #ffffff;
-  --mda-card-soft: #f9fafb;
+  --mda-page: #F8FAFC;
+  --mda-card: #FFFFFF;
+  --mda-card-soft: #F8FAFC;
   --mda-text: #111827;
-  --mda-muted: #667085;
-  --mda-border: #e5e7eb;
-  --mda-sidebar: #161a22;
-  --mda-orange: #ff6b35;
+  --mda-muted: #64748B;
+  --mda-border: #E5E7EB;
+  --mda-sidebar: #111827;
+  --mda-orange: #FF5A1F;
 
-  /* Força variáveis css para tema claro do iFood */
-  --primary: #ea1d2c !important;
-  --primary-color: #ea1d2c !important;
-  --secondary: #ffffff !important;
-  --accent: #ea1d2c !important;
-  --background: #f7f7f7 !important;
-  --foreground: #1f2937 !important;
-  --card: #ffffff !important;
-  --card-foreground: #1f2937 !important;
-  --muted: #f3f4f6 !important;
-  --muted-foreground: #6b7280 !important;
-  --border: #e5e7eb !important;
-  --input: #ffffff !important;
-  --ring: #ea1d2c !important;
-  --sidebar: #160023 !important;
-  --sidebar-background: #160023 !important;
-  --sidebar-foreground: #ffffff !important;
-}
-
-/* Oculta link da tela de aparência/personalização na sidebar */
-a[href="/dashboard/aparencia"] {
-  display: none !important;
+  /* Força variáveis css para tema claro do iFood e SaaS */
+  --primary: #FF5A1F !important;
+  --primary-color: #FF5A1F !important;
+  --secondary: #6D28D9 !important;
+  --accent: #FF5A1F !important;
+  --background: #F8FAFC !important;
+  --foreground: #111827 !important;
+  --card: #FFFFFF !important;
+  --card-foreground: #111827 !important;
+  --muted: #F1F5F9 !important;
+  --muted-foreground: #64748B !important;
+  --border: #E5E7EB !important;
+  --input: #FFFFFF !important;
+  --ring: #FF5A1F !important;
+  --sidebar: #111827 !important;
+  --sidebar-background: #111827 !important;
+  --sidebar-foreground: #FFFFFF !important;
 }
 
 body {
   background: var(--mda-page) !important;
   color: var(--mda-text) !important;
+  font-family: 'Inter', sans-serif !important;
 }
 
 /* Reforma visual leve: deixa áreas principais claras, mantendo menu/barra escura. */
@@ -44,7 +40,7 @@ main, .mda-light-page {
 
 .mda-public-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #fff 0%, #f6f7fb 100%) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #F8FAFC 100%) !important;
   color: var(--mda-text) !important;
 }
 
@@ -52,7 +48,7 @@ main, .mda-light-page {
   background: var(--mda-card) !important;
   border: 1px solid var(--mda-border) !important;
   color: var(--mda-text) !important;
-  box-shadow: 0 18px 50px rgba(16, 24, 40, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02) !important;
 }
 
 .mda-soft-card {
@@ -80,3 +76,85 @@ main, .mda-light-page {
   background: var(--mda-sidebar) !important;
   color: #fff !important;
 }
+
+/* Oculta link da tela de aparência/personalização na sidebar */
+a[href="/dashboard/aparencia"] {
+  display: none !important;
+}
+
+/* ==========================================
+   AUTHENTICATION PAGES OVERRIDES (.mda-auth-container)
+   ========================================== */
+.mda-auth-container {
+  background: #F8FAFC !important;
+  color: #111827 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.mda-auth-container label {
+  color: #374151 !important; /* gray-700 */
+}
+
+.mda-auth-container input {
+  background: #FFFFFF !important;
+  color: #111827 !important;
+  border: 1px solid #D1D5DB !important; /* border-gray-300 */
+}
+
+.mda-auth-container input:focus {
+  border-color: #FF5A1F !important;
+  box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.1) !important;
+  background: #FFFFFF !important;
+}
+
+.mda-auth-container input::placeholder {
+  color: #9CA3AF !important; /* gray-400 */
+}
+
+.mda-auth-container .text-\[\#d4bfee\],
+.mda-auth-container .text-\[\#a991c7\],
+.mda-auth-container .text-\[\#6b5880\],
+.mda-auth-container p.text-center.text-\[\#6b5880\] {
+  color: #64748B !important; /* text-slate-500 */
+}
+
+.mda-auth-container .text-white {
+  color: #111827 !important;
+}
+
+.mda-auth-container a {
+  color: #FF5A1F !important;
+}
+
+.mda-auth-container a:hover {
+  text-decoration: underline;
+}
+
+/* ==========================================
+   BUTTON STYLE OVERRIDES (FORCING BRAND COLOR)
+   ========================================== */
+button[class*="bg-[#FF6B35]"],
+button.bg-primary,
+.bg-primary {
+  background: #FF5A1F !important;
+  background-color: #FF5A1F !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(255, 90, 31, 0.2) !important;
+}
+
+button[class*="bg-[#FF6B35]"]:hover,
+button.bg-primary:hover {
+  background: #e04f1a !important;
+  background-color: #e04f1a !important;
+  box-shadow: 0 6px 20px rgba(255, 90, 31, 0.3) !important;
+}
+
+/* Ghost buttons overrides in auth container */
+.mda-auth-container button[class*="bg-transparent"] {
+  color: #64748B !important;
+}
+.mda-auth-container button[class*="bg-transparent"]:hover {
+  background-color: #F1F5F9 !important;
+  color: #111827 !important;
+}
+

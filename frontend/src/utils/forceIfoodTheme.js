@@ -1,4 +1,4 @@
-// MeuDeliveryAI - remove personalizacao de tema e força visual iFood claro
+// MeuDeliveryAI - remove personalizacao de tema e força visual iFood e SaaS claro
 // Importar por ultimo no main.jsx: import './utils/forceIfoodTheme';
 
 const THEME_KEYS = [
@@ -24,22 +24,31 @@ function clearThemeStorage() {
 function setVars() {
   try {
     const root = document.documentElement;
+    
+    // Adiciona a classe administrativa caso não exista
+    if (!root.classList.contains('mda-ifood-admin')) {
+      root.classList.add('mda-ifood-admin');
+    }
+    if (document.body && !document.body.classList.contains('mda-ifood-admin')) {
+      document.body.classList.add('mda-ifood-admin');
+    }
+
     const vars = {
-      '--primary': '#ea1d2c',
-      '--primary-color': '#ea1d2c',
+      '--primary': '#FF5A1F',
+      '--primary-color': '#FF5A1F',
       '--secondary': '#ffffff',
-      '--accent': '#ea1d2c',
-      '--background': '#f7f7f7',
-      '--foreground': '#1f2937',
+      '--accent': '#FF5A1F',
+      '--background': '#F8FAFC',
+      '--foreground': '#111827',
       '--card': '#ffffff',
-      '--card-foreground': '#1f2937',
-      '--muted': '#f3f4f6',
-      '--muted-foreground': '#6b7280',
-      '--border': '#e5e7eb',
+      '--card-foreground': '#111827',
+      '--muted': '#F1F5F9',
+      '--muted-foreground': '#64748B',
+      '--border': '#E5E7EB',
       '--input': '#ffffff',
-      '--ring': '#ea1d2c',
-      '--sidebar': '#160023',
-      '--sidebar-background': '#160023',
+      '--ring': '#FF5A1F',
+      '--sidebar': '#111827',
+      '--sidebar-background': '#111827',
       '--sidebar-foreground': '#ffffff'
     };
     Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v, 'important'));

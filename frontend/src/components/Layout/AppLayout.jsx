@@ -68,7 +68,7 @@ export default function AppLayout() {
 
         {/* Mobile Viewport Warning Banner */}
         {!mobileWarningDismissed && (
-          <div className="lg:hidden mx-4 mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-purple-800 to-indigo-900 text-white flex items-center justify-between gap-3 shadow-[0_0_15px_rgba(124,58,237,0.2)] border border-purple-500/20">
+          <div className="lg:hidden mx-4 mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 text-white flex items-center justify-between gap-3 shadow-[0_0_15px_rgba(17,24,39,0.2)] border border-slate-700/30">
             <div className="flex items-center gap-2">
               <span className="text-base shrink-0">📱</span>
               <p className="text-xs font-semibold text-left leading-snug">
