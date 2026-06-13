@@ -1,45 +1,68 @@
+/**
+ * utilitário de áudio para campainha e notificações do MeuDeliveryAI
+ */
 
-let bellTimeout = null;
-let bellInterval = null;
+let campainhaAudioElement = null;
+let notificationAudioElement = null;
+let campainhaInterval = null;
 let activeAudioContext = null;
 let unlocked = false;
-let audioElement = null;
 
-const SOUND_PATHS = [
-  '/sounds/notification.mp3',
-  '/notification.mp3',
-  '/sounds/campainha.mp3',
-  '/campainha.mp3'
-];
-
-function getAudio() {
+function getCampainhaAudio() {
   if (typeof window === 'undefined') return null;
-  if (!audioElement) {
-    audioElement = new Audio(SOUND_PATHS[0]);
-    audioElement.volume = 1;
-    audioElement.preload = 'auto';
+  if (!campainhaAudioElement) {
+    campainhaAudioElement = new Audio('/sounds/campainha.mp3');
+    campainhaAudioElement.volume = 1.0;
+    campainhaAudioElement.preload = 'auto';
   }
-  return audioElement;
+  return campainhaAudioElement;
+}
+
+function getNotificationAudio() {
+  if (typeof window === 'undefined') return null;
+  if (!notificationAudioElement) {
+    notificationAudioElement = new Audio('/sounds/notification.mp3');
+    notificationAudioElement.volume = 1.0;
+    notificationAudioElement.preload = 'auto';
+  }
+  return notificationAudioElement;
+}
+
+export function isCampainhaRunning() {
+  return !!campainhaInterval;
 }
 
 export async function unlockOrderBell() {
   try {
-    const audio = getAudio();
-    if (audio) {
-      audio.muted = true;
-      await audio.play().catch(() => null);
-      audio.pause();
-      audio.currentTime = 0;
-      audio.muted = false;
+    const camp = getCampainhaAudio();
+    const notif = getNotificationAudio();
+    if (camp) {
+      camp.muted = true;
+      await camp.play().catch(() => null);
+      camp.pause();
+      camp.currentTime = 0;
+      camp.muted = false;
+    }
+    if (notif) {
+      notif.muted = true;
+      await notif.play().catch(() => null);
+      notif.pause();
+      notif.currentTime = 0;
+      notif.muted = false;
     }
     const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (AudioContext && (!activeAudioContext || activeAudioContext.state === 'closed')) activeAudioContext = new AudioContext();
-    if (activeAudioContext?.state === 'suspended') await activeAudioContext.resume();
+    if (AudioContext && (!activeAudioContext || activeAudioContext.state === 'closed')) {
+      activeAudioContext = new AudioContext();
+    }
+    if (activeAudioContext?.state === 'suspended') {
+      await activeAudioContext.resume();
+    }
     unlocked = true;
     localStorage.setItem('mda_bell_unlocked', '1');
+    localStorage.setItem('orderSoundEnabled', 'true');
     return true;
   } catch (e) {
-    console.warn('Não foi possível liberar a campainha:', e);
+    console.warn('Não foi possível liberar os áudios:', e);
     return false;
   }
 }
@@ -47,9 +70,13 @@ export async function unlockOrderBell() {
 function ringFallback() {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return;
-  if (!activeAudioContext || activeAudioContext.state === 'closed') activeAudioContext = new AudioContext();
+  if (!activeAudioContext || activeAudioContext.state === 'closed') {
+    activeAudioContext = new AudioContext();
+  }
   const ctx = activeAudioContext;
-  if (ctx.state === 'suspended') ctx.resume().catch(() => null);
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => null);
+  }
   const now = ctx.currentTime;
   const playTone = (frequency, startAt, duration, volume = 0.2) => {
     const osc = ctx.createOscillator();
@@ -59,49 +86,89 @@ function ringFallback() {
     gain.gain.setValueAtTime(0.0001, startAt);
     gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(startAt); osc.stop(startAt + duration + 0.05);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startAt);
+    osc.stop(startAt + duration + 0.05);
   };
-  playTone(880, now, 0.38);
-  playTone(660, now + 0.28, 0.55);
+  // Toca um bipe duplo clássico de campainha
+  playTone(880, now, 0.25, 0.25);
+  playTone(880, now + 0.3, 0.25, 0.25);
 }
 
-async function ringOnce() {
+export function startNewOrderCampainha() {
+  if (typeof window === 'undefined') return;
+  if (campainhaInterval) return;
+
+  const playSound = async () => {
+    const localEnabled = localStorage.getItem('orderSoundEnabled') === 'true';
+    if (!localEnabled) return;
+
+    try {
+      const audio = getCampainhaAudio();
+      if (audio) {
+        audio.currentTime = 0;
+        await audio.play();
+        return;
+      }
+    } catch (e) {
+      console.warn('Erro ao reproduzir campainha. Tentando fallback...', e);
+    }
+    ringFallback();
+  };
+
+  playSound();
+  // Repete a campainha a cada 4 segundos
+  campainhaInterval = setInterval(playSound, 4000);
+}
+
+export function stopNewOrderCampainha() {
+  if (campainhaInterval) {
+    clearInterval(campainhaInterval);
+    campainhaInterval = null;
+  }
   try {
-    const audio = getAudio();
+    if (campainhaAudioElement) {
+      campainhaAudioElement.pause();
+      campainhaAudioElement.currentTime = 0;
+    }
+  } catch (e) {
+    // Silencia erros se o áudio não puder ser pausado
+  }
+}
+
+export async function playNotificationSound() {
+  const localEnabled = localStorage.getItem('orderSoundEnabled') === 'true';
+  if (!localEnabled) return;
+
+  try {
+    const audio = getNotificationAudio();
     if (audio) {
       audio.currentTime = 0;
       await audio.play();
-      return;
     }
   } catch (e) {
-    // Se o navegador bloquear MP3, usa beep interno.
+    console.warn('Erro ao tocar som de notificação:', e);
   }
-  ringFallback();
 }
 
-export function stopNewOrderBell() {
-  if (bellInterval) clearInterval(bellInterval);
-  if (bellTimeout) clearTimeout(bellTimeout);
-  bellInterval = null; bellTimeout = null;
-  try { if (audioElement) { audioElement.pause(); audioElement.currentTime = 0; } } catch {}
-}
-
+// Para manter compatibilidade com importações antigas
 export function playNewOrderBell(durationMs = 5000) {
-  try {
-    stopNewOrderBell();
-    ringOnce();
-    bellInterval = setInterval(ringOnce, 1200);
-    bellTimeout = setTimeout(stopNewOrderBell, durationMs);
-  } catch (error) {
-    console.warn('Erro ao tocar campainha de novo pedido:', error);
-    ringFallback();
-  }
+  startNewOrderCampainha();
+  setTimeout(stopNewOrderCampainha, durationMs);
+}
+export function stopNewOrderBell() {
+  stopNewOrderCampainha();
 }
 
-// Libera áudio após qualquer clique/toque no painel.
+// Auto-desbloqueio nas interações do usuário (caso já tenha clicado antes)
 if (typeof window !== 'undefined') {
-  ['click','touchstart','keydown'].forEach(evt => {
-    window.addEventListener(evt, () => { if (!unlocked) unlockOrderBell(); }, { once: false, passive: true });
+  ['click', 'touchstart', 'keydown'].forEach(evt => {
+    window.addEventListener(evt, () => {
+      const alreadyUnlocked = localStorage.getItem('mda_bell_unlocked') === '1';
+      if (!unlocked && alreadyUnlocked) {
+        unlockOrderBell();
+      }
+    }, { once: false, passive: true });
   });
 }

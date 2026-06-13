@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Save, Clock, Truck, ShieldAlert, MessageSquare, Phone, ToggleLeft, ToggleRight, Loader2, Info, CreditCard } from 'lucide-react'
+import { Save, Clock, Truck, ShieldAlert, MessageSquare, Phone, ToggleLeft, ToggleRight, Loader2, Info, CreditCard, Volume2, Bell } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
 import toast from 'react-hot-toast'
 import { settings as settingsApi, restaurants as restaurantApi } from '../services/api'
+import { startNewOrderCampainha, stopNewOrderCampainha } from '../utils/orderSound'
 
 const tabs = [
   { key: 'general', label: 'Geral & Operação', icon: Phone },
@@ -44,7 +45,13 @@ export default function SettingsPage() {
     whatsapp_number: '',
     auto_accept_orders: false,
     default_print_format: 'ask',
+    order_sound_enabled: true,
+    push_notifications_enabled: true,
   })
+
+  const [pushPermission, setPushPermission] = useState(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  )
 
   const [paymentForm, setPaymentForm] = useState({
     accepts_cash: true,
@@ -95,6 +102,8 @@ export default function SettingsPage() {
             whatsapp_number: d.whatsapp_number || '',
             auto_accept_orders: d.auto_accept_orders === 1 || d.auto_accept_orders === true,
             default_print_format: d.default_print_format || 'ask',
+            order_sound_enabled: d.order_sound_enabled === undefined || d.order_sound_enabled === null || d.order_sound_enabled === 1 || d.order_sound_enabled === true,
+            push_notifications_enabled: d.push_notifications_enabled === undefined || d.push_notifications_enabled === null || d.push_notifications_enabled === 1 || d.push_notifications_enabled === true,
           })
 
           if (d.opening_hours) {
@@ -167,6 +176,8 @@ export default function SettingsPage() {
         whatsapp_number: form.whatsapp_number,
         auto_accept_orders: form.auto_accept_orders,
         default_print_format: form.default_print_format,
+        order_sound_enabled: form.order_sound_enabled,
+        push_notifications_enabled: form.push_notifications_enabled,
       }
 
       // Salva configurações de pagamento
@@ -194,6 +205,47 @@ export default function SettingsPage() {
       toast.error(err.message || 'Erro ao salvar as configurações.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleTestCampainha = () => {
+    const originalLocalVal = localStorage.getItem('orderSoundEnabled')
+    localStorage.setItem('orderSoundEnabled', 'true')
+    
+    toast.success('Testando campainha por 3 segundos... 🔔')
+    startNewOrderCampainha()
+    
+    setTimeout(() => {
+      stopNewOrderCampainha()
+      if (originalLocalVal !== null) {
+        localStorage.setItem('orderSoundEnabled', originalLocalVal)
+      } else {
+        localStorage.removeItem('orderSoundEnabled')
+      }
+    }, 3000)
+  }
+
+  const requestPushPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      toast.error('Este navegador não suporta notificações push.')
+      return
+    }
+
+    try {
+      const permission = await Notification.requestPermission()
+      setPushPermission(permission)
+      if (permission === 'granted') {
+        toast.success('Notificações autorizadas com sucesso! 🔔')
+        new Notification('MeuDeliveryAI', {
+          body: 'Notificações ativadas no painel do restaurante.',
+          icon: '/favicon.ico'
+        })
+      } else if (permission === 'denied') {
+        toast.error('Permissão de notificação negada pelo usuário.')
+      }
+    } catch (err) {
+      console.error('Erro ao pedir permissão de notificação:', err)
+      toast.error('Erro ao solicitar permissão.')
     }
   }
 
@@ -376,6 +428,89 @@ export default function SettingsPage() {
                       {opt.label}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Seção: Notificações & Campainha */}
+              <div className="md:col-span-2 border-t border-white/5 pt-6 mt-4">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Bell size={20} className="text-[#FF6B35]" />
+                  Notificações & Alertas Sonoros
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Campainha Toggle */}
+                  <div className="flex flex-col gap-2 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-bold text-white block">Campainha de novos pedidos</label>
+                        <span className="text-xs text-[#a991c7] mt-0.5">Tocar som de alarme repetidamente a cada novo pedido pendente.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm(p => ({ ...p, order_sound_enabled: !p.order_sound_enabled }))}
+                        className="focus:outline-none transition-transform active:scale-95"
+                      >
+                        {form.order_sound_enabled ? (
+                          <ToggleRight size={44} className="text-[#FF6B35]" />
+                        ) : (
+                          <ToggleLeft size={44} className="text-gray-500" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <span className="text-xs font-bold text-gray-400">
+                        Status: <strong className={form.order_sound_enabled ? "text-green-400" : "text-gray-400"}>{form.order_sound_enabled ? 'Ativado' : 'Desativado'}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleTestCampainha}
+                        className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all border border-white/10"
+                      >
+                        <Volume2 size={14} className="text-[#FF6B35]" />
+                        Testar campainha
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Push Notifications Toggle */}
+                  <div className="flex flex-col gap-2 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-bold text-white block">Notificações Push no Navegador</label>
+                        <span className="text-xs text-[#a991c7] mt-0.5">Exibir alertas flutuantes no sistema/celular ao receber novos pedidos.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm(p => ({ ...p, push_notifications_enabled: !p.push_notifications_enabled }))}
+                        className="focus:outline-none transition-transform active:scale-95"
+                      >
+                        {form.push_notifications_enabled ? (
+                          <ToggleRight size={44} className="text-[#FF6B35]" />
+                        ) : (
+                          <ToggleLeft size={44} className="text-gray-500" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-400">
+                        Status: <strong className={form.push_notifications_enabled ? "text-green-400" : "text-gray-400"}>{form.push_notifications_enabled ? 'Ativado' : 'Desativado'}</strong>
+                      </span>
+                      {pushPermission !== 'granted' ? (
+                        <button
+                          type="button"
+                          onClick={requestPushPermission}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF6B35]/10 hover:bg-[#FF6B35]/20 text-[#FF6B35] text-xs font-bold transition-all border border-[#FF6B35]/20"
+                        >
+                          Permitir notificações
+                        </button>
+                      ) : (
+                        <span className="text-xs text-green-400 font-bold flex items-center gap-1">
+                          ✓ Permissão concedida
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 

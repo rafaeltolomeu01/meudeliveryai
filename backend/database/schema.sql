@@ -191,6 +191,9 @@ CREATE TABLE IF NOT EXISTS restaurant_settings (
   order_notification_sound TINYINT(1) NOT NULL DEFAULT 1,
   max_simultaneous_orders INT DEFAULT NULL,
   accept_orders_when_closed TINYINT(1) NOT NULL DEFAULT 0,
+  default_print_format    VARCHAR(10) NOT NULL DEFAULT 'ask',
+  order_sound_enabled     TINYINT(1) NOT NULL DEFAULT 1,
+  push_notifications_enabled TINYINT(1) NOT NULL DEFAULT 1,
   -- Mensagens e Suporte
   welcome_message         TEXT,
   order_confirmed_message TEXT,

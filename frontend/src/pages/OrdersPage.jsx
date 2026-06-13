@@ -1,8 +1,8 @@
-import { playNewOrderBell, unlockOrderBell } from '../utils/orderSound'
+import { startNewOrderCampainha, stopNewOrderCampainha, playNotificationSound, unlockOrderBell } from '../utils/orderSound'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Clock, User, MapPin, CreditCard, Search, X, Check, Printer, MessageSquare, Phone, AlertCircle, ShoppingBag, Loader2, CheckCircle, ChevronDown, Truck, Volume2, VolumeX } from 'lucide-react'
+import { Clock, User, MapPin, CreditCard, Search, X, Check, Printer, MessageSquare, Phone, AlertCircle, ShoppingBag, Loader2, CheckCircle, ChevronDown, Truck, Volume2, VolumeX, Bell } from 'lucide-react'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -82,46 +82,30 @@ export default function OrdersPage() {
   const [showPrintMenu, setShowPrintMenu] = useState(false)
 
   // Sound and Printing Configuration States/Refs
-  const seenOrderIds = useRef(new Set())
-  const isFirstLoad = useRef(true)
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    const saved = localStorage.getItem('mda_dashboard_sound')
-    return saved !== 'false'
-  })
-  const [printFormat, setPrintFormat] = useState('ask')
-
-  const playDoorbellSound = () => {
+  const notifiedOrdersRef = useRef(null)
+  if (!notifiedOrdersRef.current) {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-      gain1.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain1.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0);
-      osc1.start(ctx.currentTime);
-      osc1.stop(ctx.currentTime + 1.0);
-      
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(440.00, ctx.currentTime + 0.3); // A4
-      gain2.gain.setValueAtTime(0, ctx.currentTime);
-      gain2.gain.setValueAtTime(0.12, ctx.currentTime + 0.3);
-      gain2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.5);
-      osc2.start(ctx.currentTime + 0.3);
-      osc2.stop(ctx.currentTime + 1.5);
-    } catch (err) {
-      console.warn('Erro ao reproduzir áudio:', err);
+      const saved = localStorage.getItem('mda_notified_orders')
+      const parsed = saved ? JSON.parse(saved) : []
+      notifiedOrdersRef.current = new Set(parsed)
+    } catch (e) {
+      notifiedOrdersRef.current = new Set()
     }
   }
+
+  const isFirstLoad = useRef(true)
+  const [restaurantSettings, setRestaurantSettings] = useState(null)
+  const [printFormat, setPrintFormat] = useState('ask')
+  
+  const [orderSoundEnabled, setOrderSoundEnabled] = useState(() => {
+    return localStorage.getItem('orderSoundEnabled') === 'true'
+  })
+
+  const [pushPermission, setPushPermission] = useState(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  )
+
+  const [silencedOrderIds, setSilencedOrderIds] = useState(new Set())
 
   // Drag and drop state and handlers
   const [activeDragCol, setActiveDragCol] = useState(null)
@@ -166,21 +150,54 @@ export default function OrdersPage() {
       if (res.success && res.data) {
         setOrders(res.data)
 
-        // Check for new pending orders to trigger the doorbell sound
-        const hasNewPending = res.data.some(
-          (o) => o.status === 'pending' && !seenOrderIds.current.has(o.id)
-        )
+        // Check for new pending orders
+        const pendingOrders = res.data.filter(o => o.status === 'pending')
+        let newOrdersFound = false
 
-        if (hasNewPending && !isFirstLoad.current) {
-          if (soundEnabled) {
-            playNewOrderBell(5000);
+        if (isFirstLoad.current) {
+          pendingOrders.forEach(o => notifiedOrdersRef.current.add(o.id))
+          localStorage.setItem('mda_notified_orders', JSON.stringify(Array.from(notifiedOrdersRef.current)))
+          isFirstLoad.current = false
+        } else {
+          pendingOrders.forEach(o => {
+            if (!notifiedOrdersRef.current.has(o.id)) {
+              notifiedOrdersRef.current.add(o.id)
+              newOrdersFound = true
+
+              // Show Toast
+              toast(`Novo pedido #${o.order_number} recebido! 🔔`, { icon: '🔔', duration: 5000 })
+
+              // Push notification
+              const pushConfigEnabled = restaurantSettings?.push_notifications_enabled === undefined || 
+                                         restaurantSettings?.push_notifications_enabled === null || 
+                                         restaurantSettings?.push_notifications_enabled === 1 || 
+                                         restaurantSettings?.push_notifications_enabled === true;
+
+              if (pushConfigEnabled && Notification.permission === 'granted') {
+                try {
+                  const title = 'Novo pedido recebido'
+                  const options = {
+                    body: `Pedido #${o.order_number} - R$ ${(parseFloat(o.total) || 0).toFixed(2)}`,
+                    icon: '/favicon.ico',
+                    tag: `order-${o.id}`
+                  }
+                  const notification = new Notification(title, options)
+                  notification.onclick = () => {
+                    window.focus()
+                    setSelectedOrder(o)
+                  }
+                } catch (pushErr) {
+                  console.warn('Erro ao disparar push notification:', pushErr)
+                }
+              }
+            }
+          })
+
+          if (newOrdersFound) {
+            localStorage.setItem('mda_notified_orders', JSON.stringify(Array.from(notifiedOrdersRef.current)))
+            playNotificationSound()
           }
-          toast('Novo pedido recebido! 🔔', { icon: '🔔', duration: 4000 });
         }
-
-        // Update seen IDs
-        res.data.forEach(o => seenOrderIds.current.add(o.id));
-        isFirstLoad.current = false;
       }
     } catch (err) {
       console.error('Erro ao buscar pedidos no servidor:', err)
@@ -194,22 +211,89 @@ export default function OrdersPage() {
     loadOrders()
     const timer = setInterval(() => {
       loadOrders(true)
-    }, 10000) // fire every 10s
+    }, 5000) // fire every 5s
 
-    async function fetchPrintSettings() {
+    async function fetchSettings() {
       try {
         const res = await settingsApi.get()
         if (res.success && res.data) {
+          setRestaurantSettings(res.data)
           setPrintFormat(res.data.default_print_format || 'ask')
         }
       } catch (err) {
-        console.warn('Erro ao carregar configurações de impressão:', err)
+        console.warn('Erro ao carregar configurações do restaurante:', err)
       }
     }
-    fetchPrintSettings()
+    fetchSettings()
 
     return () => clearInterval(timer)
-  }, [soundEnabled])
+  }, [])
+
+  useEffect(() => {
+    if (!restaurantSettings) return;
+
+    const soundConfigEnabled = restaurantSettings.order_sound_enabled === undefined || 
+                                restaurantSettings.order_sound_enabled === null || 
+                                restaurantSettings.order_sound_enabled === 1 || 
+                                restaurantSettings.order_sound_enabled === true;
+
+    const localSoundEnabled = localStorage.getItem('orderSoundEnabled') === 'true';
+
+    const pendingOrders = orders.filter(o => o.status === 'pending');
+    const hasActivePending = pendingOrders.some(o => !silencedOrderIds.has(o.id));
+
+    if (soundConfigEnabled && localSoundEnabled && hasActivePending) {
+      startNewOrderCampainha();
+    } else {
+      stopNewOrderCampainha();
+    }
+
+    return () => {
+      stopNewOrderCampainha();
+    };
+  }, [orders, restaurantSettings, silencedOrderIds, orderSoundEnabled]);
+
+  const handleSilenceAll = () => {
+    const pendingIds = orders.filter(o => o.status === 'pending').map(o => o.id)
+    setSilencedOrderIds(prev => {
+      const next = new Set(prev)
+      pendingIds.forEach(id => next.add(id))
+      return next
+    })
+    stopNewOrderCampainha()
+    toast.success('Campainha silenciada.')
+  }
+
+  const handleEnableSound = async () => {
+    const success = await unlockOrderBell()
+    if (success) {
+      setOrderSoundEnabled(true)
+      toast.success('Som de novos pedidos ativado! 🔊')
+    }
+  }
+
+  const requestPushPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      toast.error('Este navegador não suporta notificações push.')
+      return
+    }
+
+    try {
+      const permission = await Notification.requestPermission()
+      setPushPermission(permission)
+      if (permission === 'granted') {
+        toast.success('Notificações push ativadas! 🔔')
+        new Notification('MeuDeliveryAI', {
+          body: 'Notificações ativadas no painel do restaurante.',
+          icon: '/favicon.ico'
+        })
+      } else if (permission === 'denied') {
+        toast.error('Permissão de notificação negada.')
+      }
+    } catch (err) {
+      console.error('Erro ao pedir permissão de notificação:', err)
+    }
+  }
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
@@ -453,21 +537,27 @@ export default function OrdersPage() {
           {/* Sound Control */}
           <button
             onClick={() => {
-              setSoundEnabled(prev => {
+              setOrderSoundEnabled(prev => {
                 const val = !prev;
-                localStorage.setItem('mda_dashboard_sound', String(val));
+                localStorage.setItem('orderSoundEnabled', String(val));
+                if (val) {
+                  unlockOrderBell();
+                  toast.success('Sons de novos pedidos ativados! 🔊');
+                } else {
+                  stopNewOrderCampainha();
+                  toast.success('Sons de novos pedidos desativados! 🔇');
+                }
                 return val;
               });
-              toast.success(!soundEnabled ? 'Sons de novos pedidos ativados! 🔊' : 'Sons de novos pedidos desativados! 🔇');
             }}
             className={`p-2.5 rounded-xl transition-all border shrink-0 ${
-              soundEnabled 
-                ? 'bg-green-600/10 text-green-400 border-green-500/20 hover:bg-green-600/20' 
+              orderSoundEnabled 
+                ? 'bg-[#FF5A1F]/10 text-[#FF5A1F] border-[#FF5A1F]/20 hover:bg-[#FF5A1F]/20' 
                 : 'bg-white/5 text-gray-400 border-white/5 hover:bg-white/10'
             }`}
-            title={soundEnabled ? 'Silenciar novos pedidos' : 'Ativar som de novos pedidos'}
+            title={orderSoundEnabled ? 'Silenciar novos pedidos' : 'Ativar som de novos pedidos'}
           >
-            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            {orderSoundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
 
           {/* Search */}
@@ -481,6 +571,57 @@ export default function OrdersPage() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Banners de Alerta e Configurações de Áudio/Notificação */}
+      <div className="space-y-3">
+        {/* Banner 1: Som desativado localmente */}
+        {!orderSoundEnabled && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
+            <div className="flex items-center gap-2">
+              <VolumeX className="text-[#FF5A1F] shrink-0" size={18} />
+              <span>Para receber a campainha sonora de novos pedidos automaticamente, ative o som do painel.</span>
+            </div>
+            <button
+              onClick={handleEnableSound}
+              className="px-4 py-2 rounded-xl bg-[#FF5A1F] hover:bg-[#FF5A1F]/90 text-white font-bold text-xs transition-all active:scale-95 shrink-0"
+            >
+              Ativar som de pedidos
+            </button>
+          </div>
+        )}
+
+        {/* Banner 2: Permissão de Notificação Push */}
+        {pushPermission !== 'granted' && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-[#6D28D9]/10 border border-[#6D28D9]/20 text-sm text-[#d4bfee]">
+            <div className="flex items-center gap-2">
+              <Bell className="text-[#6D28D9] shrink-0" size={18} />
+              <span>Receba notificações push nativas no seu computador ou celular quando chegar um novo pedido.</span>
+            </div>
+            <button
+              onClick={requestPushPermission}
+              className="px-4 py-2 rounded-xl bg-[#6D28D9] hover:bg-[#6D28D9]/90 text-white font-bold text-xs transition-all active:scale-95 shrink-0"
+            >
+              Permitir notificações
+            </button>
+          </div>
+        )}
+
+        {/* Banner 3: Campainha tocando */}
+        {orders.filter(o => o.status === 'pending').some(o => !silencedOrderIds.has(o.id)) && (
+          <div className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-sm text-red-300 animate-pulse">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="text-red-500 shrink-0" size={18} />
+              <span className="font-bold">Campainha tocando: Há novo(s) pedido(s) aguardando aprovação!</span>
+            </div>
+            <button
+              onClick={handleSilenceAll}
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition-all active:scale-95 shrink-0"
+            >
+              Silenciar campainha
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Kanban Board */}

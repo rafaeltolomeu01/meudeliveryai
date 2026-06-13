@@ -32,6 +32,8 @@ const updateValidation = [
   body('default_print_format').optional().isIn(['58mm', '80mm', 'ask']).withMessage('Formato de impressão inválido.'),
   body('auto_print_enabled').optional().isBoolean(),
   body('kitchen_print_enabled').optional().isBoolean(),
+  body('order_sound_enabled').optional().isBoolean(),
+  body('push_notifications_enabled').optional().isBoolean(),
 ];
 
 // ─── Rotas ────────────────────────────────────────────────────────────────────

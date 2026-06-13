@@ -162,6 +162,14 @@ async function migrate() {
         await connection.query("ALTER TABLE restaurant_settings ADD COLUMN default_print_format VARCHAR(10) NOT NULL DEFAULT 'ask'");
         console.log('     + Coluna default_print_format adicionada.');
       }
+      if (!columns.includes('order_sound_enabled')) {
+        await connection.query("ALTER TABLE restaurant_settings ADD COLUMN order_sound_enabled TINYINT(1) NOT NULL DEFAULT 1");
+        console.log('     + Coluna order_sound_enabled adicionada.');
+      }
+      if (!columns.includes('push_notifications_enabled')) {
+        await connection.query("ALTER TABLE restaurant_settings ADD COLUMN push_notifications_enabled TINYINT(1) NOT NULL DEFAULT 1");
+        console.log('     + Coluna push_notifications_enabled adicionada.');
+      }
 
       console.log('  🔄 Verificando e atualizando colunas incrementais de payment_settings...');
       const [payColumnsCheck] = await connection.query(`
