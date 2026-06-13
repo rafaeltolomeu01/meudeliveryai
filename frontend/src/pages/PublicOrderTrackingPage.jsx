@@ -305,7 +305,7 @@ export default function PublicOrderTrackingPage() {
 
         {/* simulated status notice */}
         {isSimulated && (
-          <div className="mb-6 p-3.5 rounded-2xl bg-indigo-50 border border-indigo-150 text-xs font-bold text-indigo-700 text-center animate-pulse shadow-sm">
+          <div className="mb-6 p-3.5 rounded-2xl bg-indigo-50 border border-indigo-100 text-xs font-bold text-indigo-700 text-center animate-pulse shadow-sm">
             Simulador de Entrega Ativo: O status mudará automaticamente a cada 20 segundos para fins de teste.
           </div>
         )}
@@ -340,7 +340,7 @@ export default function PublicOrderTrackingPage() {
                 </div>
               ) : (
                 /* Stepper */
-                <div className="relative pl-6 space-y-8 py-2 border-l border-slate-200 ml-3">
+                <div className="relative pl-8 space-y-8 py-2 border-l border-slate-200 ml-4">
                   {STATUS_STEPS.map((step, idx) => {
                     const isCompleted = idx < currentStepIndex
                     const isActive = idx === currentStepIndex
@@ -357,7 +357,7 @@ export default function PublicOrderTrackingPage() {
                       <div key={step.status} className="relative">
                         {/* Dot badge */}
                         <div
-                          className={`absolute -left-[35px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold transition-all duration-300 ${
+                          className={`absolute -left-[44px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold transition-all duration-300 ${
                             isCompleted
                               ? 'bg-green-600 text-white shadow-sm'
                               : isActive
@@ -373,7 +373,7 @@ export default function PublicOrderTrackingPage() {
                         <div className="text-left">
                           <h4
                             className={`text-sm font-extrabold ${
-                              isActive ? 'text-slate-900' : isCompleted ? 'text-slate-550' : 'text-slate-400'
+                              isActive ? 'text-slate-900' : isCompleted ? 'text-slate-600' : 'text-slate-400'
                             }`}
                           >
                             {step.label}
@@ -452,7 +452,7 @@ export default function PublicOrderTrackingPage() {
                       
                       if (isSystem) {
                         return (
-                          <div key={msg.id} className="self-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full text-[10px] text-slate-505 font-bold max-w-[90%] text-center shadow-sm">
+                          <div key={msg.id} className="self-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full text-[10px] text-slate-500 font-bold max-w-[90%] text-center shadow-sm">
                             {msg.message}
                           </div>
                         )
@@ -482,7 +482,7 @@ export default function PublicOrderTrackingPage() {
                 </div>
 
                 {/* Message Input Form */}
-                <form onSubmit={handleSendMessage} className="p-3 bg-slate-50 border-t border-slate-250/50 flex gap-2">
+                <form onSubmit={handleSendMessage} className="p-3 bg-slate-50 border-t border-slate-200/50 flex gap-2">
                   <input
                     type="text"
                     placeholder="Digite sua mensagem para o restaurante..."

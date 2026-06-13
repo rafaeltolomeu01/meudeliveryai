@@ -21,16 +21,40 @@ function clearThemeStorage() {
   } catch (_) {}
 }
 
+function isPublicPath() {
+  try {
+    const path = window.location.pathname;
+    return path === '/' || 
+           path.includes('/cardapio') || 
+           path.startsWith('/login') || 
+           path.startsWith('/cadastro') || 
+           path.startsWith('/register') || 
+           path.startsWith('/planos');
+  } catch (_) {
+    return false;
+  }
+}
+
 function setVars() {
   try {
     const root = document.documentElement;
+    const isPublic = isPublicPath();
     
-    // Adiciona a classe administrativa caso não exista
-    if (!root.classList.contains('mda-ifood-admin')) {
-      root.classList.add('mda-ifood-admin');
-    }
-    if (document.body && !document.body.classList.contains('mda-ifood-admin')) {
-      document.body.classList.add('mda-ifood-admin');
+    // Controla a classe mda-ifood-admin de acordo com o escopo da rota
+    if (!isPublic) {
+      if (!root.classList.contains('mda-ifood-admin')) {
+        root.classList.add('mda-ifood-admin');
+      }
+      if (document.body && !document.body.classList.contains('mda-ifood-admin')) {
+        document.body.classList.add('mda-ifood-admin');
+      }
+    } else {
+      if (root.classList.contains('mda-ifood-admin')) {
+        root.classList.remove('mda-ifood-admin');
+      }
+      if (document.body && document.body.classList.contains('mda-ifood-admin')) {
+        document.body.classList.remove('mda-ifood-admin');
+      }
     }
 
     const vars = {
@@ -70,19 +94,42 @@ if (typeof window !== 'undefined') {
   window.addEventListener('load', boot);
   window.addEventListener('focus', boot);
   
-  // Observa apenas a classe do HTML para remover 'dark', evitando loop recursivo de MutationObserver
+  // Observa classe do HTML para remover 'dark' e manter sincronia de escopo admin/public
   const observer = new MutationObserver((mutations) => {
     let shouldFix = false;
     for (const m of mutations) {
-      if (m.attributeName === 'class' && document.documentElement.classList.contains('dark')) {
-        shouldFix = true;
-        break;
+      if (m.attributeName === 'class') {
+        const isPublic = isPublicPath();
+        const hasDark = document.documentElement.classList.contains('dark');
+        const hasAdmin = document.documentElement.classList.contains('mda-ifood-admin');
+        
+        if (hasDark) {
+          shouldFix = true;
+          break;
+        }
+        if (isPublic && hasAdmin) {
+          shouldFix = true;
+          break;
+        }
+        if (!isPublic && !hasAdmin) {
+          shouldFix = true;
+          break;
+        }
       }
     }
     if (shouldFix) {
       observer.disconnect();
+      const isPublic = isPublicPath();
       document.documentElement.classList.remove('dark');
       if (document.body) document.body.classList.remove('dark');
+      
+      if (isPublic) {
+        document.documentElement.classList.remove('mda-ifood-admin');
+        if (document.body) document.body.classList.remove('mda-ifood-admin');
+      } else {
+        document.documentElement.classList.add('mda-ifood-admin');
+        if (document.body) document.body.classList.add('mda-ifood-admin');
+      }
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     }
   });

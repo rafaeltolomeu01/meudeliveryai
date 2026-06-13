@@ -86,3 +86,27 @@ body:not(.mda-ifood-admin) [class*="border-white"] {
 body:not(.mda-ifood-admin) .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
   border-color: #e5e7eb !important;
 }
+
+/* Garante que botões, badges e fundos escuros/coloridos mantenham o texto branco legível nas páginas públicas */
+body:not(.mda-ifood-admin) button.text-white,
+body:not(.mda-ifood-admin) button .text-white,
+body:not(.mda-ifood-admin) .btn.text-white,
+body:not(.mda-ifood-admin) .btn .text-white,
+body:not(.mda-ifood-admin) a[class*="bg-"].text-white,
+body:not(.mda-ifood-admin) a[class*="bg-"] .text-white,
+body:not(.mda-ifood-admin) [class*="bg-green-"].text-white,
+body:not(.mda-ifood-admin) [class*="bg-green-"] .text-white,
+body:not(.mda-ifood-admin) [class*="bg-red-"].text-white,
+body:not(.mda-ifood-admin) [class*="bg-red-"] .text-white,
+body:not(.mda-ifood-admin) [class*="bg-orange-"].text-white,
+body:not(.mda-ifood-admin) [class*="bg-orange-"] .text-white,
+body:not(.mda-ifood-admin) [class*="bg-amber-"].text-white,
+body:not(.mda-ifood-admin) [class*="bg-amber-"] .text-white,
+body:not(.mda-ifood-admin) [class*="bg-primary"].text-white,
+body:not(.mda-ifood-admin) [class*="bg-primary"] .text-white,
+body:not(.mda-ifood-admin) [class*="bg-[#"].text-white,
+body:not(.mda-ifood-admin) [class*="bg-[#"] .text-white,
+body:not(.mda-ifood-admin) [style*="background"].text-white,
+body:not(.mda-ifood-admin) [style*="background"] .text-white {
+  color: #ffffff !important;
+}
