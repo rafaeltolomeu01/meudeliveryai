@@ -83,36 +83,63 @@ async function migrate() {
   let connection;
 
   try {
-    // ── 1. Cria o banco se não existir ──────────────────────
-    const rootConn = await mysql.createConnection({
-      host    : process.env.DB_HOST     || 'localhost',
-      port    : parseInt(process.env.DB_PORT) || 3306,
-      user    : process.env.DB_USER     || 'root',
-      password: process.env.DB_PASSWORD || '',
-      charset : 'utf8mb4',
-      ssl     : sslConfig,
-    });
-
     const dbName = process.env.DB_NAME || 'meudeliveryai';
-    await rootConn.execute(
-      `CREATE DATABASE IF NOT EXISTS \`${dbName}\`
-       CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-    );
-    console.log(`  ✅ Database '${dbName}' verificado/criado.`);
-    await rootConn.end();
+    let databaseExists = false;
 
-    // ── 2. Conecta ao banco criado ───────────────────────────
-    connection = await mysql.createConnection({
-      host              : process.env.DB_HOST     || 'localhost',
-      port              : parseInt(process.env.DB_PORT) || 3306,
-      user              : process.env.DB_USER     || 'root',
-      password          : process.env.DB_PASSWORD || '',
-      database          : dbName,
-      charset           : 'utf8mb4',
-      multipleStatements: true,
-      ssl               : sslConfig,
-    });
-    console.log('  ✅ Conexão com o banco estabelecida.');
+    // Tenta conectar diretamente ao banco primeiro
+    try {
+      connection = await mysql.createConnection({
+        host              : process.env.DB_HOST     || 'localhost',
+        port              : parseInt(process.env.DB_PORT) || 3306,
+        user              : process.env.DB_USER     || 'root',
+        password          : process.env.DB_PASSWORD || '',
+        database          : dbName,
+        charset           : 'utf8mb4',
+        multipleStatements: true,
+        ssl               : sslConfig,
+      });
+      console.log('  ✅ Conexão com o banco estabelecida diretamente.');
+      databaseExists = true;
+    } catch (connErr) {
+      // Se falhar porque o banco não existe, tentamos criar
+      if (connErr.code === 'ER_BAD_DB_ERROR') {
+        console.log(`  ⚠️ Banco de dados '${dbName}' não existe. Tentando criar...`);
+      } else {
+        throw connErr;
+      }
+    }
+
+    if (!databaseExists) {
+      // Cria o banco se não existir
+      const rootConn = await mysql.createConnection({
+        host    : process.env.DB_HOST     || 'localhost',
+        port    : parseInt(process.env.DB_PORT) || 3306,
+        user    : process.env.DB_USER     || 'root',
+        password: process.env.DB_PASSWORD || '',
+        charset : 'utf8mb4',
+        ssl     : sslConfig,
+      });
+
+      await rootConn.execute(
+        `CREATE DATABASE IF NOT EXISTS \`${dbName}\`
+         CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+      );
+      console.log(`  ✅ Database '${dbName}' verificado/criado.`);
+      await rootConn.end();
+
+      // Conecta ao banco criado
+      connection = await mysql.createConnection({
+        host              : process.env.DB_HOST     || 'localhost',
+        port              : parseInt(process.env.DB_PORT) || 3306,
+        user              : process.env.DB_USER     || 'root',
+        password          : process.env.DB_PASSWORD || '',
+        database          : dbName,
+        charset           : 'utf8mb4',
+        multipleStatements: true,
+        ssl               : sslConfig,
+      });
+      console.log('  ✅ Conexão com o banco estabelecida após criação.');
+    }
 
     // ── 3. Lê o arquivo SQL ──────────────────────────────────
     if (!fs.existsSync(SQL_FILE)) {
@@ -203,6 +230,35 @@ async function migrate() {
       if (!payColumns.includes('pix_instructions')) {
         await connection.query('ALTER TABLE payment_settings ADD COLUMN pix_instructions TEXT DEFAULT NULL AFTER pix_receiver_city');
         console.log('     + Coluna pix_instructions adicionada.');
+      }
+
+      console.log('  🔄 Verificando e atualizando colunas incrementais de whatsapp_settings...');
+      const [waColumnsCheck] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'whatsapp_settings'
+      `, [dbName]);
+      const waColumns = waColumnsCheck.map(c => c.COLUMN_NAME);
+
+      if (!waColumns.includes('ai_enabled')) {
+        await connection.query('ALTER TABLE whatsapp_settings ADD COLUMN ai_enabled TINYINT(1) NOT NULL DEFAULT 0');
+        console.log('     + Coluna ai_enabled adicionada.');
+      }
+      if (!waColumns.includes('ai_name')) {
+        await connection.query("ALTER TABLE whatsapp_settings ADD COLUMN ai_name VARCHAR(100) DEFAULT 'Assistente'");
+        console.log('     + Coluna ai_name adicionada.');
+      }
+      if (!waColumns.includes('ai_personality')) {
+        await connection.query('ALTER TABLE whatsapp_settings ADD COLUMN ai_personality TEXT DEFAULT NULL');
+        console.log('     + Coluna ai_personality adicionada.');
+      }
+      if (!waColumns.includes('ai_fallback_message')) {
+        await connection.query('ALTER TABLE whatsapp_settings ADD COLUMN ai_fallback_message TEXT DEFAULT NULL');
+        console.log('     + Coluna ai_fallback_message adicionada.');
+      }
+      if (!waColumns.includes('ai_model')) {
+        await connection.query("ALTER TABLE whatsapp_settings ADD COLUMN ai_model VARCHAR(50) DEFAULT 'gpt-4o-mini'");
+        console.log('     + Coluna ai_model adicionada.');
       }
 
       console.log('  🔄 Verificando e criando tabela de chat (order_messages)...');
@@ -421,7 +477,11 @@ async function migrate() {
     }
 
     console.error('');
-    process.exit(1);
+    if (require.main === module) {
+      process.exit(1);
+    } else {
+      throw err;
+    }
 
   } finally {
     if (connection) {

@@ -16,7 +16,7 @@ const fs = require('fs');
 const optimizeAndSaveImage = async (file, subfolder = 'produtos') => {
   if (!file) return null;
 
-  const uploadDir = path.join(__dirname, '../../..', process.env.UPLOAD_DIR || 'uploads');
+  const uploadDir = path.join(__dirname, '../..', process.env.UPLOAD_DIR || 'uploads');
   const targetDir = path.join(uploadDir, subfolder);
 
   // Garante que o diretório de destino exista

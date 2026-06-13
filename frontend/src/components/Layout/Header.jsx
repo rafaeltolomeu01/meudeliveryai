@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight, Download } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, User, Settings, ToggleLeft, ToggleRight, Download, Clock } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePWA } from '../../contexts/PWAContext'
 import { restaurants as restaurantApi, orders as ordersApi, settings as settingsApi } from '../../services/api'
@@ -29,6 +29,12 @@ export default function Header() {
 
   const pageName = pageNames[location.pathname] || 'Painel'
   const isOpen = restaurantOpenState ?? user?.restaurant?.isOpen
+  const [time, setTime] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
 
 
@@ -131,8 +137,11 @@ export default function Header() {
       {/* Page Title */}
       <div>
         <h1 className="text-slate-900 font-extrabold text-lg lg:text-xl tracking-tight">{pageName}</h1>
-        <p className="text-slate-500 font-medium text-xs hidden sm:block">
-          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        <p className="text-slate-500 font-medium text-xs hidden sm:flex items-center gap-1.5 mt-0.5">
+          <Clock size={12} className="text-[#FF5A1F]" />
+          <span>
+            {time.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} - {time.toLocaleTimeString('pt-BR')}
+          </span>
         </p>
       </div>
 

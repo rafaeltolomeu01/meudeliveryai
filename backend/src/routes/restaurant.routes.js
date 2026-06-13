@@ -14,7 +14,7 @@ const {
 // ─── Multer Config ────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../..', process.env.UPLOAD_DIR || 'uploads');
+    const uploadPath = path.join(__dirname, '../..', process.env.UPLOAD_DIR || 'uploads');
     if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
     cb(null, uploadPath);
   },

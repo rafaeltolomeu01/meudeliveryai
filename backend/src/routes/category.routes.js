@@ -14,7 +14,7 @@ const {
 // ─── Multer Config ────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../..', process.env.UPLOAD_DIR || 'uploads');
+    const uploadPath = path.join(__dirname, '../..', process.env.UPLOAD_DIR || 'uploads');
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {

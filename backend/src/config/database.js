@@ -55,7 +55,7 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   charset: 'utf8mb4',
-  timezone: '-03:00',
+  timezone: '+00:00',
   ssl: sslConfig,
 });
 

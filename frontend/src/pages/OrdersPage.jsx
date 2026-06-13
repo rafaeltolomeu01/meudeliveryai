@@ -7,7 +7,7 @@ import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { formatCurrency } from '../utils/helpers'
-import { orders as ordersApi, settings as settingsApi } from '../services/api'
+import { orders as ordersApi, settings as settingsApi, drivers as driversApi } from '../services/api'
 import toast from 'react-hot-toast'
 
 const COLUMNS = [
@@ -110,6 +110,12 @@ export default function OrdersPage() {
     return new Set(JSON.parse(localStorage.getItem('mda_silenced_orders') || '[]'))
   })
 
+  // Drivers states
+  const [driversList, setDriversList] = useState([])
+  const [driverModalOpen, setDriverModalOpen] = useState(false)
+  const [selectedDriverId, setSelectedDriverId] = useState('')
+  const [orderToAssign, setOrderToAssign] = useState(null)
+
   // Drag and drop state and handlers
   const [activeDragCol, setActiveDragCol] = useState(null)
 
@@ -178,7 +184,20 @@ export default function OrdersPage() {
         console.warn('Erro ao carregar configurações do restaurante:', err)
       }
     }
+    
+    async function fetchDrivers() {
+      try {
+        const res = await driversApi.list({ limit: 100 })
+        if (res.success && res.data) {
+          setDriversList(res.data.filter(d => d.is_available === 1 || d.is_available === true))
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar entregadores:', err)
+      }
+    }
+
     fetchSettings()
+    fetchDrivers()
 
     return () => clearInterval(timer)
   }, [])
@@ -255,6 +274,17 @@ export default function OrdersPage() {
   }
 
   const handleUpdateStatus = async (orderId, newStatus) => {
+    // Intercepta se o novo status for "saiu para entrega" para poder selecionar o motorista
+    if (newStatus === 'out_for_delivery') {
+      setOrderToAssign(orderId)
+      setSelectedDriverId('')
+      setDriverModalOpen(true)
+      return
+    }
+    await executeStatusUpdate(orderId, newStatus)
+  }
+
+  const executeStatusUpdate = async (orderId, newStatus) => {
     try {
       const res = await ordersApi.updateStatus(orderId, newStatus)
       if (res.success) {
@@ -267,6 +297,24 @@ export default function OrdersPage() {
     } catch (err) {
       console.error(err)
       toast.error('Erro ao atualizar status do pedido.')
+    }
+  }
+
+  const handleConfirmDriver = async () => {
+    if (!orderToAssign) return
+    try {
+      if (selectedDriverId) {
+        await ordersApi.assignDriver(orderToAssign, selectedDriverId)
+        toast.success('Entregador vinculado com sucesso!')
+      }
+      await executeStatusUpdate(orderToAssign, 'out_for_delivery')
+    } catch (err) {
+      console.error('Erro ao vincular entregador:', err)
+      toast.error('Erro ao vincular entregador, mas atualizando o status...')
+      await executeStatusUpdate(orderToAssign, 'out_for_delivery')
+    } finally {
+      setDriverModalOpen(false)
+      setOrderToAssign(null)
     }
   }
 
@@ -1058,6 +1106,49 @@ export default function OrdersPage() {
                 rows={3}
                 className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-red-500 focus:bg-white/10 resize-none"
               />
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Assign Driver Modal */}
+      {driverModalOpen && (
+        <Modal
+          isOpen={driverModalOpen}
+          onClose={() => { setDriverModalOpen(false); setOrderToAssign(null); }}
+          title="Selecione o Entregador"
+          size="sm"
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setDriverModalOpen(false); setOrderToAssign(null); }}>
+                Cancelar
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleConfirmDriver}>
+                Confirmar Saída
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-left">
+            <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-300 flex items-start gap-2">
+              <Truck size={16} className="shrink-0 mt-0.5" />
+              <span>O pedido será atualizado para "Saiu para entrega". Vincule um entregador agora ou prossiga diretamente.</span>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-gray-300">Escolha o Motorista / Entregador</label>
+              <select
+                value={selectedDriverId}
+                onChange={(e) => setSelectedDriverId(e.target.value)}
+                className="w-full bg-[#1e1430] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-cyan-500"
+              >
+                <option value="">Sem entregador (Prosseguir sem atribuir)</option>
+                {driversList.map((driver) => (
+                  <option key={driver.id} value={driver.id}>
+                    🏍️ {driver.name} {driver.phone ? `(${driver.phone})` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </Modal>

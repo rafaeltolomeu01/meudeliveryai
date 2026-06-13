@@ -186,32 +186,58 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Revenue Chart */}
             <Card title="Faturamento por Período" subtitle="Valores acumulados em vendas concluídas" className="lg:col-span-2">
-              <div className="flex items-end gap-2 h-56 pt-6">
-                {reportData.chartData.map(({ label, value }, i) => {
-                  const pct = (value / maxChart) * 100
-                  return (
-                    <div key={label} className="flex-1 flex flex-col items-center gap-2 group relative">
-                      {/* Tooltip on hover */}
-                      <span className="absolute -top-7 scale-0 group-hover:scale-100 transition-all bg-[#1A0533] border border-white/10 text-white font-bold text-[10px] px-2 py-1 rounded shadow-xl z-10 whitespace-nowrap">
-                        {formatCurrency(value)}
-                      </span>
-                      <span className="text-[9px] text-[#a991c7] font-semibold">
-                        {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value > 0 ? value.toFixed(0) : ''}
-                      </span>
-                      <div
-                        className="w-full rounded-t-md transition-all duration-700 hover:brightness-110 cursor-pointer"
-                        style={{
-                          height: `${Math.max(pct, 3)}%`,
-                          background: i === reportData.chartData.length - 1
-                            ? 'linear-gradient(180deg, #FF6B35, #e84e15)'
-                            : 'rgba(255, 107, 53, 0.25)',
-                          boxShadow: i === reportData.chartData.length - 1 ? '0 0 12px rgba(255, 107, 53, 0.3)' : 'none',
-                        }}
-                      />
-                      <span className="text-[10px] text-[#6b5880] font-bold truncate max-w-full">{label}</span>
-                    </div>
-                  )
-                })}
+              <div className="relative h-60 pt-6">
+                {/* Horizontal grid lines */}
+                <div className="absolute inset-x-0 bottom-8 top-6 flex flex-col justify-between pointer-events-none">
+                  <div className="border-b border-white/[0.03] w-full h-0" />
+                  <div className="border-b border-white/[0.03] w-full h-0" />
+                  <div className="border-b border-white/[0.03] w-full h-0" />
+                  <div className="border-b border-white/[0.03] w-full h-0" />
+                </div>
+
+                <div className="relative z-10 flex items-end gap-3 h-full">
+                  {reportData.chartData.map(({ label, value }, i) => {
+                    const pct = (value / maxChart) * 100
+                    const isLast = i === reportData.chartData.length - 1
+                    return (
+                      <div key={label} className="flex-1 flex flex-col items-center h-full justify-end group relative">
+                        {/* Tooltip on hover */}
+                        <div className="absolute -top-10 scale-0 group-hover:scale-100 transition-all duration-200 bg-[#1A0533] border border-white/10 text-white font-extrabold text-[10px] px-2.5 py-1.5 rounded-xl shadow-xl z-20 whitespace-nowrap pointer-events-none">
+                          <p className="text-[9px] text-[#a991c7] font-semibold">{label}</p>
+                          <p className="text-[#FF6B35] font-black mt-0.5">{formatCurrency(value)}</p>
+                        </div>
+
+                        {/* Value indicator above bar */}
+                        <span className="text-[9px] text-[#a991c7] font-bold mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-350 z-10 select-none">
+                          {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value > 0 ? value.toFixed(0) : ''}
+                        </span>
+
+                        {/* Column Backdrop Track */}
+                        <div className="w-full bg-white/[0.01] hover:bg-white/[0.02] border border-white/[0.02] hover:border-white/[0.06] rounded-t-xl h-40 flex flex-col justify-end p-1 transition-all duration-300">
+                          {/* Actual bar with gradient */}
+                          <div
+                            className="w-full rounded-t-lg transition-all duration-500 hover:scale-y-[1.02] origin-bottom cursor-pointer relative"
+                            style={{
+                              height: `${Math.max(pct, 4)}%`,
+                              background: isLast
+                                ? 'linear-gradient(180deg, #FF6B35, #FF5A1F)'
+                                : 'linear-gradient(180deg, rgba(255, 107, 53, 0.45), rgba(255, 107, 53, 0.15))',
+                              boxShadow: isLast ? '0 4px 20px rgba(255, 107, 53, 0.35)' : 'none',
+                            }}
+                          >
+                            {/* Inner glossy reflection on hover */}
+                            <div className="absolute inset-0 rounded-t-lg bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          </div>
+                        </div>
+
+                        {/* Label */}
+                        <span className="text-[10px] text-[#6b5880] font-extrabold mt-2 truncate max-w-full group-hover:text-white transition-colors duration-200 select-none">
+                          {label}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </Card>
 

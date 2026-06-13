@@ -280,6 +280,12 @@ CREATE TABLE IF NOT EXISTS whatsapp_settings (
   -- Status da conexão
   connection_status          ENUM('disconnected','connecting','connected','error') NOT NULL DEFAULT 'disconnected',
   last_connected_at          DATETIME,
+  -- Configurações de IA
+  ai_enabled                 TINYINT(1) NOT NULL DEFAULT 0,
+  ai_name                    VARCHAR(100) DEFAULT 'Assistente',
+  ai_personality             TEXT,
+  ai_fallback_message        TEXT,
+  ai_model                   VARCHAR(50) DEFAULT 'gpt-4o-mini',
   created_at                 DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at                 DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
