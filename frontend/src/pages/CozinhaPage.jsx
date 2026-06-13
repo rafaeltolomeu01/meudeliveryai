@@ -140,6 +140,9 @@ export default function CozinhaPage() {
         }
         toast.success(`Pedido ${orderNumber}: ${nextLabels[newStatus] || newStatus}! 🎉`)
         
+        localStorage.setItem('mda_orders_updated_at', String(Date.now()))
+        window.dispatchEvent(new Event('mda_orders_updated'))
+
         // Atualiza a lista local removendo ou atualizando o estado do item
         await loadKitchenOrders(true)
       }

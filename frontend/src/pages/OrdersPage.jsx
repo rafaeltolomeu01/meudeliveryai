@@ -106,7 +106,9 @@ export default function OrdersPage() {
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
   )
 
-  const [silencedOrderIds, setSilencedOrderIds] = useState(new Set())
+  const [silencedOrderIds, setSilencedOrderIds] = useState(() => {
+    return new Set(JSON.parse(localStorage.getItem('mda_silenced_orders') || '[]'))
+  })
 
   // Drag and drop state and handlers
   const [activeDragCol, setActiveDragCol] = useState(null)
@@ -150,55 +152,6 @@ export default function OrdersPage() {
       const res = await ordersApi.list({ limit: 100, date_from: today, date_to: today })
       if (res.success && res.data) {
         setOrders(res.data)
-
-        // Check for new pending orders
-        const pendingOrders = res.data.filter(o => o.status === 'pending')
-        let newOrdersFound = false
-
-        if (isFirstLoad.current) {
-          pendingOrders.forEach(o => notifiedOrdersRef.current.add(o.id))
-          localStorage.setItem('mda_notified_orders', JSON.stringify(Array.from(notifiedOrdersRef.current)))
-          isFirstLoad.current = false
-        } else {
-          pendingOrders.forEach(o => {
-            if (!notifiedOrdersRef.current.has(o.id)) {
-              notifiedOrdersRef.current.add(o.id)
-              newOrdersFound = true
-
-              // Show Toast
-              toast(`Novo pedido #${o.order_number} recebido! 🔔`, { icon: '🔔', duration: 5000 })
-
-              // Push notification
-              const pushConfigEnabled = restaurantSettings?.push_notifications_enabled === undefined || 
-                                         restaurantSettings?.push_notifications_enabled === null || 
-                                         restaurantSettings?.push_notifications_enabled === 1 || 
-                                         restaurantSettings?.push_notifications_enabled === true;
-
-              if (pushConfigEnabled && Notification.permission === 'granted') {
-                try {
-                  const title = 'Novo pedido recebido'
-                  const options = {
-                    body: `Pedido #${o.order_number} - R$ ${(parseFloat(o.total) || 0).toFixed(2)}`,
-                    icon: '/favicon.ico',
-                    tag: `order-${o.id}`
-                  }
-                  const notification = new Notification(title, options)
-                  notification.onclick = () => {
-                    window.focus()
-                    setSelectedOrder(o)
-                  }
-                } catch (pushErr) {
-                  console.warn('Erro ao disparar push notification:', pushErr)
-                }
-              }
-            }
-          })
-
-          if (newOrdersFound) {
-            localStorage.setItem('mda_notified_orders', JSON.stringify(Array.from(notifiedOrdersRef.current)))
-            playNotificationSound()
-          }
-        }
       }
     } catch (err) {
       console.error('Erro ao buscar pedidos no servidor:', err)
@@ -230,35 +183,39 @@ export default function OrdersPage() {
     return () => clearInterval(timer)
   }, [])
 
+  // Sync sound state and silenced orders with localStorage/other tabs
   useEffect(() => {
-    if (!restaurantSettings) return;
-
-    const soundConfigEnabled = restaurantSettings.order_sound_enabled === undefined || 
-                                restaurantSettings.order_sound_enabled === null || 
-                                restaurantSettings.order_sound_enabled === 1 || 
-                                restaurantSettings.order_sound_enabled === true;
-
-    const localSoundEnabled = orderSoundEnabled;
-
-    const pendingOrders = orders.filter(o => o.status === 'pending');
-    const hasActivePending = pendingOrders.some(o => !silencedOrderIds.has(o.id));
-
-    if (soundConfigEnabled && localSoundEnabled && hasActivePending) {
-      startNewOrderCampainha();
-    } else {
-      stopNewOrderCampainha();
+    const handleToggle = () => {
+      const val = localStorage.getItem('orderSoundEnabled')
+      setOrderSoundEnabled(val === null ? true : val === 'true')
+    }
+    const handleSilencedChange = () => {
+      const ids = new Set(JSON.parse(localStorage.getItem('mda_silenced_orders') || '[]'))
+      setSilencedOrderIds(ids)
+    }
+    const handleStorage = (e) => {
+      handleToggle()
+      handleSilencedChange()
     }
 
+    window.addEventListener('mda_sound_toggle', handleToggle)
+    window.addEventListener('mda_silenced_orders_change', handleSilencedChange)
+    window.addEventListener('storage', handleStorage)
+
     return () => {
-      stopNewOrderCampainha();
-    };
-  }, [orders, restaurantSettings, silencedOrderIds, orderSoundEnabled]);
+      window.removeEventListener('mda_sound_toggle', handleToggle)
+      window.removeEventListener('mda_silenced_orders_change', handleSilencedChange)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
 
   const handleSilenceAll = () => {
     const pendingIds = orders.filter(o => o.status === 'pending').map(o => o.id)
     setSilencedOrderIds(prev => {
       const next = new Set(prev)
       pendingIds.forEach(id => next.add(id))
+      localStorage.setItem('mda_silenced_orders', JSON.stringify(Array.from(next)))
+      window.dispatchEvent(new Event('mda_silenced_orders_change'))
       return next
     })
     stopNewOrderCampainha()
@@ -269,6 +226,7 @@ export default function OrdersPage() {
     const success = await unlockOrderBell()
     if (success) {
       setOrderSoundEnabled(true)
+      window.dispatchEvent(new Event('mda_sound_toggle'))
       toast.success('Som de novos pedidos ativado! 🔊')
     }
   }
@@ -301,6 +259,8 @@ export default function OrdersPage() {
       const res = await ordersApi.updateStatus(orderId, newStatus)
       if (res.success) {
         toast.success(`Pedido status alterado para "${newStatus}"! 🎉`)
+        localStorage.setItem('mda_orders_updated_at', String(Date.now()))
+        window.dispatchEvent(new Event('mda_orders_updated'))
         loadOrders(true)
         setSelectedOrder(null)
       }
@@ -334,6 +294,8 @@ export default function OrdersPage() {
       const res = await ordersApi.cancel(selectedOrder.id, cancelReason)
       if (res.success) {
         toast.success('Pedido cancelado com sucesso! 🔴')
+        localStorage.setItem('mda_orders_updated_at', String(Date.now()))
+        window.dispatchEvent(new Event('mda_orders_updated'))
         setShowCancelModal(false)
         setCancelReason('')
         loadOrders(true)
@@ -538,18 +500,17 @@ export default function OrdersPage() {
           {/* Sound Control */}
           <button
             onClick={() => {
-              setOrderSoundEnabled(prev => {
-                const val = !prev;
-                localStorage.setItem('orderSoundEnabled', String(val));
-                if (val) {
-                  unlockOrderBell();
-                  toast.success('Sons de novos pedidos ativados! 🔊');
-                } else {
-                  stopNewOrderCampainha();
-                  toast.success('Sons de novos pedidos desativados! 🔇');
-                }
-                return val;
-              });
+              const val = !orderSoundEnabled;
+              localStorage.setItem('orderSoundEnabled', String(val));
+              window.dispatchEvent(new Event('mda_sound_toggle'));
+              if (val) {
+                unlockOrderBell();
+                toast.success('Sons de novos pedidos ativados! 🔊');
+              } else {
+                stopNewOrderCampainha();
+                toast.success('Sons de novos pedidos desativados! 🔇');
+              }
+              setOrderSoundEnabled(val);
             }}
             className={`p-2.5 rounded-xl transition-all border shrink-0 ${
               orderSoundEnabled 

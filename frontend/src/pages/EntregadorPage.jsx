@@ -56,6 +56,10 @@ export default function EntregadorPage() {
         } else if (newStatus === 'delivered') {
           toast.success(`Pedido ${orderNumber} entregue com sucesso! 🏁`)
         }
+        
+        localStorage.setItem('mda_orders_updated_at', String(Date.now()))
+        window.dispatchEvent(new Event('mda_orders_updated'))
+
         loadDriverDeliveries(true)
       }
     } catch (err) {

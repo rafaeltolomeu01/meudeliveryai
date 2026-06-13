@@ -3,13 +3,25 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import MobileNav from './MobileNav'
-import { subscription as subscriptionApi } from '../../services/api'
+import { subscription as subscriptionApi, orders as ordersApi, settings as settingsApi } from '../../services/api'
 import { AlertTriangle, ShieldAlert } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { startNewOrderCampainha, stopNewOrderCampainha, playNotificationSound } from '../../utils/orderSound'
 
 export default function AppLayout() {
   const [subscriptionData, setSubscriptionData] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
+
+  const [orders, setOrders] = useState([])
+  const [restaurantSettings, setRestaurantSettings] = useState(null)
+  const [orderSoundEnabled, setOrderSoundEnabled] = useState(() => {
+    const val = localStorage.getItem('orderSoundEnabled')
+    return val === null ? true : val === 'true'
+  })
+  const [silencedOrderIds, setSilencedOrderIds] = useState(() => {
+    return new Set(JSON.parse(localStorage.getItem('mda_silenced_orders') || '[]'))
+  })
 
   const fetchSubscription = async () => {
     try {
@@ -31,6 +43,157 @@ export default function AppLayout() {
       document.body?.classList?.remove('mda-ifood-admin')
     }
   }, [])
+
+  // 1. Fetch settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await settingsApi.get()
+        if (res.success) {
+          setRestaurantSettings(res.data)
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar configurações de som:', err)
+      }
+    }
+    fetchSettings()
+  }, [])
+
+  // 2. Sync sound state and silenced orders with localStorage and other tabs/components
+  useEffect(() => {
+    const handleToggle = () => {
+      const val = localStorage.getItem('orderSoundEnabled')
+      setOrderSoundEnabled(val === null ? true : val === 'true')
+    }
+    const handleSilencedChange = () => {
+      const ids = new Set(JSON.parse(localStorage.getItem('mda_silenced_orders') || '[]'))
+      setSilencedOrderIds(ids)
+    }
+    const handleStorage = (e) => {
+      handleToggle()
+      handleSilencedChange()
+    }
+
+    window.addEventListener('mda_sound_toggle', handleToggle)
+    window.addEventListener('mda_silenced_orders_change', handleSilencedChange)
+    window.addEventListener('storage', handleStorage)
+
+    return () => {
+      window.removeEventListener('mda_sound_toggle', handleToggle)
+      window.removeEventListener('mda_silenced_orders_change', handleSilencedChange)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
+
+  // 3. Background polling for new pending orders
+  useEffect(() => {
+    const notifiedOrders = new Set(JSON.parse(localStorage.getItem('mda_notified_orders') || '[]'))
+
+    const loadOrdersPoll = async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10)
+        const res = await ordersApi.list({ limit: 100, date_from: today, date_to: today })
+        if (res.success && res.data) {
+          setOrders(res.data)
+
+          // Check for new pending orders
+          const pendingOrders = res.data.filter(o => o.status === 'pending')
+          let newOrdersFound = false
+
+          pendingOrders.forEach(o => {
+            if (!notifiedOrders.has(o.id)) {
+              notifiedOrders.add(o.id)
+              newOrdersFound = true
+
+              // Show Toast
+              toast(`Novo pedido #${o.order_number} recebido! 🔔`, { icon: '🔔', duration: 5000 })
+
+              // Push notification
+              const pushConfigEnabled = restaurantSettings?.push_notifications_enabled === undefined || 
+                                         restaurantSettings?.push_notifications_enabled === null || 
+                                         restaurantSettings?.push_notifications_enabled === 1 || 
+                                         restaurantSettings?.push_notifications_enabled === true;
+
+              if (pushConfigEnabled && Notification.permission === 'granted') {
+                try {
+                  const title = 'Novo pedido recebido'
+                  const options = {
+                    body: `Pedido #${o.order_number} - R$ ${(parseFloat(o.total) || 0).toFixed(2)}`,
+                    icon: '/favicon.ico',
+                    tag: `order-${o.id}`
+                  }
+                  const notification = new Notification(title, options)
+                  notification.onclick = () => {
+                    window.focus()
+                    navigate('/dashboard/pedidos')
+                  }
+                } catch (pushErr) {
+                  console.warn('Erro ao disparar push notification:', pushErr)
+                }
+              }
+            }
+          })
+
+          if (newOrdersFound) {
+            localStorage.setItem('mda_notified_orders', JSON.stringify(Array.from(notifiedOrders)))
+            playNotificationSound()
+            
+            // Redirect to dashboard/pedidos if not already there or in cocina
+            if (location.pathname !== '/dashboard/pedidos' && location.pathname !== '/dashboard/cozinha') {
+              navigate('/dashboard/pedidos')
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro no polling global de pedidos:', err)
+      }
+    }
+
+    // Run immediately and every 5s
+    loadOrdersPoll()
+    const timer = setInterval(loadOrdersPoll, 5000)
+
+    const handleOrdersUpdated = () => {
+      loadOrdersPoll()
+    }
+    const handleStorageChange = (e) => {
+      if (e.key === 'mda_orders_updated_at') {
+        loadOrdersPoll()
+      }
+    }
+
+    window.addEventListener('mda_orders_updated', handleOrdersUpdated)
+    window.addEventListener('storage', handleStorageChange)
+
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('mda_orders_updated', handleOrdersUpdated)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [restaurantSettings, location.pathname, navigate])
+
+  // 4. Background campainha player trigger
+  useEffect(() => {
+    if (!restaurantSettings) return
+
+    const soundConfigEnabled = restaurantSettings.order_sound_enabled === undefined || 
+                                restaurantSettings.order_sound_enabled === null || 
+                                restaurantSettings.order_sound_enabled === 1 || 
+                                restaurantSettings.order_sound_enabled === true
+
+    const pendingOrders = orders.filter(o => o.status === 'pending')
+    const hasActivePending = pendingOrders.some(o => !silencedOrderIds.has(o.id))
+
+    if (soundConfigEnabled && orderSoundEnabled && hasActivePending) {
+      startNewOrderCampainha()
+    } else {
+      stopNewOrderCampainha()
+    }
+
+    return () => {
+      stopNewOrderCampainha()
+    }
+  }, [orders, restaurantSettings, orderSoundEnabled, silencedOrderIds])
 
   const isExpired = subscriptionData && (
     subscriptionData.status === 'canceled' ||

@@ -156,6 +156,8 @@ export default function OrderDetailPage() {
       const res = await ordersApi.updateStatus(id, newStatus)
       if (res.success) {
         toast.success(`Pedido status alterado para "${statusLabels[newStatus]}"! 🎉`)
+        localStorage.setItem('mda_orders_updated_at', String(Date.now()))
+        window.dispatchEvent(new Event('mda_orders_updated'))
         const updated = await ordersApi.get(id)
         if (updated.success) setOrder(updated.data)
       }
@@ -195,6 +197,8 @@ export default function OrderDetailPage() {
       const res = await ordersApi.cancel(id, cancelReason)
       if (res.success) {
         toast.success('Pedido cancelado com sucesso! 🔴')
+        localStorage.setItem('mda_orders_updated_at', String(Date.now()))
+        window.dispatchEvent(new Event('mda_orders_updated'))
         setShowCancelModal(false)
         setCancelReason('')
         const updated = await ordersApi.get(id)

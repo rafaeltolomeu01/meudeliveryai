@@ -99,38 +99,33 @@ function ringFallback() {
 
 export function startNewOrderCampainha() {
   if (typeof window === 'undefined') return;
-  if (campainhaInterval) return;
 
-  const playSound = async () => {
-    const localVal = localStorage.getItem('orderSoundEnabled');
-    const localEnabled = localVal === null ? true : localVal === 'true';
-    if (!localEnabled) return;
+  const audio = getCampainhaAudio();
+  const localVal = localStorage.getItem('orderSoundEnabled');
+  const localEnabled = localVal === null ? true : localVal === 'true';
+  if (!localEnabled) return;
 
-    try {
-      const audio = getCampainhaAudio();
-      if (audio) {
-        audio.currentTime = 0;
-        await audio.play();
-        return;
-      }
-    } catch (e) {
-      console.warn('Erro ao reproduzir campainha. Tentando fallback...', e);
+  if (audio) {
+    if (audio.paused) {
+      audio.loop = true;
+      audio.currentTime = 0;
+      audio.play().catch(e => console.warn('Erro ao tocar campainha:', e));
     }
-    ringFallback();
-  };
-
-  playSound();
-  // Repete a campainha a cada 4 segundos
-  campainhaInterval = setInterval(playSound, 4000);
+  } else {
+    if (!campainhaInterval) {
+      ringFallback();
+      campainhaInterval = setInterval(ringFallback, 4000);
+    }
+  }
 
   // Limpa timeout anterior
   if (campainhaTimeout) {
     clearTimeout(campainhaTimeout);
   }
-  // Para automaticamente após 1 minuto (60 segundos)
+  // Para automaticamente após 2 minutos (120 segundos)
   campainhaTimeout = setTimeout(() => {
     stopNewOrderCampainha();
-  }, 60000);
+  }, 120000);
 }
 
 export function stopNewOrderCampainha() {
