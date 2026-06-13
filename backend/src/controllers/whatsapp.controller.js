@@ -732,68 +732,87 @@ const webhook = async (req, res, next) => {
       );
     }
 
+    // ─── Processar mensagem recebida (Evolution API: messages.upsert) ──────────
     if (event === 'messages.upsert') {
       const messages = payload?.data?.messages || [];
       for (const msg of messages) {
-        // Ignorar mensagens enviadas pelo próprio bot
-        if (msg.key?.fromMe) {
-          await saveLog(
-            restaurantId,
-            'outbound',
-            msg.key?.remoteJid?.replace('@s.whatsapp.net', ''),
-            msg.message?.conversation || '',
-            'sent'
-          );
+        const remoteJid = msg.key?.remoteJid || '';
+
+        // ✅ IGNORAR mensagens de GRUPOS (jid termina com @g.us)
+        if (remoteJid.endsWith('@g.us')) {
+          console.log(`[AI] Ignorando mensagem de grupo: ${remoteJid}`);
           continue;
         }
 
-        // Mensagem recebida de cliente — tentar responder com IA
-        const customerPhone = (msg.key?.remoteJid || '').replace('@s.whatsapp.net', '');
+        // ✅ IGNORAR broadcasts e status (@broadcast, status@broadcast)
+        if (remoteJid.includes('broadcast') || remoteJid === 'status@broadcast') {
+          console.log(`[AI] Ignorando broadcast/status: ${remoteJid}`);
+          continue;
+        }
+
+        // ✅ IGNORAR mensagens enviadas pelo próprio bot
+        if (msg.key?.fromMe) {
+          const outPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@lid', '');
+          await saveLog(restaurantId, 'outbound', outPhone, msg.message?.conversation || '', 'sent');
+          continue;
+        }
+
+        // Extrair número limpo do cliente (apenas contatos individuais)
+        const customerPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@lid', '');
         const customerMessage = (
           msg.message?.conversation ||
           msg.message?.extendedTextMessage?.text ||
+          msg.message?.imageMessage?.caption ||
+          msg.message?.videoMessage?.caption ||
           ''
         ).trim();
 
-        if (!customerPhone || !customerMessage) continue;
+        console.log(`[AI Webhook] Mensagem de ${customerPhone}: "${customerMessage.substring(0, 100)}"`);
+
+        if (!customerPhone || !customerMessage) {
+          console.log(`[AI Webhook] Ignorando: phone="${customerPhone}" message vazio="${!customerMessage}"`);
+          continue;
+        }
 
         // Salvar log da mensagem recebida
-        await saveLog(restaurantId, 'received', customerPhone, customerMessage, 'sent');
+        await saveLog(restaurantId, 'received', customerPhone, customerMessage, 'received');
 
         // Verificar se IA está habilitada para este restaurante
         const { enabled, settings: aiSettings } = await aiService.getAIConfig(restaurantId);
-        if (!enabled || !aiSettings) continue;
-
-        // Verificar se WhatsApp está conectado
-        const connRows = await query(
-          "SELECT * FROM whatsapp_connections WHERE restaurant_id = ? AND status = 'connected' LIMIT 1",
-          [restaurantId]
-        );
-        if (connRows.length === 0) continue;
-        const activeConn = connRows[0];
+        console.log(`[AI Webhook] IA habilitada para restaurante ${restaurantId}: ${enabled}`);
+        if (!enabled || !aiSettings) {
+          console.log(`[AI Webhook] IA desabilitada — sem resposta automática.`);
+          continue;
+        }
 
         // Gerar resposta da IA (com dados reais do banco)
         let aiReply = null;
         try {
+          console.log(`[AI Webhook] Processando resposta para ${customerPhone}...`);
           aiReply = await aiService.processIncomingMessage(
             restaurantId,
             customerPhone,
             customerMessage,
             aiSettings
           );
+          console.log(`[AI Webhook] Resposta gerada: "${aiReply ? aiReply.substring(0, 100) : 'null'}"`);
         } catch (aiErr) {
-          console.error('[AI] Erro ao processar mensagem:', aiErr.message);
+          console.error('[AI] Erro ao processar mensagem:', aiErr.message, aiErr.stack);
           aiReply = aiSettings.ai_fallback_message ||
             'Desculpe, não consigo processar sua mensagem agora. Por favor, entre em contato diretamente conosco.';
         }
 
-        if (!aiReply) continue;
+        if (!aiReply) {
+          console.log(`[AI Webhook] IA não gerou resposta para ${customerPhone}.`);
+          continue;
+        }
 
         // Enviar resposta via Provedor Ativo
         if (isEvoConfigured() || getProvider() === 'zapi') {
           try {
             await sendTextHelper(customerPhone, aiReply, restaurantId);
             await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'sent');
+            console.log(`[AI Webhook] ✅ Resposta enviada para ${customerPhone}`);
           } catch (sendErr) {
             console.error('[AI] Erro ao enviar resposta:', sendErr.message);
             await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'error', sendErr.message);
@@ -801,6 +820,47 @@ const webhook = async (req, res, next) => {
         } else {
           // Modo demo: apenas loga sem enviar
           await saveLog(restaurantId, 'ai_response', customerPhone, aiReply, 'demo', 'WhatsApp não configurado');
+          console.log(`[AI Webhook] DEMO — resposta não enviada (sem provedor configurado).`);
+        }
+      }
+    }
+
+    // ─── Processar mensagem recebida (Z-API: ReceivedCallback) ─────────────────
+    if (event === 'ReceivedCallback' || (payload?.type === 'ReceivedCallback')) {
+      const zapiPhone  = payload?.phone || '';
+      const zapiMsg    = (payload?.text?.message || payload?.body || '').trim();
+      const isGroup    = payload?.isGroup === true || zapiPhone.includes('@g.us');
+      const fromMe     = payload?.fromMe === true;
+
+      console.log(`[Z-API Webhook] Recebido de ${zapiPhone}, grupo=${isGroup}, fromMe=${fromMe}, msg="${zapiMsg.substring(0, 80)}"`);
+
+      // ✅ IGNORAR grupos e mensagens próprias
+      if (isGroup || fromMe || !zapiPhone || !zapiMsg) {
+        console.log(`[Z-API Webhook] Ignorado (grupo=${isGroup}, fromMe=${fromMe})`);
+        // respond 200 without action
+      } else {
+        const cleanPhone = zapiPhone.replace(/\D/g, '');
+        await saveLog(restaurantId, 'received', cleanPhone, zapiMsg, 'received');
+
+        const { enabled, settings: aiSettings } = await aiService.getAIConfig(restaurantId);
+        if (enabled && aiSettings) {
+          let aiReply = null;
+          try {
+            aiReply = await aiService.processIncomingMessage(restaurantId, cleanPhone, zapiMsg, aiSettings);
+          } catch (aiErr) {
+            console.error('[AI Z-API] Erro:', aiErr.message);
+            aiReply = aiSettings.ai_fallback_message || 'Desculpe, não consigo processar agora. Entre em contato diretamente.';
+          }
+          if (aiReply) {
+            try {
+              await sendTextHelper(cleanPhone, aiReply, restaurantId);
+              await saveLog(restaurantId, 'ai_response', cleanPhone, aiReply, 'sent');
+              console.log(`[AI Z-API] ✅ Resposta enviada para ${cleanPhone}`);
+            } catch (sendErr) {
+              console.error('[AI Z-API] Erro ao enviar:', sendErr.message);
+              await saveLog(restaurantId, 'ai_response', cleanPhone, aiReply, 'error', sendErr.message);
+            }
+          }
         }
       }
     }
