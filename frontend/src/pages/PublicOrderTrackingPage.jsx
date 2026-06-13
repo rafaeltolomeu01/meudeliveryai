@@ -247,10 +247,10 @@ export default function PublicOrderTrackingPage() {
   }, [messages])
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg, #0F0F0F)' }}>
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="text-center flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--theme-primary, #FF6B35)', borderTopColor: 'transparent' }} />
-          <p className="text-gray-400 text-sm font-medium">Buscando status do pedido...</p>
+          <Loader2 className="animate-spin text-[#FF5A1F]" size={40} />
+          <p className="text-slate-500 text-sm font-semibold">Buscando status do pedido...</p>
         </div>
       </div>
     )
@@ -258,21 +258,20 @@ export default function PublicOrderTrackingPage() {
 
   if (error || !restaurant || !order) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center" style={{ backgroundColor: 'var(--theme-bg, #0F0F0F)' }}>
-        <AlertTriangle size={48} className="mb-4" style={{ color: 'var(--theme-primary, #FF6B35)' }} />
-        <h2 className="text-xl font-bold text-white mb-2">Pedido não localizado</h2>
-        <p className="text-gray-400 text-sm max-w-sm mb-6">{error || 'Verifique o link enviado pelo estabelecimento.'}</p>
-        <Link to={`/cardapio/${slug}`} className="text-sm font-semibold px-6 py-2.5 rounded-xl text-white" style={{ backgroundColor: 'var(--theme-primary, #FF6B35)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-[#F8FAFC]">
+        <AlertTriangle size={48} className="mb-4 text-[#FF5A1F]" />
+        <h2 className="text-xl font-black text-slate-900 mb-2">Pedido não localizado</h2>
+        <p className="text-slate-500 text-sm max-w-sm mb-6">{error || 'Verifique o link enviado pelo estabelecimento.'}</p>
+        <Link to={`/cardapio/${slug}`} className="text-sm font-extrabold px-6 py-3 rounded-2xl text-white bg-[#FF5A1F] hover:bg-[#e04f1a] transition-all shadow-md">
           Ir para o Cardápio
         </Link>
       </div>
     )
   }
 
-  const primaryColor = restaurant.primary_color || '#FF6B35'
-  const bgColor = restaurant.background_color || '#0F0F0F'
-  const buttonColor = restaurant.button_color || primaryColor
-  const buttonRadiusClass = restaurant.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-xl'
+  const primaryColor = restaurant.primary_color || '#FF5A1F'
+  const buttonColor = primaryColor
+  const buttonRadiusClass = restaurant.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-2xl'
   const borderRadiusClass = restaurant.border_radius === 'quadrada' ? 'rounded-none' : 'rounded-3xl'
 
   // Stepper calculations
@@ -286,27 +285,27 @@ export default function PublicOrderTrackingPage() {
   const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(`Olá! Gostaria de informações sobre o meu pedido ${order.order_number}.`)}` : `tel:${supportContact}`
 
   return (
-    <div className="min-h-screen font-inter pb-12 text-left" style={{ backgroundColor: bgColor, color: restaurant.text_color || '#FFFFFF' }}>
+    <div className="min-h-screen font-inter pb-12 text-left bg-[#F8FAFC] text-[#111827]">
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-6">
         
         {/* Navigation */}
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => navigate(`/cardapio/${slug}`)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-950 transition-colors"
           >
             <ArrowLeft size={16} />
             <span>Voltar ao Cardápio</span>
           </button>
-          <span className="text-xs font-semibold text-gray-400 bg-white/5 border border-white/10 px-3 py-1 rounded-full flex items-center gap-1.5">
-            <Loader2 size={12} className="animate-spin" style={{ color: primaryColor }} />
+          <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+            <Loader2 size={12} className="animate-spin text-[#FF5A1F]" />
             <span>Atualizando automático</span>
           </span>
         </div>
 
         {/* simulated status notice */}
         {isSimulated && (
-          <div className="mb-6 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300 text-center animate-pulse">
+          <div className="mb-6 p-3.5 rounded-2xl bg-indigo-50 border border-indigo-150 text-xs font-bold text-indigo-700 text-center animate-pulse shadow-sm">
             Simulador de Entrega Ativo: O status mudará automaticamente a cada 20 segundos para fins de teste.
           </div>
         )}
@@ -317,15 +316,15 @@ export default function PublicOrderTrackingPage() {
           <div className="md:col-span-2 space-y-6">
             
             {/* Status Card */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6">
+            <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-xl font-black text-white">Acompanhe seu Pedido</h2>
-                  <p className="text-xs text-gray-400 mt-1">Pedido ID: <span className="font-bold text-white">{order.order_number}</span></p>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">Acompanhe seu Pedido</h2>
+                  <p className="text-xs text-slate-500 mt-1 font-semibold">Pedido ID: <span className="font-extrabold text-slate-900">{order.order_number}</span></p>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-gray-500 font-semibold block">FEITO EM</span>
-                  <span className="text-xs font-bold text-gray-300">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">FEITO EM</span>
+                  <span className="text-xs font-black text-slate-800">
                     {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -333,15 +332,15 @@ export default function PublicOrderTrackingPage() {
 
               {/* Cancelled Block */}
               {isCancelled ? (
-                <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 mb-2">
-                  <h4 className="text-sm font-bold text-red-500">Pedido Cancelado</h4>
-                  <p className="text-xs text-gray-400 mt-1">
+                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 mb-2 text-left">
+                  <h4 className="text-sm font-extrabold text-rose-950">Pedido Cancelado</h4>
+                  <p className="text-xs text-rose-700 mt-1">
                     Este pedido foi cancelado pelo estabelecimento. Entre em contato para maiores detalhes.
                   </p>
                 </div>
               ) : (
                 /* Stepper */
-                <div className="relative pl-6 space-y-8 py-2 border-l border-white/10 ml-3">
+                <div className="relative pl-6 space-y-8 py-2 border-l border-slate-200 ml-3">
                   {STATUS_STEPS.map((step, idx) => {
                     const isCompleted = idx < currentStepIndex
                     const isActive = idx === currentStepIndex
@@ -358,12 +357,12 @@ export default function PublicOrderTrackingPage() {
                       <div key={step.status} className="relative">
                         {/* Dot badge */}
                         <div
-                          className={`absolute -left-[35px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${
+                          className={`absolute -left-[35px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold transition-all duration-300 ${
                             isCompleted
-                              ? 'bg-green-600 text-white'
+                              ? 'bg-green-600 text-white shadow-sm'
                               : isActive
-                              ? 'text-white'
-                              : 'bg-[#1A0533] border border-white/10 text-gray-600'
+                              ? 'text-white shadow-sm'
+                              : 'bg-slate-100 border border-slate-200 text-slate-400'
                           }`}
                           style={isActive ? { backgroundColor: primaryColor, boxShadow: `0 0 15px ${primaryColor}40` } : {}}
                         >
@@ -373,15 +372,15 @@ export default function PublicOrderTrackingPage() {
                         {/* Text */}
                         <div className="text-left">
                           <h4
-                            className={`text-sm font-bold ${
-                              isActive ? 'text-white' : isCompleted ? 'text-gray-300' : 'text-gray-600'
+                            className={`text-sm font-extrabold ${
+                              isActive ? 'text-slate-900' : isCompleted ? 'text-slate-550' : 'text-slate-400'
                             }`}
                           >
                             {step.label}
                           </h4>
                           <p
                             className={`text-xs mt-0.5 ${
-                              isActive ? 'text-gray-300 font-medium' : 'text-gray-500'
+                              isActive ? 'text-slate-700 font-medium' : 'text-slate-500'
                             }`}
                           >
                             {description}
@@ -395,28 +394,28 @@ export default function PublicOrderTrackingPage() {
             </div>
 
             {/* Delivery address / details */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 space-y-4">
+              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                 <Bike size={16} style={{ color: primaryColor }} />
                 Detalhes da Entrega
               </h3>
               
               {order.order_type === 'delivery' ? (
-                <div className="text-xs text-gray-300 leading-relaxed">
-                  <p className="font-semibold text-white">Endereço de Envio:</p>
+                <div className="text-xs text-slate-650 leading-relaxed font-semibold">
+                  <p className="font-bold text-slate-800">Endereço de Envio:</p>
                   <p className="mt-1">
                     {order.delivery_address}, N° {order.delivery_number}
                     {order.delivery_complement && `, ${order.delivery_complement}`}
                   </p>
                   <p>{order.delivery_neighborhood} — {order.delivery_city}/{order.delivery_state}</p>
                   {order.driver_name && (
-                    <div className="mt-4 p-3 rounded-2xl bg-white/[0.01] border border-white/5 flex items-center justify-between">
+                    <div className="mt-4 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-gray-500 font-semibold uppercase">ENTREGADOR DESIGNADO</p>
-                        <p className="text-xs font-bold text-white mt-0.5">{order.driver_name}</p>
+                        <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">ENTREGADOR DESIGNADO</p>
+                        <p className="text-xs font-extrabold text-slate-900 mt-0.5">{order.driver_name}</p>
                       </div>
                       {order.driver_phone && (
-                        <a href={`tel:${order.driver_phone}`} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-[#FF6B35] transition-all" style={{ color: primaryColor }}>
+                        <a href={`tel:${order.driver_phone}`} className="p-2 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 text-[#FF5A1F] transition-all shadow-sm">
                           <Phone size={15} />
                         </a>
                       )}
@@ -424,27 +423,27 @@ export default function PublicOrderTrackingPage() {
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400">Este pedido foi feito para **Retirada no Balcão**.</p>
+                <p className="text-xs text-slate-500 font-semibold">Este pedido foi feito para **Retirada no Balcão**.</p>
               )}
             </div>
 
             {/* Chat com o Estabelecimento */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 space-y-4">
+              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                 <span className="w-1.5 h-4 rounded-full" style={{ backgroundColor: primaryColor }} />
                 Chat do Pedido 💬
               </h3>
               
-              <div className="flex flex-col h-[300px] bg-black/30 border border-white/5 rounded-2xl overflow-hidden">
+              <div className="flex flex-col h-[300px] bg-slate-50 border border-slate-200/80 rounded-2xl overflow-hidden">
                 {/* Message History */}
                 <div 
-                  className="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col no-scrollbar scroll-smooth" 
+                  className="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col no-scrollbar scroll-smooth bg-white" 
                   id="chat-messages-container"
                 >
                   {messages.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                      <MessageSquare size={24} className="text-gray-600 mb-2 animate-pulse" />
-                      <p className="text-[10px] text-gray-500 italic">Nenhuma mensagem. Envie um oi para falar com o restaurante!</p>
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-white">
+                      <MessageSquare size={24} className="text-slate-400 mb-2 animate-pulse" />
+                      <p className="text-[10px] text-slate-500 italic">Nenhuma mensagem. Envie um oi para falar com o restaurante!</p>
                     </div>
                   ) : (
                     messages.map((msg) => {
@@ -453,7 +452,7 @@ export default function PublicOrderTrackingPage() {
                       
                       if (isSystem) {
                         return (
-                          <div key={msg.id} className="self-center bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-full text-[10px] text-gray-400 font-semibold max-w-[90%] text-center shadow-sm">
+                          <div key={msg.id} className="self-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full text-[10px] text-slate-505 font-bold max-w-[90%] text-center shadow-sm">
                             {msg.message}
                           </div>
                         )
@@ -462,18 +461,18 @@ export default function PublicOrderTrackingPage() {
                       return (
                         <div
                           key={msg.id}
-                          className={`max-w-[75%] rounded-2xl p-3 text-xs leading-relaxed flex flex-col shadow-md ${
+                          className={`max-w-[75%] rounded-2xl p-3 text-xs leading-relaxed flex flex-col shadow-sm ${
                             isCustomer
                               ? 'self-end text-white rounded-tr-none'
-                              : 'self-start bg-white/10 text-gray-200 rounded-tl-none border border-white/5'
+                              : 'self-start bg-slate-100 text-slate-800 rounded-tl-none border border-slate-200'
                           }`}
                           style={isCustomer ? { backgroundColor: primaryColor } : {}}
                         >
-                          <span className="font-bold text-[9px] text-white/55 mb-1">
+                          <span className={`font-bold text-[9px] mb-1 ${isCustomer ? 'text-white/85' : 'text-slate-500'}`}>
                             {isCustomer ? 'Você' : (restaurant.name || 'Estabelecimento')}
                           </span>
                           <span>{msg.message}</span>
-                          <span className="text-[8px] text-white/45 self-end mt-1 font-semibold">
+                          <span className={`text-[8px] self-end mt-1 font-bold ${isCustomer ? 'text-white/75' : 'text-slate-400'}`}>
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
@@ -483,14 +482,13 @@ export default function PublicOrderTrackingPage() {
                 </div>
 
                 {/* Message Input Form */}
-                <form onSubmit={handleSendMessage} className="p-3 bg-black/20 border-t border-white/5 flex gap-2">
+                <form onSubmit={handleSendMessage} className="p-3 bg-slate-50 border-t border-slate-250/50 flex gap-2">
                   <input
                     type="text"
                     placeholder="Digite sua mensagem para o restaurante..."
                     value={newMessageText}
                     onChange={(e) => setNewMessageText(e.target.value)}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6B35]"
-                    style={{ focusBorderColor: primaryColor }}
+                    className="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#FF5A1F] focus:ring-1 focus:ring-[#FF5A1F]/30"
                   />
                   <button 
                     type="submit" 
@@ -513,44 +511,44 @@ export default function PublicOrderTrackingPage() {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`p-4 ${buttonRadiusClass} bg-green-600 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all`}
+              className={`p-4 ${buttonRadiusClass} bg-green-600 hover:bg-green-700 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all`}
             >
               <MessageSquare size={16} />
               Contatar Estabelecimento
             </a>
 
             {restaurant.support_phone && (
-              <div className="text-center p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-xs text-gray-400">
-                Suporte por telefone: <a href={`tel:${restaurant.support_phone}`} className="font-bold text-white hover:underline">{restaurant.support_phone}</a>
+              <div className="text-center p-3.5 rounded-2xl bg-white border border-slate-200 text-xs text-slate-500 shadow-sm">
+                Suporte por telefone: <a href={`tel:${restaurant.support_phone}`} className="font-extrabold text-slate-950 hover:underline">{restaurant.support_phone}</a>
               </div>
             )}
 
             {/* Order details summary */}
-            <div className={`bg-white/[0.02] border border-white/5 p-5 space-y-4 ${borderRadiusClass}`}>
-              <h3 className="text-xs font-bold text-white border-b border-white/5 pb-3">Resumo do Pedido</h3>
+            <div className={`bg-white border border-slate-200 shadow-sm p-5 space-y-4 ${borderRadiusClass}`}>
+              <h3 className="text-xs font-extrabold text-slate-900 border-b border-slate-100 pb-3 uppercase tracking-wider">Resumo do Pedido</h3>
               
-              <div className="divide-y divide-white/5 max-h-40 overflow-y-auto pr-1">
+              <div className="divide-y divide-slate-100 max-h-40 overflow-y-auto pr-1">
                 {order.items?.map((item) => (
                   <div key={item.id} className="py-2 flex justify-between gap-4 text-xs">
-                    <span className="text-gray-300 font-semibold">{item.quantity}x {item.product_name}</span>
-                    <span className="text-gray-400">R$ {parseFloat(item.total_price).toFixed(2)}</span>
+                    <span className="text-slate-800 font-bold">{item.quantity}x {item.product_name}</span>
+                    <span className="text-slate-500 font-semibold">R$ {parseFloat(item.total_price).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-white/5 pt-3.5 space-y-2 text-xs text-gray-400">
+              <div className="border-t border-slate-100 pt-4 space-y-2 text-xs text-slate-500">
                 <div className="flex justify-between items-center">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-white">R$ {parseFloat(order.subtotal).toFixed(2)}</span>
+                  <span className="font-bold text-slate-900">R$ {parseFloat(order.subtotal).toFixed(2)}</span>
                 </div>
                 {order.order_type === 'delivery' && (
                   <div className="flex justify-between items-center">
                     <span>Taxa de entrega</span>
-                    <span className="font-semibold text-white">R$ {parseFloat(order.delivery_fee).toFixed(2)}</span>
+                    <span className="font-bold text-slate-900">R$ {parseFloat(order.delivery_fee).toFixed(2)}</span>
                   </div>
                 )}
-                <div className="border-t border-white/5 pt-3.5 flex justify-between items-center text-white">
-                  <span className="font-bold text-sm">Total</span>
+                <div className="border-t border-slate-100 pt-4 flex justify-between items-center text-slate-900">
+                  <span className="font-extrabold text-slate-900 text-sm">Total</span>
                   <span className="font-black text-base" style={{ color: primaryColor }}>
                     R$ {parseFloat(order.total).toFixed(2)}
                   </span>
