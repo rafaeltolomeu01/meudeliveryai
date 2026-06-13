@@ -70,20 +70,20 @@ const updateSettings = async (req, res, next) => {
       delivery_radius_km, min_order_value, delivery_fee, estimated_delivery_time,
       auto_accept_orders, whatsapp_number, instagram_url, facebook_url,
       accept_orders_when_closed, welcome_message, order_confirmed_message,
-      order_dispatched_message, support_phone, is_open, default_print_format, auto_print_enabled, kitchen_print_enabled,
+      order_dispatched_message, support_phone, is_open, default_print_format,
       order_sound_enabled, push_notifications_enabled
     } = req.body;
 
+    // Build update query dynamically — only touch fields that were sent
     await query(
       `INSERT INTO restaurant_settings (
         restaurant_id, delivery_radius_km, min_order_value, delivery_fee,
         estimated_delivery_time, auto_accept_orders, whatsapp_number,
         instagram_url, facebook_url, accept_orders_when_closed, welcome_message,
         order_confirmed_message, order_dispatched_message, support_phone, is_open,
-        default_print_format, auto_print_enabled, kitchen_print_enabled,
-        order_sound_enabled, push_notifications_enabled
+        default_print_format, order_sound_enabled, push_notifications_enabled
       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
         delivery_radius_km = COALESCE(VALUES(delivery_radius_km), delivery_radius_km),
         min_order_value = COALESCE(VALUES(min_order_value), min_order_value),
@@ -94,29 +94,31 @@ const updateSettings = async (req, res, next) => {
         instagram_url = COALESCE(VALUES(instagram_url), instagram_url),
         facebook_url = COALESCE(VALUES(facebook_url), facebook_url),
         accept_orders_when_closed = COALESCE(VALUES(accept_orders_when_closed), accept_orders_when_closed),
-        welcome_message = COALESCE(VALUES(welcome_message), welcome_message),
-        order_confirmed_message = COALESCE(VALUES(order_confirmed_message), order_confirmed_message),
-        order_dispatched_message = COALESCE(VALUES(order_dispatched_message), order_dispatched_message),
+        welcome_message = VALUES(welcome_message),
+        order_confirmed_message = VALUES(order_confirmed_message),
+        order_dispatched_message = VALUES(order_dispatched_message),
         support_phone = COALESCE(VALUES(support_phone), support_phone),
         is_open = COALESCE(VALUES(is_open), is_open),
         default_print_format = COALESCE(VALUES(default_print_format), default_print_format),
-        auto_print_enabled = COALESCE(VALUES(auto_print_enabled), auto_print_enabled),
-        kitchen_print_enabled = COALESCE(VALUES(kitchen_print_enabled), kitchen_print_enabled),
         order_sound_enabled = COALESCE(VALUES(order_sound_enabled), order_sound_enabled),
         push_notifications_enabled = COALESCE(VALUES(push_notifications_enabled), push_notifications_enabled)`,
       [
         restaurant_id,
-        delivery_radius_km || null, min_order_value || null, delivery_fee || null,
-        estimated_delivery_time || null,
+        delivery_radius_km !== undefined ? (delivery_radius_km || null) : null,
+        min_order_value !== undefined ? (min_order_value || null) : null,
+        delivery_fee !== undefined ? (delivery_fee || null) : null,
+        estimated_delivery_time !== undefined ? (estimated_delivery_time || null) : null,
         auto_accept_orders !== undefined ? (auto_accept_orders ? 1 : 0) : null,
-        whatsapp_number || null, instagram_url || null, facebook_url || null,
+        whatsapp_number !== undefined ? (whatsapp_number || null) : null,
+        instagram_url !== undefined ? (instagram_url || null) : null,
+        facebook_url !== undefined ? (facebook_url || null) : null,
         accept_orders_when_closed !== undefined ? (accept_orders_when_closed ? 1 : 0) : null,
-        welcome_message || null, order_confirmed_message || null,
-        order_dispatched_message || null, support_phone || null,
+        welcome_message !== undefined ? (welcome_message || '') : '',
+        order_confirmed_message !== undefined ? (order_confirmed_message || '') : '',
+        order_dispatched_message !== undefined ? (order_dispatched_message || '') : '',
+        support_phone !== undefined ? (support_phone || null) : null,
         is_open !== undefined ? (is_open ? 1 : 0) : null,
         default_print_format || 'ask',
-        req.body.auto_print_enabled !== undefined ? (req.body.auto_print_enabled ? 1 : 0) : null,
-        req.body.kitchen_print_enabled !== undefined ? (req.body.kitchen_print_enabled ? 1 : 0) : null,
         order_sound_enabled !== undefined ? (order_sound_enabled ? 1 : 0) : null,
         push_notifications_enabled !== undefined ? (push_notifications_enabled ? 1 : 0) : null
       ]
