@@ -232,7 +232,7 @@ export default function PublicCheckoutPage() {
         delivery_state: form.state,
         delivery_zip_code: form.zipCode,
         reference: form.reference,
-        items: cart.map((item) => ({ product_id: item.product_id, quantity: item.quantity, notes: item.notes, complements: item.complements, options: item.options })),
+        items: cart.map((item) => ({ product_id: item.product_id, quantity: item.quantity, notes: item.notes, complements: item.complements, options: item.optionsDetails || [] })),
         notes: form.notes,
         change_for: paymentMethod === 'cash' ? form.changeFor : null,
         table_number: tableNumber || null,

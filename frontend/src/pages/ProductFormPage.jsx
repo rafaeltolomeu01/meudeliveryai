@@ -6,6 +6,7 @@ import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import { products as productsApi, categories as categoriesApi, complements as complementsApi } from '../services/api'
 import toast from 'react-hot-toast'
+import { formatImageUrl } from '../utils/helpers'
 
 export default function ProductFormPage() {
   const { id } = useParams()
@@ -75,7 +76,7 @@ export default function ProductFormPage() {
               stock_quantity: p.stock_quantity ? p.stock_quantity.toString() : '0'
             })
             if (p.image_url) {
-              setImagePreview(p.image_url)
+              setImagePreview(formatImageUrl(p.image_url))
             }
             if (p.complement_group_ids) {
               const groupIds = Array.isArray(p.complement_group_ids)

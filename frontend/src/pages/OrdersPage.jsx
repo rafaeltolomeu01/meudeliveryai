@@ -98,7 +98,8 @@ export default function OrdersPage() {
   const [printFormat, setPrintFormat] = useState('ask')
   
   const [orderSoundEnabled, setOrderSoundEnabled] = useState(() => {
-    return localStorage.getItem('orderSoundEnabled') === 'true'
+    const val = localStorage.getItem('orderSoundEnabled')
+    return val === null ? true : val === 'true'
   })
 
   const [pushPermission, setPushPermission] = useState(
@@ -237,7 +238,7 @@ export default function OrdersPage() {
                                 restaurantSettings.order_sound_enabled === 1 || 
                                 restaurantSettings.order_sound_enabled === true;
 
-    const localSoundEnabled = localStorage.getItem('orderSoundEnabled') === 'true';
+    const localSoundEnabled = orderSoundEnabled;
 
     const pendingOrders = orders.filter(o => o.status === 'pending');
     const hasActivePending = pendingOrders.some(o => !silencedOrderIds.has(o.id));

@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS restaurants (
   address     VARCHAR(500),
   logo        VARCHAR(500),
   cover_image VARCHAR(500),
+  name_updated_at DATETIME DEFAULT NULL,
   status      ENUM('active', 'inactive', 'blocked') NOT NULL DEFAULT 'active',
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -1,3 +1,4 @@
+process.env.TZ = 'America/Sao_Paulo';
 require('dotenv').config();
 require('./src/config/env');
 

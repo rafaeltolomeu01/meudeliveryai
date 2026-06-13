@@ -171,6 +171,19 @@ async function migrate() {
         console.log('     + Coluna push_notifications_enabled adicionada.');
       }
 
+      console.log('  🔄 Verificando e atualizando colunas incrementais de restaurants...');
+      const [restColumnsCheck] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'restaurants'
+      `, [dbName]);
+      const restColumns = restColumnsCheck.map(c => c.COLUMN_NAME);
+
+      if (!restColumns.includes('name_updated_at')) {
+        await connection.query('ALTER TABLE restaurants ADD COLUMN name_updated_at DATETIME DEFAULT NULL AFTER cover_image');
+        console.log('     + Coluna name_updated_at adicionada a restaurants.');
+      }
+
       console.log('  🔄 Verificando e atualizando colunas incrementais de payment_settings...');
       const [payColumnsCheck] = await connection.query(`
         SELECT COLUMN_NAME 

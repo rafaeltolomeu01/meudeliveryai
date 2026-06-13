@@ -5,7 +5,7 @@ import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import { products as productsApi, categories as categoriesApi } from '../services/api'
-import { formatCurrency } from '../utils/helpers'
+import { formatCurrency, formatImageUrl } from '../utils/helpers'
 import toast from 'react-hot-toast'
 
 export default function ProductsPage() {
@@ -248,7 +248,7 @@ export default function ProductsPage() {
                   <div className="flex items-start justify-between gap-2 mb-3">
                     {p.image_url ? (
                       <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-800 shrink-0">
-                        <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                        <img src={formatImageUrl(p.image_url)} alt={p.name} className="w-full h-full object-cover" />
                       </div>
                     ) : (
                       <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">

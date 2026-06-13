@@ -8,6 +8,7 @@ import { publicApi } from '../services/api'
 import Button from '../components/ui/Button'
 import toast from 'react-hot-toast'
 import { usePWA } from '../contexts/PWAContext'
+import { formatImageUrl } from '../utils/helpers'
 
 const DAYS_MAPPING = {
   monday: 'Segunda-feira',
@@ -132,10 +133,6 @@ export default function PublicMenuPage() {
         
         if (restRes.success) setRestaurant(restRes.data)
         if (menuRes.success) setMenu(menuRes.data)
-        
-        if (menuRes.data?.categories?.length > 0) {
-          setActiveCategory(menuRes.data.categories[0].id)
-        }
       } catch (err) {
         console.warn('Erro ao conectar com API pública, usando dados demo.', err)
         if (slug === 'burger-house' || slug === 'demo') {
@@ -237,12 +234,18 @@ export default function PublicMenuPage() {
       if (newQty <= 0) {
         delete groupSelections[item.id]
       } else {
-        if (otherItemsQty + newQty > group.max_quantity) {
-          toast.error(`Você pode selecionar no máximo ${group.max_quantity} itens no grupo "${group.name}".`)
+        const isGroupBeverage = /bebida|refrigerante|coca|guaran|suco|água|agua|refri|drink|lat(a|ão)|cerveja/i.test(group.name);
+        const isItemBeverage = isGroupBeverage || /bebida|refrigerante|coca|guaran|suco|água|agua|refri|drink|lat(a|ão)|cerveja/i.test(item.name);
+        
+        const effectiveGroupMaxQty = isGroupBeverage ? 99 : group.max_quantity;
+        const effectiveItemMaxQty = isItemBeverage ? 99 : item.max_quantity;
+
+        if (otherItemsQty + newQty > effectiveGroupMaxQty) {
+          toast.error(`Você pode selecionar no máximo ${effectiveGroupMaxQty} itens no grupo "${group.name}".`)
           return prev
         }
-        if (newQty > item.max_quantity) {
-          toast.error(`Você pode selecionar no máximo ${item.max_quantity}x do item "${item.name}".`)
+        if (newQty > effectiveItemMaxQty) {
+          toast.error(`Você pode selecionar no máximo ${effectiveItemMaxQty}x do item "${item.name}".`)
           return prev
         }
         groupSelections[item.id] = newQty
@@ -464,7 +467,7 @@ export default function PublicMenuPage() {
       {/* 2. HERO COVER BANNER */}
       <div className="h-44 sm:h-56 relative w-full overflow-hidden bg-slate-200 border-b border-slate-100">
         {restaurant.cover_image ? (
-          <img src={restaurant.cover_image} alt="Capa" className="w-full h-full object-cover" />
+          <img src={formatImageUrl(restaurant.cover_image)} alt="Capa" className="w-full h-full object-cover" />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-r from-slate-200 to-slate-100 flex items-center justify-center opacity-65">
             <ShoppingBag size={48} className="text-slate-300" />
@@ -478,7 +481,7 @@ export default function PublicMenuPage() {
           {/* Logo Circular */}
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white bg-slate-100 shadow-md overflow-hidden shrink-0 -mt-16 md:mt-0 mx-auto md:mx-0 flex items-center justify-center">
             {restaurant.logo ? (
-              <img src={restaurant.logo} alt="Logo" className="w-full h-full object-cover" />
+              <img src={formatImageUrl(restaurant.logo)} alt="Logo" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center font-black text-white text-3xl" style={{ background: `linear-gradient(135deg, ${primaryColor}, #111827)` }}>
                 {restaurant.name.slice(0, 2).toUpperCase()}
@@ -571,7 +574,7 @@ export default function PublicMenuPage() {
                   <div>
                     {prod.image_url ? (
                       <div className="w-full h-32 rounded-2xl overflow-hidden bg-slate-50 mb-3 relative">
-                        <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                        <img src={formatImageUrl(prod.image_url)} alt={prod.name} className="w-full h-full object-cover" />
                         {prod.is_available === 0 && (
                           <div className="absolute inset-0 bg-white/70 flex items-center justify-center text-[10px] font-black text-slate-500">INDISPONÍVEL</div>
                         )}
@@ -623,6 +626,18 @@ export default function PublicMenuPage() {
       {menu?.categories?.length > 0 && (
         <div className="sticky top-[69px] z-30 shadow-sm border-b border-slate-200 bg-white/95 backdrop-blur-md py-3">
           <div className="max-w-4xl mx-auto px-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar scroll-smooth">
+            <button
+              onClick={() => {
+                setActiveCategory(null)
+              }}
+              className={`px-4 py-2.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+                activeCategory === null
+                  ? 'text-white bg-[#FF5A1F] shadow-sm'
+                  : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600'
+              }`}
+            >
+              Todos
+            </button>
             {menu.categories.map((cat) => (
               <button
                 key={cat.id}
@@ -646,7 +661,9 @@ export default function PublicMenuPage() {
 
       {/* 7. PRODUCTS LIST BY CATEGORY */}
       <div className="max-w-4xl mx-auto px-4 mt-8 space-y-10">
-        {menu?.categories?.map((cat) => {
+        {menu?.categories
+          ?.filter((cat) => activeCategory === null || activeCategory === cat.id)
+          ?.map((cat) => {
           const catProducts = menu.products.filter(p => p.category_id === cat.id)
           if (catProducts.length === 0) return null
 
@@ -692,7 +709,7 @@ export default function PublicMenuPage() {
                     {/* Right Product Image & Float ADD Button */}
                     <div className="relative shrink-0 self-center">
                       {prod.image_url ? (
-                        <img src={prod.image_url} alt={prod.name} className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-slate-100 shadow-sm" />
+                        <img src={formatImageUrl(prod.image_url)} alt={prod.name} className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-slate-100 shadow-sm" />
                       ) : (
                         <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-center shadow-sm">
                           <ShoppingBag size={20} className="text-slate-300" />
@@ -928,6 +945,12 @@ export default function PublicMenuPage() {
             {/* Scrollable details */}
             <div className="p-6 overflow-y-auto space-y-6">
               
+              {selectedProduct.image_url && (
+                <div className="w-full h-48 sm:h-56 -mx-6 -mt-6 mb-6 overflow-hidden bg-slate-100 relative">
+                  <img src={formatImageUrl(selectedProduct.image_url)} alt={selectedProduct.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+
               {/* Modal header */}
               <div className="flex justify-between items-start gap-4">
                 <div className="text-left">
@@ -965,7 +988,8 @@ export default function PublicMenuPage() {
                 <div className="space-y-6 text-left">
                   {selectedProduct.complements.map((group) => {
                     const isRequired = group.is_required === 1
-                    const isSingleSelect = group.max_quantity === 1
+                    const isGroupBeverage = /bebida|refrigerante|coca|guaran|suco|água|agua|refri|drink|lat(a|ão)|cerveja/i.test(group.name);
+                    const isSingleSelect = group.max_quantity === 1 && !isGroupBeverage
                     const selections = selectedOptions[group.id] || {}
                     const totalSelected = Object.values(selections).reduce((sum, q) => sum + q, 0)
                     
@@ -980,7 +1004,9 @@ export default function PublicMenuPage() {
                             <p className="text-[9px] font-bold text-slate-400 mt-0.5">
                               {isSingleSelect 
                                 ? 'Escolha 1 opção' 
-                                : `Selecione até ${group.max_quantity} opções (${totalSelected}/${group.max_quantity})`
+                                : isGroupBeverage
+                                  ? `Escolha a quantidade desejada (${totalSelected})`
+                                  : `Selecione até ${group.max_quantity} opções (${totalSelected}/${group.max_quantity})`
                               }
                             </p>
                           </div>
@@ -995,7 +1021,8 @@ export default function PublicMenuPage() {
                           {group.items?.map((item) => {
                             const quantitySelected = selections[item.id] || 0
                             const isSelected = quantitySelected > 0
-                            const itemCanMultiply = item.max_quantity > 1
+                            const isItemBeverage = isGroupBeverage || /bebida|refrigerante|coca|guaran|suco|água|agua|refri|drink|lat(a|ão)|cerveja/i.test(item.name);
+                            const itemCanMultiply = item.max_quantity > 1 || isItemBeverage
 
                             return (
                               <div

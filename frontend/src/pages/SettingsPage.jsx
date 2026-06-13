@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Save, Clock, Truck, ShieldAlert, MessageSquare, Phone, ToggleLeft, ToggleRight, Loader2, Info, CreditCard, Volume2, Bell } from 'lucide-react'
+import { Save, Clock, Truck, ShieldAlert, MessageSquare, Phone, ToggleLeft, ToggleRight, Loader2, Info, CreditCard, Volume2, Bell, Upload } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Card from '../components/ui/Card'
 import toast from 'react-hot-toast'
 import { settings as settingsApi, restaurants as restaurantApi } from '../services/api'
 import { startNewOrderCampainha, stopNewOrderCampainha } from '../utils/orderSound'
+import { formatImageUrl } from '../utils/helpers'
 
 const tabs = [
   { key: 'general', label: 'Geral & Operação', icon: Phone },
@@ -31,6 +32,18 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'general')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  const [restaurantForm, setRestaurantForm] = useState({
+    name: '',
+    logo: '',
+    cover_image: '',
+    name_updated_at: null,
+  })
+  const [originalRestaurantName, setOriginalRestaurantName] = useState('')
+  const [logoFile, setLogoFile] = useState(null)
+  const [coverFile, setCoverFile] = useState(null)
+  const [logoPreview, setLogoPreview] = useState(null)
+  const [coverPreview, setCoverPreview] = useState(null)
 
   const [form, setForm] = useState({
     is_open: false,
@@ -86,6 +99,8 @@ export default function SettingsPage() {
     async function loadSettings() {
       try {
         setLoading(true)
+        
+        // 1. Load operational settings
         const res = await settingsApi.get()
         if (res.success && res.data) {
           const d = res.data
@@ -132,6 +147,25 @@ export default function SettingsPage() {
               }
             })
             setHours(formattedHours)
+          }
+        }
+
+        // 2. Load restaurant profile
+        const restRes = await restaurantApi.get()
+        if (restRes.success && restRes.data) {
+          const rd = restRes.data
+          setRestaurantForm({
+            name: rd.name || '',
+            logo: rd.logo || '',
+            cover_image: rd.cover_image || '',
+            name_updated_at: rd.name_updated_at || null,
+          })
+          setOriginalRestaurantName(rd.name || '')
+          if (rd.logo) {
+            setLogoPreview(formatImageUrl(rd.logo))
+          }
+          if (rd.cover_image) {
+            setCoverPreview(formatImageUrl(rd.cover_image))
           }
         }
 
@@ -199,10 +233,43 @@ export default function SettingsPage() {
         settingsApi.updatePayments(paymentPayload)
       ])
 
+      // 1. Upload logo if selected
+      if (logoFile) {
+        const logoData = new FormData()
+        logoData.append('logo', logoFile)
+        await restaurantApi.uploadLogo(logoData)
+        setLogoFile(null)
+      }
+
+      // 2. Upload cover if selected
+      if (coverFile) {
+        const coverData = new FormData()
+        coverData.append('cover', coverFile)
+        await restaurantApi.uploadCover(coverData)
+        setCoverFile(null)
+      }
+
+      // 3. Update restaurant name if modified
+      if (restaurantForm.name.trim() !== '' && restaurantForm.name !== originalRestaurantName) {
+        await restaurantApi.update({ name: restaurantForm.name.trim() })
+        setOriginalRestaurantName(restaurantForm.name.trim())
+        
+        // Reload restaurant profile data to get the updated name_updated_at timestamp
+        const restRes = await restaurantApi.get()
+        if (restRes.success && restRes.data) {
+          setRestaurantForm({
+            name: restRes.data.name || '',
+            logo: restRes.data.logo || '',
+            cover_image: restRes.data.cover_image || '',
+            name_updated_at: restRes.data.name_updated_at || null,
+          })
+        }
+      }
+
       toast.success('Configurações salvas com sucesso! 🚀')
     } catch (err) {
       console.error(err)
-      toast.error(err.message || 'Erro ao salvar as configurações.')
+      toast.error(err.response?.data?.message || err.message || 'Erro ao salvar as configurações.')
     } finally {
       setSaving(false)
     }
@@ -269,6 +336,21 @@ export default function SettingsPage() {
     }))
   }
 
+  const isNameBlocked = () => {
+    if (!restaurantForm.name_updated_at) return false
+    const lastUpdate = new Date(restaurantForm.name_updated_at).getTime()
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
+    return Date.now() - lastUpdate < thirtyDaysMs
+  }
+
+  const getNextNameChangeDate = () => {
+    if (!restaurantForm.name_updated_at) return ''
+    const lastUpdate = new Date(restaurantForm.name_updated_at).getTime()
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
+    const nextDate = new Date(lastUpdate + thirtyDaysMs)
+    return nextDate.toLocaleDateString('pt-BR')
+  }
+
   if (loading) {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
@@ -315,7 +397,109 @@ export default function SettingsPage() {
         
         {/* Tab 1: Geral & Operacao */}
         {activeTab === 'general' && (
-          <Card title="Geral e Funcionamento">
+          <div className="space-y-6">
+            <Card title="Identidade do Restaurante" subtitle="Personalize o nome, logotipo e banner de capa do seu restaurante.">
+              <div className="space-y-6">
+                
+                {/* Nome do Restaurante */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  <div>
+                    <Input
+                      label="Nome do Restaurante"
+                      value={restaurantForm.name}
+                      onChange={(e) => setRestaurantForm(p => ({ ...p, name: e.target.value }))}
+                      placeholder="Ex: Burger House"
+                      disabled={isNameBlocked()}
+                      hint={isNameBlocked() ? `O nome só pode ser alterado a cada 30 dias. Disponível em: ${getNextNameChangeDate()}` : "Nome principal exibido no cardápio digital."}
+                    />
+                    {isNameBlocked() && (
+                      <p className="text-amber-500 text-[11px] font-semibold mt-1.5 flex items-center gap-1">
+                        <Info size={12} />
+                        Alteração bloqueada até {getNextNameChangeDate()} (Regra de 30 dias).
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Uploads de Imagens */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Logotipo */}
+                  <div className="space-y-2 text-left">
+                    <label className="text-sm font-bold text-white block">Logotipo</label>
+                    <span className="text-xs text-[#a991c7] block">Esta imagem aparecerá como avatar no cardápio público.</span>
+                    <div className="flex flex-col items-center justify-center border border-dashed border-white/10 rounded-2xl p-4 bg-white/[0.01] hover:bg-white/[0.02] transition-colors relative min-h-32 group">
+                      {logoPreview ? (
+                        <div className="w-24 h-24 rounded-full overflow-hidden relative border-2 border-white/10 shadow-md">
+                          <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+                            <Upload size={18} className="text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center flex flex-col items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-400">
+                            <Upload size={14} />
+                          </div>
+                          <p className="text-[10px] text-gray-300 font-semibold">Escolher Logo</p>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0]
+                          if (file) {
+                            setLogoFile(file)
+                            setLogoPreview(URL.createObjectURL(file))
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Banner de Capa */}
+                  <div className="space-y-2 text-left">
+                    <label className="text-sm font-bold text-white block">Banner de Capa</label>
+                    <span className="text-xs text-[#a991c7] block">Esta imagem aparecerá como cabeçalho de fundo no cardápio público.</span>
+                    <div className="flex flex-col items-center justify-center border border-dashed border-white/10 rounded-2xl p-4 bg-white/[0.01] hover:bg-white/[0.02] transition-colors relative min-h-32 group">
+                      {coverPreview ? (
+                        <div className="w-full h-24 rounded-xl overflow-hidden relative border border-white/10">
+                          <img src={coverPreview} alt="Cover Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Upload size={18} className="text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center flex flex-col items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-400">
+                            <Upload size={14} />
+                          </div>
+                          <p className="text-[10px] text-gray-300 font-semibold">Escolher Banner</p>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0]
+                          if (file) {
+                            setCoverFile(file)
+                            setCoverPreview(URL.createObjectURL(file))
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </Card>
+
+            <Card title="Geral e Funcionamento">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* Status Aberto/Fechado */}
@@ -516,6 +700,7 @@ export default function SettingsPage() {
 
             </div>
           </Card>
+          </div>
         )}
 
         {/* Tab 2: Horarios de Funcionamento */}

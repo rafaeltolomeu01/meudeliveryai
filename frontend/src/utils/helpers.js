@@ -208,3 +208,29 @@ export function formatCPF(cpf) {
   const cleaned = cpf.replace(/\D/g, '')
   return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
 }
+
+/**
+ * Resolves the absolute backend URL for relative image paths starting with /uploads.
+ * Works across development (with localhost:3001) and production environments.
+ * @param {string} url - The image path
+ * @returns {string} The full absolute image URL
+ */
+export function formatImageUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url
+  }
+  
+  let backendUrl = ''
+  if (import.meta.env && import.meta.env.VITE_API_URL) {
+    backendUrl = import.meta.env.VITE_API_URL.replace('/api/v1', '')
+  } else {
+    backendUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://localhost:3001'
+      : (typeof window !== 'undefined' ? window.location.origin : '')
+  }
+  
+  const baseUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl
+  const relativePath = url.startsWith('/') ? url : `/${url}`
+  return `${baseUrl}${relativePath}`
+}

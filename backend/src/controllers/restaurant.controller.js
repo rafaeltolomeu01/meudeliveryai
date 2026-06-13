@@ -9,7 +9,7 @@ const { optimizeAndSaveImage } = require('../utils/image.helper');
 const getMyRestaurant = async (req, res, next) => {
   try {
     const restaurants = await query(
-      `SELECT r.id, r.name, r.slug, r.owner_name, r.email, r.phone, r.whatsapp, r.document, r.city, r.state, r.address,
+      `SELECT r.id, r.name, r.name_updated_at, r.slug, r.owner_name, r.email, r.phone, r.whatsapp, r.document, r.city, r.state, r.address,
               r.logo, r.logo AS logo_url, r.cover_image, r.cover_image AS cover_url, r.status, r.created_at, r.updated_at,
               p.slug AS plan, s.status as subscription_status, s.trial_ends_at,
               rs.delivery_fee, rs.min_order_value, rs.estimated_delivery_time,
@@ -50,6 +50,38 @@ const updateRestaurant = async (req, res, next) => {
 
     const restaurant_id = req.user.restaurant_id;
 
+    const currentRest = await query(
+      'SELECT name, name_updated_at FROM restaurants WHERE id = ? LIMIT 1',
+      [restaurant_id]
+    );
+
+    if (currentRest.length === 0) {
+      return res.status(404).json({ success: false, message: 'Restaurante não encontrado.' });
+    }
+
+    const currentName = currentRest[0].name;
+    const nameUpdatedAt = currentRest[0].name_updated_at;
+
+    let finalName = currentName;
+    let shouldUpdateNameTimestamp = false;
+
+    if (name !== undefined && name !== null && name.trim() !== currentName) {
+      if (nameUpdatedAt) {
+        const timeDiff = Date.now() - new Date(nameUpdatedAt).getTime();
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+        if (timeDiff < thirtyDaysMs) {
+          const nextAllowedDate = new Date(new Date(nameUpdatedAt).getTime() + thirtyDaysMs);
+          const nextAllowedStr = nextAllowedDate.toLocaleDateString('pt-BR');
+          return res.status(400).json({
+            success: false,
+            message: `O nome do restaurante só pode ser alterado a cada 30 dias. Você poderá alterar novamente em ${nextAllowedStr}.`
+          });
+        }
+      }
+      finalName = name.trim();
+      shouldUpdateNameTimestamp = true;
+    }
+
     // Se o slug foi enviado, precisamos validar duplicidade
     let formattedSlug = undefined;
     if (slug !== undefined && slug !== null) {
@@ -78,7 +110,7 @@ const updateRestaurant = async (req, res, next) => {
 
     await query(
       `UPDATE restaurants SET
-        name = COALESCE(?, name),
+        name = ?,
         slug = COALESCE(?, slug),
         owner_name = COALESCE(?, owner_name),
         email = COALESCE(?, email),
@@ -87,10 +119,10 @@ const updateRestaurant = async (req, res, next) => {
         document = COALESCE(?, document),
         city = COALESCE(?, city),
         state = COALESCE(?, state),
-        address = COALESCE(?, address)
+        address = COALESCE(?, address)${shouldUpdateNameTimestamp ? ', name_updated_at = NOW()' : ''}
        WHERE id = ?`,
       [
-        name || null,
+        finalName,
         formattedSlug || null,
         owner_name || null,
         email || null,

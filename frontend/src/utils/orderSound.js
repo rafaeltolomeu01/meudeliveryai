@@ -5,6 +5,7 @@
 let campainhaAudioElement = null;
 let notificationAudioElement = null;
 let campainhaInterval = null;
+let campainhaTimeout = null;
 let activeAudioContext = null;
 let unlocked = false;
 
@@ -101,7 +102,8 @@ export function startNewOrderCampainha() {
   if (campainhaInterval) return;
 
   const playSound = async () => {
-    const localEnabled = localStorage.getItem('orderSoundEnabled') === 'true';
+    const localVal = localStorage.getItem('orderSoundEnabled');
+    const localEnabled = localVal === null ? true : localVal === 'true';
     if (!localEnabled) return;
 
     try {
@@ -120,12 +122,25 @@ export function startNewOrderCampainha() {
   playSound();
   // Repete a campainha a cada 4 segundos
   campainhaInterval = setInterval(playSound, 4000);
+
+  // Limpa timeout anterior
+  if (campainhaTimeout) {
+    clearTimeout(campainhaTimeout);
+  }
+  // Para automaticamente após 1 minuto (60 segundos)
+  campainhaTimeout = setTimeout(() => {
+    stopNewOrderCampainha();
+  }, 60000);
 }
 
 export function stopNewOrderCampainha() {
   if (campainhaInterval) {
     clearInterval(campainhaInterval);
     campainhaInterval = null;
+  }
+  if (campainhaTimeout) {
+    clearTimeout(campainhaTimeout);
+    campainhaTimeout = null;
   }
   try {
     if (campainhaAudioElement) {
@@ -138,7 +153,8 @@ export function stopNewOrderCampainha() {
 }
 
 export async function playNotificationSound() {
-  const localEnabled = localStorage.getItem('orderSoundEnabled') === 'true';
+  const localVal = localStorage.getItem('orderSoundEnabled');
+  const localEnabled = localVal === null ? true : localVal === 'true';
   if (!localEnabled) return;
 
   try {

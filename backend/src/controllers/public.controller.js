@@ -306,10 +306,21 @@ const createPublicOrder = async (req, res, next) => {
       if (!product.is_available) return res.status(400).json({ success: false, message: `Produto "${product.name}" está temporariamente esgotado.` });
       if (product.track_stock && product.stock_quantity !== null && product.stock_quantity < quantity) return res.status(400).json({ success: false, message: `O produto "${product.name}" possui apenas ${product.stock_quantity} unidades em estoque.` });
 
-      const unit_price = parseFloat(product.promotional_price || product.price);
+      let optionsPrice = 0;
+      let optionsParsed = [];
+      if (item.options && Array.isArray(item.options)) {
+        optionsParsed = item.options;
+        optionsParsed.forEach(opt => {
+          const optPrice = parseFloat(opt.price || 0);
+          const optQty = parseInt(opt.quantity || 1, 10);
+          optionsPrice += optPrice * optQty;
+        });
+      }
+
+      const unit_price = parseFloat(product.promotional_price || product.price) + optionsPrice;
       const total_price = unit_price * quantity;
       subtotal += total_price;
-      validatedItems.push({ product_id: product.id, product_name: product.name, quantity, unit_price, total_price, notes: item.notes || null, options: item.options ? JSON.stringify(item.options) : null, track_stock: product.track_stock });
+      validatedItems.push({ product_id: product.id, product_name: product.name, quantity, unit_price, total_price, notes: item.notes || null, options: optionsParsed.length ? JSON.stringify(optionsParsed) : null, track_stock: product.track_stock });
     }
 
     const deliveryFee = order_type === 'delivery' ? parseFloat(setting.delivery_fee || 0) : 0;
